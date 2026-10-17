@@ -1,0 +1,35 @@
+-- Somente leitura. Execute como administrador com psql -X -v ON_ERROR_STOP=1.
+\connect dataqore_app
+SELECT 'app: conecta no próprio database' AS check_name,
+       has_database_privilege('srv_dataqore_app', 'dataqore_app', 'CONNECT') AS passed
+UNION ALL SELECT 'app: não conecta no engine',
+       NOT has_database_privilege('srv_dataqore_app', 'dataqore_engine', 'CONNECT')
+UNION ALL SELECT 'app: não cria objetos no schema',
+       NOT has_schema_privilege('srv_dataqore_app', 'app', 'CREATE')
+UNION ALL SELECT 'app: pode inserir auditoria',
+       has_table_privilege('srv_dataqore_app', 'app.audit_log', 'INSERT')
+UNION ALL SELECT 'app: não altera auditoria',
+       NOT has_table_privilege('srv_dataqore_app', 'app.audit_log', 'UPDATE')
+UNION ALL SELECT 'app: não exclui auditoria',
+       NOT has_table_privilege('srv_dataqore_app', 'app.audit_log', 'DELETE')
+UNION ALL SELECT 'app: não pertence ao owner',
+       NOT pg_has_role('srv_dataqore_app', 'dataqore_app_owner', 'MEMBER');
+
+\connect dataqore_engine
+SELECT 'engine: conecta no próprio database' AS check_name,
+       has_database_privilege('srv_dataqore_engine', 'dataqore_engine', 'CONNECT') AS passed
+UNION ALL SELECT 'engine: não conecta no app',
+       NOT has_database_privilege('srv_dataqore_engine', 'dataqore_app', 'CONNECT')
+UNION ALL SELECT 'engine: não cria objetos no schema',
+       NOT has_schema_privilege('srv_dataqore_engine', 'engine', 'CREATE')
+UNION ALL SELECT 'engine: pode inserir métricas',
+       has_table_privilege('srv_dataqore_engine', 'engine.metrics', 'INSERT')
+UNION ALL SELECT 'engine: não executa manutenção de partições',
+       NOT has_function_privilege('srv_dataqore_engine', 'engine.ensure_metrics_partitions(date,integer)', 'EXECUTE')
+UNION ALL SELECT 'engine: não pertence ao owner',
+       NOT pg_has_role('srv_dataqore_engine', 'dataqore_engine_owner', 'MEMBER');
+
+SELECT inhrelid::regclass AS partition,
+       pg_get_expr(c.relpartbound, c.oid) AS bounds
+FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid
+WHERE inhparent = 'engine.metrics'::regclass ORDER BY 1;
