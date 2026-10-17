@@ -15,7 +15,8 @@ containers, não alteram sua configuração e não conectam nas fontes dos clien
 | `dataqore_app` | `app` | `srv_dataqore_app` | `dataqore_app_owner` |
 | `dataqore_engine` | `engine` | `srv_dataqore_engine` | `dataqore_engine_owner` |
 
-As contas `srv_*` não são proprietárias, não pertencem às roles proprietárias e
+As contas de execução `srv_dataqore_app` e `srv_dataqore_engine` não são
+proprietárias, não pertencem às roles proprietárias e
 não possuem poderes de superusuário, criação de databases, roles ou objetos.
 Recebem `CONNECT` no próprio database, `USAGE` no próprio schema e
 `SELECT, INSERT, UPDATE, DELETE` nas tabelas. Não recebem `TRUNCATE`, `REFERENCES`
@@ -30,8 +31,10 @@ de outros databases existentes no seu servidor; eles podem ter acesso por
 As roles proprietárias ficam reservadas para DDL/migrations. Nesta entrega,
 o administrador executa os scripts, que usam `SET LOCAL ROLE` para criar objetos
 com o proprietário correto. Os serviços nunca recebem a senha do administrador.
-A configuração de contas próprias para as ferramentas de migrations ficará
-na integração de Prisma/Alembic; não usar as contas `srv_*` para migrations.
+A configuração das contas dedicadas `*_migrator` e do baseline Prisma/Alembic
+está no [roteiro de migrations](MIGRATIONS.md). Não usar as contas de execução
+para migrations. Os passos abaixo descrevem o provisionamento inicial por DDL;
+para um ambiente novo controlado por migrations, seguir o roteiro específico.
 
 ## Ordem de execução
 
@@ -172,8 +175,9 @@ Não há exclusão automática de métricas ou retenção nesta entrega.
 
 Os exemplos [controller.env.example](../controller.env.example) e
 [engine.env.example](../engine.env.example) mostram as conexões separadas.
-Copiar para o `.env` do serviço correspondente quando ele for implementado.
-São modelos; esta entrega não implementa carregamento de configuração.
+Manter as configurações locais na raiz em `controller.env` e `engine.env`.
+Os comandos de migrations já carregam `MIGRATION_DATABASE_URL` desses arquivos;
+o carregamento de `DATABASE_URL` pelos serviços será integrado posteriormente.
 
 Substituir host, porta e senha. Caracteres especiais da senha precisam de
 percent-encoding na URL. O controller usa `schema=app` para Prisma; o motor

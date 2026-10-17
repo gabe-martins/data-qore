@@ -1,0 +1,16 @@
+{
+  "name": "@dataqore/controller",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": { "node": ">=22.12" },
+  "scripts": {
+    "schema:validate": "prisma validate",
+    "db:check": "../engine/.venv/bin/python ../tools/migrations.py app check",
+    "db:verify": "../engine/.venv/bin/python ../tools/migrations.py app verify",
+    "db:status": "../engine/.venv/bin/python ../tools/migrations.py app status",
+    "db:baseline": "../engine/.venv/bin/python ../tools/migrations.py app baseline",
+    "db:migrate": "../engine/.venv/bin/python ../tools/migrations.py app apply"
+  },
+  "devDependencies": { "prisma": "7.10.1" }
+}

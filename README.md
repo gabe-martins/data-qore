@@ -14,3 +14,10 @@ mensais de métricas: [instruções e DDL](database/README.md).
 
 Exemplos de configuração futura: [controller](controller.env.example) e
 [motor](engine.env.example). Nenhum script é executado automaticamente.
+
+## Migrations
+
+Prisma 7 no controller e SQLAlchemy/Alembic no motor, com contas dedicadas,
+conferência de catálogo e baseline sem recriação das tabelas existentes.
+Consulte o [roteiro de migrations](database/MIGRATIONS.md) para provisionar os
+migrators, configurar `MIGRATION_DATABASE_URL` e registrar os bancos atuais.

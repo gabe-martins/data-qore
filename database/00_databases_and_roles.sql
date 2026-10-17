@@ -32,4 +32,5 @@ ALTER ROLE srv_dataqore_engine SET idle_in_transaction_session_timeout TO '60s';
 -- Defina as senhas fora deste arquivo, usando os comandos interativos do psql:
 -- \password srv_dataqore_app
 -- \password srv_dataqore_engine
--- Não conceder as roles *_owner às contas srv_*.
+-- Não conceder *_owner às contas de execução srv_dataqore_app/srv_dataqore_engine.
+-- As contas dedicadas *_migrator são provisionadas separadamente no script 05.

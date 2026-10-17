@@ -1,0 +1,1785 @@
+{
+  "database": [
+    {
+      "datname": "dataqore_engine",
+      "owner": "dataqore_engine_owner",
+      "encoding": "UTF8"
+    }
+  ],
+  "schemas": [
+    {
+      "nspname": "engine",
+      "owner": "dataqore_engine_owner",
+      "public_create": false,
+      "public_usage": false,
+      "runtime_create": false,
+      "runtime_usage": true
+    },
+    {
+      "nspname": "public",
+      "owner": "pg_database_owner",
+      "public_create": false,
+      "public_usage": false,
+      "runtime_create": false,
+      "runtime_usage": false
+    }
+  ],
+  "tables": [
+    {
+      "relname": "column_profiles",
+      "relkind": "r",
+      "owner": "dataqore_engine_owner",
+      "partition_key": null
+    },
+    {
+      "relname": "comparison_definitions",
+      "relkind": "r",
+      "owner": "dataqore_engine_owner",
+      "partition_key": null
+    },
+    {
+      "relname": "connections",
+      "relkind": "r",
+      "owner": "dataqore_engine_owner",
+      "partition_key": null
+    },
+    {
+      "relname": "datasets",
+      "relkind": "r",
+      "owner": "dataqore_engine_owner",
+      "partition_key": null
+    },
+    {
+      "relname": "metrics",
+      "relkind": "p",
+      "owner": "dataqore_engine_owner",
+      "partition_key": "RANGE (measured_at)"
+    },
+    {
+      "relname": "run_results",
+      "relkind": "r",
+      "owner": "dataqore_engine_owner",
+      "partition_key": null
+    },
+    {
+      "relname": "runs",
+      "relkind": "r",
+      "owner": "dataqore_engine_owner",
+      "partition_key": null
+    }
+  ],
+  "columns": [
+    {
+      "relname": "column_profiles",
+      "attname": "id",
+      "attnum": 1,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "gen_random_uuid()"
+    },
+    {
+      "relname": "column_profiles",
+      "attname": "run_id",
+      "attnum": 2,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "column_profiles",
+      "attname": "dataset_id",
+      "attnum": 3,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "column_profiles",
+      "attname": "column_name",
+      "attnum": 4,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "column_profiles",
+      "attname": "profile",
+      "attnum": 5,
+      "type": "jsonb",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "column_profiles",
+      "attname": "created_at",
+      "attnum": 6,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "now()"
+    },
+    {
+      "relname": "comparison_definitions",
+      "attname": "id",
+      "attnum": 1,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "gen_random_uuid()"
+    },
+    {
+      "relname": "comparison_definitions",
+      "attname": "name",
+      "attnum": 2,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "comparison_definitions",
+      "attname": "left_dataset_id",
+      "attnum": 3,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "comparison_definitions",
+      "attname": "right_dataset_id",
+      "attnum": 4,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "comparison_definitions",
+      "attname": "mode",
+      "attnum": 5,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": "'auto'::text"
+    },
+    {
+      "relname": "comparison_definitions",
+      "attname": "sampling_options",
+      "attnum": 6,
+      "type": "jsonb",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "'{\"max_rows\": 1000, \"min_rows\": 64, \"max_cells\": 100000, \"pilot_rows\": 64, \"max_sample_bytes\": 16777216, \"proportion_margin\": 0.05}'::jsonb"
+    },
+    {
+      "relname": "comparison_definitions",
+      "attname": "sample_size",
+      "attnum": 7,
+      "type": "integer",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "comparison_definitions",
+      "attname": "absolute_tolerance",
+      "attnum": 8,
+      "type": "numeric",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "0"
+    },
+    {
+      "relname": "comparison_definitions",
+      "attname": "relative_tolerance",
+      "attnum": 9,
+      "type": "numeric",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "0"
+    },
+    {
+      "relname": "comparison_definitions",
+      "attname": "is_active",
+      "attnum": 10,
+      "type": "boolean",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "true"
+    },
+    {
+      "relname": "comparison_definitions",
+      "attname": "created_at",
+      "attnum": 11,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "now()"
+    },
+    {
+      "relname": "comparison_definitions",
+      "attname": "updated_at",
+      "attnum": 12,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "now()"
+    },
+    {
+      "relname": "connections",
+      "attname": "id",
+      "attnum": 1,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "gen_random_uuid()"
+    },
+    {
+      "relname": "connections",
+      "attname": "name",
+      "attnum": 2,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "connections",
+      "attname": "connector",
+      "attnum": 3,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "connections",
+      "attname": "credentials_ciphertext",
+      "attnum": 4,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "connections",
+      "attname": "encryption_key_version",
+      "attnum": 5,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": "'v1'::text"
+    },
+    {
+      "relname": "connections",
+      "attname": "is_active",
+      "attnum": 6,
+      "type": "boolean",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "true"
+    },
+    {
+      "relname": "connections",
+      "attname": "created_at",
+      "attnum": 7,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "now()"
+    },
+    {
+      "relname": "connections",
+      "attname": "updated_at",
+      "attnum": 8,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "now()"
+    },
+    {
+      "relname": "datasets",
+      "attname": "id",
+      "attnum": 1,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "gen_random_uuid()"
+    },
+    {
+      "relname": "datasets",
+      "attname": "connection_id",
+      "attnum": 2,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "datasets",
+      "attname": "schema_name",
+      "attnum": 3,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": "''::text"
+    },
+    {
+      "relname": "datasets",
+      "attname": "table_name",
+      "attnum": 4,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "datasets",
+      "attname": "metadata",
+      "attnum": 5,
+      "type": "jsonb",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "'{}'::jsonb"
+    },
+    {
+      "relname": "datasets",
+      "attname": "discovered_at",
+      "attnum": 6,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "now()"
+    },
+    {
+      "relname": "metrics",
+      "attname": "measured_at",
+      "attnum": 1,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "metrics",
+      "attname": "id",
+      "attnum": 2,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "gen_random_uuid()"
+    },
+    {
+      "relname": "metrics",
+      "attname": "run_id",
+      "attnum": 3,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "metrics",
+      "attname": "dataset_id",
+      "attnum": 4,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "metrics",
+      "attname": "column_name",
+      "attnum": 5,
+      "type": "text",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "metrics",
+      "attname": "metric_name",
+      "attnum": 6,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "metrics",
+      "attname": "value",
+      "attnum": 7,
+      "type": "numeric",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "metrics",
+      "attname": "evaluated_count",
+      "attnum": 8,
+      "type": "bigint",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "metrics",
+      "attname": "applicable_count",
+      "attnum": 9,
+      "type": "bigint",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "run_results",
+      "attname": "run_id",
+      "attnum": 1,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "run_results",
+      "attname": "format_version",
+      "attnum": 2,
+      "type": "integer",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "run_results",
+      "attname": "conclusion",
+      "attnum": 3,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "run_results",
+      "attname": "result",
+      "attnum": 4,
+      "type": "jsonb",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "run_results",
+      "attname": "created_at",
+      "attnum": 5,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "now()"
+    },
+    {
+      "relname": "runs",
+      "attname": "id",
+      "attnum": 1,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "gen_random_uuid()"
+    },
+    {
+      "relname": "runs",
+      "attname": "kind",
+      "attnum": 2,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "runs",
+      "attname": "comparison_id",
+      "attnum": 3,
+      "type": "uuid",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "runs",
+      "attname": "dataset_id",
+      "attnum": 4,
+      "type": "uuid",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "runs",
+      "attname": "status",
+      "attnum": 5,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": "'queued'::text"
+    },
+    {
+      "relname": "runs",
+      "attname": "parameters",
+      "attnum": 6,
+      "type": "jsonb",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "runs",
+      "attname": "idempotency_key",
+      "attnum": 7,
+      "type": "text",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "runs",
+      "attname": "requested_at",
+      "attnum": 8,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "now()"
+    },
+    {
+      "relname": "runs",
+      "attname": "started_at",
+      "attnum": 9,
+      "type": "timestamp with time zone",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "runs",
+      "attname": "finished_at",
+      "attnum": 10,
+      "type": "timestamp with time zone",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "runs",
+      "attname": "heartbeat_at",
+      "attnum": 11,
+      "type": "timestamp with time zone",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "runs",
+      "attname": "error_code",
+      "attnum": 12,
+      "type": "text",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "runs",
+      "attname": "error_message",
+      "attnum": 13,
+      "type": "text",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    }
+  ],
+  "constraints": [
+    {
+      "relname": "column_profiles",
+      "conname": "column_profiles_column_name_check",
+      "contype": "c",
+      "definition": "CHECK (column_name <> ''::text)"
+    },
+    {
+      "relname": "column_profiles",
+      "conname": "column_profiles_dataset_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (dataset_id) REFERENCES engine.datasets(id) ON DELETE RESTRICT"
+    },
+    {
+      "relname": "column_profiles",
+      "conname": "column_profiles_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "column_profiles",
+      "conname": "column_profiles_profile_check",
+      "contype": "c",
+      "definition": "CHECK (jsonb_typeof(profile) = 'object'::text)"
+    },
+    {
+      "relname": "column_profiles",
+      "conname": "column_profiles_run_id_dataset_id_column_name_key",
+      "contype": "u",
+      "definition": "UNIQUE (run_id, dataset_id, column_name)"
+    },
+    {
+      "relname": "column_profiles",
+      "conname": "column_profiles_run_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (run_id) REFERENCES engine.runs(id) ON DELETE RESTRICT"
+    },
+    {
+      "relname": "comparison_definitions",
+      "conname": "comparison_definitions_absolute_tolerance_check",
+      "contype": "c",
+      "definition": "CHECK (absolute_tolerance >= 0::numeric AND absolute_tolerance < 'Infinity'::numeric)"
+    },
+    {
+      "relname": "comparison_definitions",
+      "conname": "comparison_definitions_check",
+      "contype": "c",
+      "definition": "CHECK (left_dataset_id <> right_dataset_id)"
+    },
+    {
+      "relname": "comparison_definitions",
+      "conname": "comparison_definitions_left_dataset_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (left_dataset_id) REFERENCES engine.datasets(id) ON DELETE RESTRICT"
+    },
+    {
+      "relname": "comparison_definitions",
+      "conname": "comparison_definitions_mode_check",
+      "contype": "c",
+      "definition": "CHECK (mode = ANY (ARRAY['auto'::text, 'matched_keys'::text, 'independent_random'::text]))"
+    },
+    {
+      "relname": "comparison_definitions",
+      "conname": "comparison_definitions_name_check",
+      "contype": "c",
+      "definition": "CHECK (btrim(name) <> ''::text)"
+    },
+    {
+      "relname": "comparison_definitions",
+      "conname": "comparison_definitions_name_key",
+      "contype": "u",
+      "definition": "UNIQUE (name)"
+    },
+    {
+      "relname": "comparison_definitions",
+      "conname": "comparison_definitions_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "comparison_definitions",
+      "conname": "comparison_definitions_relative_tolerance_check",
+      "contype": "c",
+      "definition": "CHECK (relative_tolerance >= 0::numeric AND relative_tolerance < 'Infinity'::numeric)"
+    },
+    {
+      "relname": "comparison_definitions",
+      "conname": "comparison_definitions_right_dataset_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (right_dataset_id) REFERENCES engine.datasets(id) ON DELETE RESTRICT"
+    },
+    {
+      "relname": "comparison_definitions",
+      "conname": "comparison_definitions_sample_size_check",
+      "contype": "c",
+      "definition": "CHECK (sample_size >= 1 AND sample_size <= 10000)"
+    },
+    {
+      "relname": "comparison_definitions",
+      "conname": "comparison_definitions_sampling_options_check",
+      "contype": "c",
+      "definition": "CHECK (jsonb_typeof(sampling_options) = 'object'::text)"
+    },
+    {
+      "relname": "connections",
+      "conname": "connections_connector_check",
+      "contype": "c",
+      "definition": "CHECK (connector = ANY (ARRAY['postgresql'::text, 'mysql'::text, 'mssql'::text, 'oracle'::text, 'sqlite'::text]))"
+    },
+    {
+      "relname": "connections",
+      "conname": "connections_credentials_ciphertext_check",
+      "contype": "c",
+      "definition": "CHECK (credentials_ciphertext <> ''::text)"
+    },
+    {
+      "relname": "connections",
+      "conname": "connections_encryption_key_version_check",
+      "contype": "c",
+      "definition": "CHECK (encryption_key_version <> ''::text)"
+    },
+    {
+      "relname": "connections",
+      "conname": "connections_name_check",
+      "contype": "c",
+      "definition": "CHECK (btrim(name) <> ''::text)"
+    },
+    {
+      "relname": "connections",
+      "conname": "connections_name_key",
+      "contype": "u",
+      "definition": "UNIQUE (name)"
+    },
+    {
+      "relname": "connections",
+      "conname": "connections_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "datasets",
+      "conname": "datasets_connection_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (connection_id) REFERENCES engine.connections(id) ON DELETE RESTRICT"
+    },
+    {
+      "relname": "datasets",
+      "conname": "datasets_connection_id_schema_name_table_name_key",
+      "contype": "u",
+      "definition": "UNIQUE (connection_id, schema_name, table_name)"
+    },
+    {
+      "relname": "datasets",
+      "conname": "datasets_metadata_check",
+      "contype": "c",
+      "definition": "CHECK (jsonb_typeof(metadata) = 'object'::text)"
+    },
+    {
+      "relname": "datasets",
+      "conname": "datasets_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "datasets",
+      "conname": "datasets_table_name_check",
+      "contype": "c",
+      "definition": "CHECK (table_name <> ''::text)"
+    },
+    {
+      "relname": "metrics",
+      "conname": "metrics_applicable_count_check",
+      "contype": "c",
+      "definition": "CHECK (applicable_count >= 0)"
+    },
+    {
+      "relname": "metrics",
+      "conname": "metrics_check",
+      "contype": "c",
+      "definition": "CHECK (evaluated_count IS NULL OR applicable_count IS NULL OR evaluated_count <= applicable_count)"
+    },
+    {
+      "relname": "metrics",
+      "conname": "metrics_dataset_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (dataset_id) REFERENCES engine.datasets(id) ON DELETE RESTRICT"
+    },
+    {
+      "relname": "metrics",
+      "conname": "metrics_evaluated_count_check",
+      "contype": "c",
+      "definition": "CHECK (evaluated_count >= 0)"
+    },
+    {
+      "relname": "metrics",
+      "conname": "metrics_metric_name_check",
+      "contype": "c",
+      "definition": "CHECK (btrim(metric_name) <> ''::text)"
+    },
+    {
+      "relname": "metrics",
+      "conname": "metrics_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (measured_at, id)"
+    },
+    {
+      "relname": "metrics",
+      "conname": "metrics_run_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (run_id) REFERENCES engine.runs(id) ON DELETE RESTRICT"
+    },
+    {
+      "relname": "metrics",
+      "conname": "metrics_value_check",
+      "contype": "c",
+      "definition": "CHECK (value > '-Infinity'::numeric AND value < 'Infinity'::numeric)"
+    },
+    {
+      "relname": "run_results",
+      "conname": "run_results_conclusion_check",
+      "contype": "c",
+      "definition": "CHECK (conclusion = ANY (ARRAY['compatible_in_sample'::text, 'difference_observed'::text, 'profile_only'::text, 'inconclusive'::text]))"
+    },
+    {
+      "relname": "run_results",
+      "conname": "run_results_format_version_check",
+      "contype": "c",
+      "definition": "CHECK (format_version > 0)"
+    },
+    {
+      "relname": "run_results",
+      "conname": "run_results_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (run_id)"
+    },
+    {
+      "relname": "run_results",
+      "conname": "run_results_result_check",
+      "contype": "c",
+      "definition": "CHECK (jsonb_typeof(result) = 'object'::text)"
+    },
+    {
+      "relname": "run_results",
+      "conname": "run_results_run_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (run_id) REFERENCES engine.runs(id) ON DELETE RESTRICT"
+    },
+    {
+      "relname": "runs",
+      "conname": "runs_check",
+      "contype": "c",
+      "definition": "CHECK (kind = 'comparison'::text AND comparison_id IS NOT NULL AND dataset_id IS NULL OR kind = 'profile'::text AND dataset_id IS NOT NULL AND comparison_id IS NULL)"
+    },
+    {
+      "relname": "runs",
+      "conname": "runs_check1",
+      "contype": "c",
+      "definition": "CHECK (status = 'queued'::text AND started_at IS NULL AND finished_at IS NULL OR status = 'running'::text AND started_at IS NOT NULL AND finished_at IS NULL OR status = 'succeeded'::text AND started_at IS NOT NULL AND finished_at IS NOT NULL OR status = 'failed'::text AND finished_at IS NOT NULL)"
+    },
+    {
+      "relname": "runs",
+      "conname": "runs_check2",
+      "contype": "c",
+      "definition": "CHECK (started_at IS NULL OR started_at >= requested_at)"
+    },
+    {
+      "relname": "runs",
+      "conname": "runs_check3",
+      "contype": "c",
+      "definition": "CHECK (finished_at IS NULL OR finished_at >= requested_at)"
+    },
+    {
+      "relname": "runs",
+      "conname": "runs_check4",
+      "contype": "c",
+      "definition": "CHECK (finished_at IS NULL OR started_at IS NULL OR finished_at >= started_at)"
+    },
+    {
+      "relname": "runs",
+      "conname": "runs_comparison_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (comparison_id) REFERENCES engine.comparison_definitions(id) ON DELETE RESTRICT"
+    },
+    {
+      "relname": "runs",
+      "conname": "runs_dataset_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (dataset_id) REFERENCES engine.datasets(id) ON DELETE RESTRICT"
+    },
+    {
+      "relname": "runs",
+      "conname": "runs_idempotency_key_check",
+      "contype": "c",
+      "definition": "CHECK (idempotency_key IS NULL OR idempotency_key <> ''::text)"
+    },
+    {
+      "relname": "runs",
+      "conname": "runs_idempotency_key_key",
+      "contype": "u",
+      "definition": "UNIQUE (idempotency_key)"
+    },
+    {
+      "relname": "runs",
+      "conname": "runs_kind_check",
+      "contype": "c",
+      "definition": "CHECK (kind = ANY (ARRAY['comparison'::text, 'profile'::text]))"
+    },
+    {
+      "relname": "runs",
+      "conname": "runs_parameters_check",
+      "contype": "c",
+      "definition": "CHECK (jsonb_typeof(parameters) = 'object'::text)"
+    },
+    {
+      "relname": "runs",
+      "conname": "runs_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "runs",
+      "conname": "runs_status_check",
+      "contype": "c",
+      "definition": "CHECK (status = ANY (ARRAY['queued'::text, 'running'::text, 'succeeded'::text, 'failed'::text]))"
+    }
+  ],
+  "indexes": [
+    {
+      "relname": "column_profiles",
+      "index_name": "column_profiles_dataset_idx",
+      "definition": "CREATE INDEX column_profiles_dataset_idx ON engine.column_profiles USING btree (dataset_id, created_at DESC)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "column_profiles",
+      "index_name": "column_profiles_pkey",
+      "definition": "CREATE UNIQUE INDEX column_profiles_pkey ON engine.column_profiles USING btree (id)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "column_profiles",
+      "index_name": "column_profiles_run_id_dataset_id_column_name_key",
+      "definition": "CREATE UNIQUE INDEX column_profiles_run_id_dataset_id_column_name_key ON engine.column_profiles USING btree (run_id, dataset_id, column_name)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "comparison_definitions",
+      "index_name": "comparison_definitions_name_key",
+      "definition": "CREATE UNIQUE INDEX comparison_definitions_name_key ON engine.comparison_definitions USING btree (name)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "comparison_definitions",
+      "index_name": "comparison_definitions_pkey",
+      "definition": "CREATE UNIQUE INDEX comparison_definitions_pkey ON engine.comparison_definitions USING btree (id)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "comparison_definitions",
+      "index_name": "comparisons_left_dataset_idx",
+      "definition": "CREATE INDEX comparisons_left_dataset_idx ON engine.comparison_definitions USING btree (left_dataset_id)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "comparison_definitions",
+      "index_name": "comparisons_right_dataset_idx",
+      "definition": "CREATE INDEX comparisons_right_dataset_idx ON engine.comparison_definitions USING btree (right_dataset_id)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "connections",
+      "index_name": "connections_name_key",
+      "definition": "CREATE UNIQUE INDEX connections_name_key ON engine.connections USING btree (name)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "connections",
+      "index_name": "connections_pkey",
+      "definition": "CREATE UNIQUE INDEX connections_pkey ON engine.connections USING btree (id)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "datasets",
+      "index_name": "datasets_connection_id_schema_name_table_name_key",
+      "definition": "CREATE UNIQUE INDEX datasets_connection_id_schema_name_table_name_key ON engine.datasets USING btree (connection_id, schema_name, table_name)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "datasets",
+      "index_name": "datasets_pkey",
+      "definition": "CREATE UNIQUE INDEX datasets_pkey ON engine.datasets USING btree (id)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "metrics",
+      "index_name": "metrics_pkey",
+      "definition": "CREATE UNIQUE INDEX metrics_pkey ON ONLY engine.metrics USING btree (measured_at, id)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "metrics",
+      "index_name": "metrics_run_idx",
+      "definition": "CREATE INDEX metrics_run_idx ON ONLY engine.metrics USING btree (run_id)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "metrics",
+      "index_name": "metrics_series_idx",
+      "definition": "CREATE INDEX metrics_series_idx ON ONLY engine.metrics USING btree (dataset_id, column_name, metric_name, measured_at DESC)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "run_results",
+      "index_name": "run_results_pkey",
+      "definition": "CREATE UNIQUE INDEX run_results_pkey ON engine.run_results USING btree (run_id)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "runs",
+      "index_name": "runs_active_idx",
+      "definition": "CREATE INDEX runs_active_idx ON engine.runs USING btree (heartbeat_at) WHERE (status = 'running'::text)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "runs",
+      "index_name": "runs_comparison_idx",
+      "definition": "CREATE INDEX runs_comparison_idx ON engine.runs USING btree (comparison_id, requested_at DESC)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "runs",
+      "index_name": "runs_dataset_idx",
+      "definition": "CREATE INDEX runs_dataset_idx ON engine.runs USING btree (dataset_id, requested_at DESC)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "runs",
+      "index_name": "runs_idempotency_key_key",
+      "definition": "CREATE UNIQUE INDEX runs_idempotency_key_key ON engine.runs USING btree (idempotency_key)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "runs",
+      "index_name": "runs_pkey",
+      "definition": "CREATE UNIQUE INDEX runs_pkey ON engine.runs USING btree (id)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "runs",
+      "index_name": "runs_queue_idx",
+      "definition": "CREATE INDEX runs_queue_idx ON engine.runs USING btree (requested_at, id) WHERE (status = 'queued'::text)",
+      "indisvalid": true,
+      "indisready": true
+    }
+  ],
+  "table_grants": [
+    {
+      "relname": "column_profiles",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "column_profiles",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "column_profiles",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "REFERENCES",
+      "is_grantable": false
+    },
+    {
+      "relname": "column_profiles",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "column_profiles",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "TRIGGER",
+      "is_grantable": false
+    },
+    {
+      "relname": "column_profiles",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "TRUNCATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "column_profiles",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "column_profiles",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "column_profiles",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "column_profiles",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "column_profiles",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "comparison_definitions",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "comparison_definitions",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "comparison_definitions",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "REFERENCES",
+      "is_grantable": false
+    },
+    {
+      "relname": "comparison_definitions",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "comparison_definitions",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "TRIGGER",
+      "is_grantable": false
+    },
+    {
+      "relname": "comparison_definitions",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "TRUNCATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "comparison_definitions",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "comparison_definitions",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "comparison_definitions",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "comparison_definitions",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "comparison_definitions",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "connections",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "connections",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "connections",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "REFERENCES",
+      "is_grantable": false
+    },
+    {
+      "relname": "connections",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "connections",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "TRIGGER",
+      "is_grantable": false
+    },
+    {
+      "relname": "connections",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "TRUNCATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "connections",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "connections",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "connections",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "connections",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "connections",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "datasets",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "datasets",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "datasets",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "REFERENCES",
+      "is_grantable": false
+    },
+    {
+      "relname": "datasets",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "datasets",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "TRIGGER",
+      "is_grantable": false
+    },
+    {
+      "relname": "datasets",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "TRUNCATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "datasets",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "datasets",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "datasets",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "datasets",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "datasets",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "metrics",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "metrics",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "metrics",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "REFERENCES",
+      "is_grantable": false
+    },
+    {
+      "relname": "metrics",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "metrics",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "TRIGGER",
+      "is_grantable": false
+    },
+    {
+      "relname": "metrics",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "TRUNCATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "metrics",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "metrics",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "metrics",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "metrics",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "metrics",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "run_results",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "run_results",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "run_results",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "REFERENCES",
+      "is_grantable": false
+    },
+    {
+      "relname": "run_results",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "run_results",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "TRIGGER",
+      "is_grantable": false
+    },
+    {
+      "relname": "run_results",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "TRUNCATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "run_results",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "run_results",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "run_results",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "run_results",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "run_results",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "runs",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "runs",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "runs",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "REFERENCES",
+      "is_grantable": false
+    },
+    {
+      "relname": "runs",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "runs",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "TRIGGER",
+      "is_grantable": false
+    },
+    {
+      "relname": "runs",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "TRUNCATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "runs",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "runs",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "runs",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "runs",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "runs",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    }
+  ],
+  "default_grants": [
+    {
+      "schema": "",
+      "object_type": "f",
+      "grantee": "dataqore_engine_owner",
+      "privilege_type": "EXECUTE",
+      "is_grantable": false
+    },
+    {
+      "schema": "engine",
+      "object_type": "S",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "schema": "engine",
+      "object_type": "S",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "USAGE",
+      "is_grantable": false
+    },
+    {
+      "schema": "engine",
+      "object_type": "r",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "schema": "engine",
+      "object_type": "r",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "schema": "engine",
+      "object_type": "r",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "schema": "engine",
+      "object_type": "r",
+      "grantee": "srv_dataqore_engine",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    }
+  ],
+  "functions": [
+    {
+      "proname": "ensure_metrics_partitions",
+      "arguments": "first_month date, month_count integer",
+      "result": "void",
+      "prosrc": "\nDECLARE\n    month_start date;\n    month_end date;\n    partition_name text;\n    offset_month integer;\nBEGIN\n    IF first_month IS NULL OR month_count IS NULL OR month_count NOT BETWEEN 1 AND 120 THEN\n        RAISE EXCEPTION 'Informe first_month e month_count entre 1 e 120';\n    END IF;\n    -- Serializa chamadas concorrentes desta rotina de manutenção.\n    PERFORM pg_advisory_xact_lock(80417, 1);\n    FOR offset_month IN 0..month_count - 1 LOOP\n        month_start := (date_trunc('month', first_month::timestamp)\n            + make_interval(months => offset_month))::date;\n        month_end := (month_start + interval '1 month')::date;\n        partition_name := 'metrics_' || to_char(month_start, 'YYYY_MM');\n        EXECUTE format(\n            'CREATE TABLE IF NOT EXISTS engine.%I PARTITION OF engine.metrics FOR VALUES FROM (%L) TO (%L)',\n            partition_name, month_start::text || ' 00:00:00+00', month_end::text || ' 00:00:00+00'\n        );\n    END LOOP;\nEND;\n",
+      "proconfig": [
+        "search_path=pg_catalog"
+      ],
+      "prosecdef": false,
+      "provolatile": "v",
+      "proparallel": "u",
+      "proisstrict": false,
+      "owner": "dataqore_engine_owner",
+      "runtime_execute": false
+    }
+  ],
+  "triggers": [],
+  "database_grants": [
+    {
+      "datname": "dataqore_app",
+      "runtime_connect": false,
+      "runtime_create": false,
+      "runtime_temp": false,
+      "public_grants": false
+    },
+    {
+      "datname": "dataqore_engine",
+      "runtime_connect": true,
+      "runtime_create": false,
+      "runtime_temp": false,
+      "public_grants": false
+    }
+  ],
+  "role_flags": [
+    {
+      "rolname": "dataqore_engine_owner",
+      "rolsuper": false,
+      "rolcreatedb": false,
+      "rolcreaterole": false,
+      "rolreplication": false,
+      "rolbypassrls": false,
+      "rolcanlogin": false,
+      "rolinherit": true
+    },
+    {
+      "rolname": "srv_dataqore_engine",
+      "rolsuper": false,
+      "rolcreatedb": false,
+      "rolcreaterole": false,
+      "rolreplication": false,
+      "rolbypassrls": false,
+      "rolcanlogin": true,
+      "rolinherit": false
+    },
+    {
+      "rolname": "srv_dataqore_engine_migrator",
+      "rolsuper": false,
+      "rolcreatedb": false,
+      "rolcreaterole": false,
+      "rolreplication": false,
+      "rolbypassrls": false,
+      "rolcanlogin": true,
+      "rolinherit": false
+    }
+  ],
+  "role_memberships": [
+    {
+      "member": "srv_dataqore_engine_migrator",
+      "granted_role": "dataqore_engine_owner",
+      "admin_option": false
+    }
+  ]
+}
