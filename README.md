@@ -21,3 +21,9 @@ Prisma 7 no controller e SQLAlchemy/Alembic no motor, com contas dedicadas,
 conferência de catálogo e baseline sem recriação das tabelas existentes.
 Consulte o [roteiro de migrations](database/MIGRATIONS.md) para provisionar os
 migrators, configurar `MIGRATION_DATABASE_URL` e registrar os bancos atuais.
+
+## API do motor ADQ
+
+FastAPI, cinco conectores, perfis e comparações amostrais, fila Postgres e
+worker separado. Consulte [instalação, configuração e exemplos](engine/README.md)
+e o [OpenAPI do motor](docs/openapi-engine.json).

@@ -11,8 +11,10 @@ ROOT = Path(__file__).resolve().parents[1]
 def load_url(service):
     filename = "controller.env" if service == "app" else "engine.env"
     path = Path(os.environ.get("DATAQORE_ENV_FILE", ROOT / filename))
-    values = dotenv_values(path, interpolate=False) if path.exists() else {}
-    url = os.environ.get("MIGRATION_DATABASE_URL") or values.get("MIGRATION_DATABASE_URL")
+    url = os.environ.get("MIGRATION_DATABASE_URL")
+    if not url:
+        values = dotenv_values(path, interpolate=False) if path.exists() else {}
+        url = values.get("MIGRATION_DATABASE_URL")
     if not url:
         raise ValueError(f"Configure MIGRATION_DATABASE_URL em {filename} ou no ambiente.")
     parts = urlsplit(url)

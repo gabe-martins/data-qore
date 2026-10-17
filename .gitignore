@@ -10,3 +10,4 @@ node_modules/
 dist/
 .pytest_cache/
 *.egg-info/
+engine/local_sources/
