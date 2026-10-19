@@ -90,3 +90,10 @@ npm run types:generate --prefix web
 Use the [web app test instructions](../web/README.md#browser-checks) for the
 isolated integration suite. Integration tests require the disposable fixture;
 they skip execution without its internal test flag.
+
+## Agendamentos
+
+O processo do controller também executa o agendador de comparações, com cron
+tradicional de cinco campos, fuso IANA e outbox persistida no app. Aplique a
+nova migration `1_schedules` antes de iniciar esta versão. O comando de
+execução continua o mesmo; não há processo extra. Veja [operação e políticas](../docs/SCHEDULES.md).

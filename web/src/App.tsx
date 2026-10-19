@@ -17,6 +17,7 @@ import {
   LogOut,
   Menu,
   UserRound,
+  CalendarClock,
 } from "lucide-react";
 import {
   login,
@@ -39,6 +40,7 @@ const Overview = lazy(() =>
 const Connections = lazy(() =>
   import("./pages/Connections").then((m) => ({ default: m.Connections })),
 );
+const Schedules = lazy(() => import("./pages/Schedules").then(m => ({ default: m.Schedules })));
 const Catalog = lazy(() =>
   import("./pages/Catalog").then((m) => ({ default: m.Catalog })),
 );
@@ -101,6 +103,7 @@ export function App() {
     ["/connections", "Connections", Database],
     ["/catalog", "Catalog", Library],
     ["/comparisons", "Comparisons", GitCompareArrows],
+    ["/schedules", "Schedules", CalendarClock],
     ["/runs", "Runs", History],
     ["/account", "Account", Settings],
   ] as const;
@@ -171,6 +174,7 @@ export function App() {
               <Route path="/catalog" element={<Catalog />} />
               <Route path="/datasets/:id" element={<DatasetProfile />} />
               <Route path="/comparisons" element={<Comparisons />} />
+              <Route path="/schedules" element={<Schedules />} />
               <Route path="/comparisons/new" element={<Wizard />} />
               <Route path="/comparisons/:id/edit" element={<Wizard />} />
               <Route path="/comparisons/:id" element={<ComparisonDetail />} />

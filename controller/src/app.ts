@@ -26,6 +26,8 @@ import type {
   components as EngineComponents,
 } from "./engine-api.js";
 import { engineSpec, openapi } from "./openapi.js";
+import { z } from "zod";
+import { Schedules, cronSchema, nextDates, scheduleOut, dispatchOut } from "./schedules.js";
 const COOKIE = "dataqore_refresh";
 const messages: Record<string, string> = {
   invalid_comparison_options: "Review the scope, mapping and business key against source metadata.",
@@ -88,6 +90,7 @@ const messages: Record<string, string> = {
 };
 export async function createApp(config: Config, db: DB) {
   const auth = new Auth(db, config);
+  const schedules = new Schedules(db, config, auth);
   const adapter = new FastifyAdapter({
     logger: false,
     bodyLimit: 1048576,
@@ -142,6 +145,44 @@ export async function createApp(config: Config, db: DB) {
     res.clearCookie(COOKIE, { path: "/api/v1/auth" });
   }
   const operations: [string, string, (req: any, res: any) => Promise<any>][] = [
+    ["post", "/api/v1/schedules/preview", async (req, res) => {
+      await auth.authorize(req.headers.authorization);
+      const v = cronSchema.parse(req.body);
+      res.status(200);
+      return { cron_expression: v.cron_expression, timezone: v.timezone, next_runs: nextDates(v.cron_expression, v.timezone).map(d => d.toISOString()) };
+    }],
+    ["get", "/api/v1/schedules", async (req) => {
+      await auth.authorize(req.headers.authorization);
+      const q = z.object({ limit: z.coerce.number().int().min(1).max(200).default(20), offset: z.coerce.number().int().min(0).default(0), comparison_id: z.uuid().optional(), search: z.string().max(255).default("") }).strict().parse(req.query);
+      const where = { ...(q.comparison_id ? { comparisonId: q.comparison_id } : {}), name: { contains: q.search, mode: "insensitive" as const } };
+      const [items, total] = await db.$transaction([db.schedule.findMany({ where, take: q.limit, skip: q.offset, orderBy: [{ createdAt: "desc" }, { id: "asc" }] }), db.schedule.count({ where })]);
+      return { items: items.map(scheduleOut), total, limit: q.limit, offset: q.offset };
+    }],
+    ["post", "/api/v1/schedules", async (req, res) => {
+      const session = await auth.authorize(req.headers.authorization);
+      const row = await schedules.create(req.body, session.user.id, req.id);
+      res.status(201); return row;
+    }],
+    ["get", "/api/v1/schedules/:id", async req => {
+      await auth.authorize(req.headers.authorization);
+      const id = z.uuid().parse(req.params.id);
+      const row = await db.schedule.findUnique({ where: { id } });
+      if (!row) throw new PublicError(404, "not_found", "Schedule not found.");
+      return scheduleOut(row);
+    }],
+    ["patch", "/api/v1/schedules/:id", async req => {
+      const session = await auth.authorize(req.headers.authorization);
+      return schedules.update(z.uuid().parse(req.params.id), req.body, session.user.id, req.id);
+    }],
+    ["get", "/api/v1/schedules/:id/dispatches", async req => {
+      await auth.authorize(req.headers.authorization);
+      const scheduleId = z.uuid().parse(req.params.id);
+      if (!(await db.schedule.findUnique({ where: { id: scheduleId } }))) throw new PublicError(404, "not_found", "Schedule not found.");
+      const q = z.object({ limit: z.coerce.number().int().min(1).max(200).default(20), offset: z.coerce.number().int().min(0).default(0) }).strict().parse(req.query);
+      const where = { scheduleId };
+      const [items, total] = await db.$transaction([db.scheduleDispatch.findMany({ where, take: q.limit, skip: q.offset, orderBy: [{ scheduledFor: "desc" }, { id: "asc" }] }), db.scheduleDispatch.count({ where })]);
+      return { items: items.map(dispatchOut), total, limit: q.limit, offset: q.offset };
+    }],
     [
       "post",
       "/api/v1/auth/login",

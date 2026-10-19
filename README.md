@@ -99,6 +99,11 @@ for setup details and troubleshooting.
 | [Database](database/README.md) | Initial provisioning and database maintenance |
 | [Launcher](scripts/README.md) | Starting, stopping, and troubleshooting local services |
 
+## Schedules
+
+Schedule comparisons from **Schedules**, using a traditional cron expression or the guided form.
+The scheduler runs inside the controller. See the [scheduling guide](docs/SCHEDULES.md) for migration and operation instructions.
+
 <p align="center">
   <img src="web/public/branding/dataqore-symbol.svg" alt="DataQore symbol" width="64">
 </p>

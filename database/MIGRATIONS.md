@@ -144,7 +144,7 @@ descartável. Não registre novamente o baseline nem altere os contratos histór
 A revisão `0002_comparison_options` acrescenta apenas uma coluna JSONB com
 padrão vazio e CHECK em `engine.comparison_definitions`. Consulte
 [recortes e chaves de negócio](../docs/SCOPED_COMPARISONS.md) antes de atualizar
-um ambiente existente. Não há migration do controller nesta entrega.
+um ambiente existente. O controller também possui a migration `1_schedules` para agendamentos; o catálogo versionado `app_1_schedules` é selecionado quando ela está aplicada.
 
 ## 5. Ambiente novo
 

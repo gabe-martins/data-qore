@@ -74,12 +74,16 @@ class PostgreSQLMigrationTests(TemporaryPostgres):
             self.command(service,'baseline')
             self.command(service,'baseline')
             self.command(service,'apply')
+            after_first=self.table_oids(service)
             self.command(service,'apply')
             self.command(service,'verify')
-            self.assertEqual(before,self.table_oids(service))
+            after=self.table_oids(service)
+            self.assertEqual(after_first,after)
+            self.assertEqual(dict(before),{name:oid for name,oid in after if name in dict(before)})
+            self.assertEqual(set(dict(after))-set(dict(before)),{'schedules','schedule_dispatches'} if service=='app' else set())
             with self.connect(service) as connection:
                 table='_prisma_migrations' if service=='app' else 'alembic_version'
-                self.assertEqual(connection.execute(f'SELECT count(*) FROM {service}.{table}').fetchone()[0],1)
+                self.assertEqual(connection.execute(f'SELECT count(*) FROM {service}.{table}').fetchone()[0],2 if service=='app' else 1)
                 for privilege in ('SELECT','INSERT','UPDATE','DELETE'):
                     self.assertFalse(connection.execute('SELECT has_table_privilege(%s,%s,%s)',
                         (f'srv_dataqore_{service}',f'{service}.{table}',privilege)).fetchone()[0])

@@ -41,6 +41,7 @@
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
     "argon2": "0.45.1",
+    "cron-parser": "5.10.2",
     "dotenv": "18.0.8",
     "jose": "6.2.12",
     "pg": "8.23.1",

@@ -7,6 +7,7 @@ try {
   const identity=await db.$queryRaw<{current_user:string;current_database:string}[]>`SELECT current_user,current_database()`;
   if(identity[0]?.current_user!=='srv_dataqore_app'||identity[0]?.current_database!=='dataqore_app')throw Error('Restricted runtime account required.');
   const count=await db.user.count();
+  await db.schedule.count();
   console.log('Runtime database access verified. Administrator records: '+count+'.');
 } catch(error) {
   console.error(databaseFailure(error));process.exitCode=1;

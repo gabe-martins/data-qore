@@ -113,7 +113,7 @@ export function Comparisons() {
             </div>
             <dl className="comparison-facts">
               <dt>Execution</dt>
-              <dd>Manual</dd>
+              <dd><Link to={"/schedules?comparison_id=" + c.id}>Manual / schedules</Link></dd>
               <dt>Status</dt>
               <dd>
                 <button
@@ -239,6 +239,7 @@ export function ComparisonDetail() {
         eyebrow="DATA QUALITY / COMPARISONS"
         action={
           <>
+            <Button asChild variant="outline"><Link to={"/schedules?comparison_id=" + id}>Schedules</Link></Button>
             <Button asChild variant="outline">
               <Link to={`/comparisons/${id}/edit`}>Edit</Link>
             </Button>
@@ -309,7 +310,7 @@ export function ComparisonDetail() {
                   />
                   <Stat
                     label="Execution"
-                    value="Manual"
+                    value="Manual / schedules"
                     detail={
                       <Badge value={c.data.is_active ? "active" : "inactive"} />
                     }

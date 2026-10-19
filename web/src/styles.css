@@ -1198,6 +1198,11 @@ select:focus-visible {
   opacity: 0.5;
   cursor: progress;
 }
+
+.schedule-mode { margin: 20px 0; padding: 12px 16px; border: 1px solid var(--semantic-border-default); border-radius: 10px; display: flex; gap: 24px; flex-wrap: wrap; }
+.schedule-mode legend { font-weight: 600; padding: 0 6px; }
+.schedule-mode input[type="radio"] { width: 16px; height: 16px; min-height: 16px; padding: 0; margin: 0; flex-shrink: 0; accent-color: var(--semantic-action-primary); }
+.schedule-mode .check-label { margin: 4px 0; white-space: nowrap; }
 .tolerance-field { margin-bottom: 20px; }
 .tolerance-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tolerance-label label { margin: 0; }
