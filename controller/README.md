@@ -100,3 +100,9 @@ validados no controller; os payloads dos recursos são validados no motor.
 Os testes reais são iniciados pelo fixture Python descrito no manual e em
 `web/README.md`; não execute contra seu banco pessoal. Sem o indicador
 interno do fixture, os testes de integração Node são pulados.
+## Agendamentos
+
+O processo do controller também executa o agendador de comparações, com cron
+tradicional de cinco campos, fuso IANA e outbox persistida no app. Aplique a
+nova migration `1_schedules` antes de iniciar esta versão. O comando de
+execução continua o mesmo; não há processo extra. Veja [operação e políticas](../docs/SCHEDULES.md).

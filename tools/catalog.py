@@ -125,7 +125,14 @@ def differences(expected, actual, prefix=""):
 
 
 def _verify(connection, service):
-    path = Path(__file__).with_name("baselines") / f"{service}.json"
+    version=service
+    if service == "app":
+        with connection.cursor() as cur:
+            cur.execute("SELECT to_regclass('app._prisma_migrations')")
+            if cur.fetchone()[0] is not None:
+                cur.execute("SELECT EXISTS(SELECT FROM app._prisma_migrations WHERE migration_name='1_schedules' AND finished_at IS NOT NULL AND rolled_back_at IS NULL)")
+                if cur.fetchone()[0]:version="app_1_schedules"
+    path = Path(__file__).with_name("baselines") / f"{version}.json"
     expected = json.loads(path.read_text())
     actual = snapshot(connection, service)
     problems = differences(expected, actual)

@@ -13,6 +13,8 @@ def free_port():
 @unittest.skipUnless(os.environ.get('DATAQORE_PG_BIN') and (ROOT/'web/node_modules').exists(), 'Requires disposable PostgreSQL and web/controller dependencies')
 class FullStackTests(TemporaryPostgres):
     def test_browser_and_controller_against_real_disposable_services(self):
+        self.command('app','baseline')
+        self.command('app','apply')
         engine_port,controller_port,web_port=free_port(),free_port(),free_port()
         source=self.directory/'sources';source.mkdir()
         for side in ('left','right'):
@@ -100,7 +102,7 @@ class FullStackTests(TemporaryPostgres):
                     for p,log,name in handles:log.flush();log.seek(0);print(name,log.read())
                     self.fail('Service did not start: '+url)
                 time.sleep(.2)
-        commands=[(['node','--import','tsx','--test','tests/controller.test.ts'],ROOT/'controller'),(['node','node_modules/@playwright/test/cli.js','test'],ROOT/'web')]
+        commands=[(['node','--import','tsx','--test','tests/controller.test.ts'],ROOT/'controller'),(['node','node_modules/@playwright/test/cli.js','test'],ROOT/'web'),(['node','--import','tsx','--test','tests/schedules.test.ts'],ROOT/'controller')]
         for cmd,cwd in commands:
             result=subprocess.run(cmd,cwd=cwd,env=env,text=True,capture_output=True,timeout=240)
             self.assertEqual(result.returncode,0,result.stdout+result.stderr)
@@ -110,6 +112,6 @@ class FullStackTests(TemporaryPostgres):
             self.assertTrue(audit)
         with self.connect('engine') as c:
             rows=c.execute('SELECT result FROM engine.run_results').fetchall()
-            self.assertEqual(len(rows),4)
+            self.assertEqual(len(rows),5)
             self.assertNotIn('sample_rows',json.dumps(rows))
-            self.assertEqual(c.execute('SELECT count(*) FROM engine.runs WHERE status=\'succeeded\'').fetchone()[0],4)
+            self.assertEqual(c.execute('SELECT count(*) FROM engine.runs WHERE status=\'succeeded\'').fetchone()[0],5)

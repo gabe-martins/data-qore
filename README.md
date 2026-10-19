@@ -48,3 +48,9 @@ motor, worker, controller e Vite, ou os comandos individuais dos guias.
 
 O manual operacional completo fica fora do repositório, em
 `/home/biel/analytics-data-quality/docs/DATAQORE_CONFIGURACAO.html`.
+
+## Agendamentos
+
+Comparações podem ser agendadas no menu **Schedules**, por expressão cron
+tradicional ou formulário guiado, com fuso, prévia, pausa e histórico.
+O agendador executa no controller. [Instalação e regras](docs/SCHEDULES.md).

@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { root } from "./config.js";
 import { z } from "zod";
 import { loginSchema, changeSchema } from "./auth.js";
+import { cronSchema, scheduleSchema, schedulePatchBaseSchema, scheduleOutSchema, dispatchOutSchema } from "./schedules.js";
 export const engineSpec = JSON.parse(
   readFileSync(resolve(root, "docs/openapi-engine.json"), "utf8"),
 );
@@ -74,6 +75,31 @@ export function openapi() {
           "401": { description: "Unauthorized" },
         },
       },
+    };
+  }
+  spec.components.schemas.ScheduleOut = z.toJSONSchema(scheduleOutSchema);
+  spec.components.schemas.ScheduleDispatchOut = z.toJSONSchema(dispatchOutSchema);
+  const ref = (name: string) => ({ $ref: "#/components/schemas/" + name });
+  const page = (name: string) => ({ type: "object", required: ["items", "total", "limit", "offset"], properties: {
+    items: { type: "array", items: ref(name) }, total: { type: "integer" }, limit: { type: "integer" }, offset: { type: "integer" } } });
+  const query = (name: string, type = "integer") => ({ name, in: "query", required: false, schema: { type } });
+  for (const [path, method, body, response, status] of [
+    ["/schedules/preview", "post", z.toJSONSchema(cronSchema), { type: "object", required: ["cron_expression", "timezone", "next_runs"], properties: { cron_expression: { type: "string" }, timezone: { type: "string" }, next_runs: { type: "array", items: { type: "string", format: "date-time" } } } }, "200"],
+    ["/schedules", "get", null, page("ScheduleOut"), "200"],
+    ["/schedules", "post", z.toJSONSchema(scheduleSchema), ref("ScheduleOut"), "201"],
+    ["/schedules/{id}", "get", null, ref("ScheduleOut"), "200"],
+    ["/schedules/{id}", "patch", z.toJSONSchema(schedulePatchBaseSchema), ref("ScheduleOut"), "200"],
+    ["/schedules/{id}/dispatches", "get", null, page("ScheduleDispatchOut"), "200"],
+  ] as const) {
+    const parameters: any[] = path.includes("{id}") ? [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }] : [];
+    if (method === "get" && (!path.includes("{id}") || path.endsWith("dispatches"))) parameters.push(query("limit"), query("offset"));
+    if (path === "/schedules" && method === "get") parameters.push(query("comparison_id", "string"), query("search", "string"));
+    spec.paths["/api/v1" + path] ??= {};
+    spec.paths["/api/v1" + path][method] = {
+      tags: ["schedules"], security: [{ bearerAuth: [] }], parameters,
+      ...(body ? { requestBody: { required: true, content: { "application/json": { schema: body } } } } : {}),
+      responses: { [status]: { description: "Success", content: { "application/json": { schema: response } } },
+        "401": { description: "Unauthorized" }, "404": { description: "Not found" }, "409": { description: "Conflict" }, "422": { description: "Invalid expression or payload" }, "503": { description: "Engine unavailable" } },
     };
   }
   return spec;

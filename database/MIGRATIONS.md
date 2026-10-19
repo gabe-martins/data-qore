@@ -136,9 +136,10 @@ npm run db:baseline --prefix controller
 npm run db:migrate --prefix controller
 ```
 
-`verify` confere **o contrato inicial**, para adoção do baseline. Depois de
-evoluir o schema, use `status` e novas revisões; não registre novamente o
-baseline nem altere seus contratos históricos.
+`verify` confere o contrato inicial antes do baseline e, no app, o catálogo
+versionado de `1_schedules` quando essa migration consta como concluída.
+As referências históricas permanecem congeladas. Use `status` e novas
+revisões para evoluir; não registre novamente o baseline.
 
 ## 5. Ambiente novo
 
