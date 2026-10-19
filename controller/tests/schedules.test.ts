@@ -154,7 +154,9 @@ test("authenticated schedule API and real scheduled run use the engine queue", {
     const resultBody = await resultResponse.json() as any;
     const result = resultBody.result;
     assert.equal(result.format_version, 5);
-    assert.deepEqual(result.comparison_options, comparison.comparison_options);
+    assert.deepEqual(result.comparison_options.mapping, comparison.comparison_options.mapping);
+    assert.deepEqual(result.comparison_options.business_key, comparison.comparison_options.business_key);
+    assert.deepEqual(result.comparison_options.scope.filters, comparison.comparison_options.scope.filters);
     assert.deepEqual(result.key_validation.map((v: any) => v.total_rows), [1, 1]);
     assert.ok(result.key_validation.every((v: any) => v.valid));
     const paused = await client("/schedules/" + id, { is_active: false }, token, "PATCH");

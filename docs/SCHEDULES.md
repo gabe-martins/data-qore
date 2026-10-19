@@ -105,3 +105,24 @@ instalação ou nos testes. O usuário escolhe quais comparações ativar.
   anteriores preservados e segunda aplicação sem alteração adicional.
 - No banco pessoal, conferência antes/depois aprovada, histórico atualizado
   com `1_schedules`, nenhum agendamento/disparo criado e serviços ativos.
+
+## Integração com a main — 19/10/2026
+
+A branch de agendamentos incorpora as melhorias de tolerâncias percentuais,
+recortes equivalentes, mapeamento de colunas e chaves de negócio já presentes
+na main. Os disparos continuam usando o endpoint de runs do motor, que congela
+as regras atuais da comparação; não há uma definição paralela no agendador.
+
+- Catálogos versionados do app (`1_schedules`) e do motor
+  (`0002_comparison_options`) verificados em PostgreSQL descartável.
+- 122 testes Python de regressão aprovados; o teste completo de integração
+  também foi aprovado na reexecução após integrar suas expectativas de cron.
+- Fluxo completo com seis testes de autenticação/controller, quatro testes
+  de agendamento e quatro fluxos Playwright aprovados. O disparo real inclui
+  filtro de recorte, mapeamento, chave de negócio e tolerâncias existentes;
+  o resultado v5 valida a chave somente no recorte escolhido.
+- Builds do controller e Web App e três testes de conversão percentual
+  aprovados. Os contratos do controller e os tipos da interface foram
+  regenerados com as duas funcionalidades.
+- Migrations existentes preservadas. A resolução dos conflitos não executa
+  migrations nem altera dados ou configurações nos bancos pessoais.
