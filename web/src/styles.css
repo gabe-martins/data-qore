@@ -317,6 +317,18 @@ label:has(input:required)::after {
   grid-template-columns: 1fr 1fr;
   gap: 0 20px;
 }
+.scope-filter {
+  min-width: 0;
+  border: 1px solid var(--semantic-border-default);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+.scope-filter legend {
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
 .check-label {
   display: flex;
   gap: 10px;

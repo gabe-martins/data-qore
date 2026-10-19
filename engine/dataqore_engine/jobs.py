@@ -1,6 +1,6 @@
 """Fila transacional, snapshots sem segredos e publicação com verificação de estado."""
 from contextlib import ExitStack
-from datetime import datetime
+from datetime import datetime,timezone
 from decimal import Decimal
 import hashlib
 import json
@@ -14,6 +14,7 @@ from .connectors import SourceManager
 from .core.comparison_engine import execute_comparison
 from .core.profile_engine import execute_profile
 from .core.sampling import SamplingOptions
+from .comparison_options import compact_options, metadata_signature, resolve_scope, validate_options
 from .storage import DomainError,Repository,database_engine,json_safe
 
 logger=logging.getLogger("dataqore.worker")
@@ -46,17 +47,25 @@ class Queue:
                 if not definition["is_active"]:
                     raise DomainError(409,"comparison_inactive","A comparação está desativada.")
                 identifiers=[definition["left_dataset_id"],definition["right_dataset_id"]]
-                parameters={k:definition[k] for k in ("mode","sampling_options","sample_size","absolute_tolerance","relative_tolerance")}
+                parameters={k:definition[k] for k in ("mode","sampling_options","sample_size","absolute_tolerance","relative_tolerance","comparison_options")}
             else:
                 identifiers=[target]
                 parameters=dict(options)
             sources=[]
+            columns=[]
             for identifier in identifiers:
                 dataset=get(m.datasets,identifier)
+                columns.append(dataset["metadata"].get("columns",{}))
                 connection=get(m.connections,dataset["connection_id"])
                 if not connection["is_active"]:
                     raise DomainError(409,"connection_inactive","Uma conexão está desativada.")
                 sources.append({k:dataset[k] for k in ("connection_id","schema_name","table_name")}|{"dataset_id":identifier})
+            if kind=="comparison" and compact_options(parameters["comparison_options"]):
+                at=datetime.now(timezone.utc)
+                parameters["resolved_scope"]=resolve_scope(parameters["comparison_options"],at)
+                validate_options(parameters["comparison_options"],columns,parameters["mode"],parameters["resolved_scope"])
+                for source,metadata in zip(sources,columns):
+                    source["expected_columns"]=metadata_signature(metadata)
             parameters.update(sources=sources,request_fingerprint=fingerprint)
             values={"kind":kind,"comparison_id":target if kind=="comparison" else None,
                 "dataset_id":target if kind=="profile" else None,"parameters":json_safe(parameters),"idempotency_key":key}
@@ -97,7 +106,7 @@ class Queue:
                 raise ValueError("Resultado não corresponde à execução.")
             public=json_safe(result)
             measured=datetime.fromisoformat(result["finished_at"])
-            conn.execute(m.run_results.insert().values(run_id=identifier,format_version=4,
+            conn.execute(m.run_results.insert().values(run_id=identifier,format_version=result["format_version"],
                 conclusion=result["summary"]["status"],result=public))
             profiles,series=[],[]
             for dataset_id,source in zip(source_ids,result["sources"]):
@@ -105,7 +114,8 @@ class Queue:
                     profiles.append({"run_id":identifier,"dataset_id":dataset_id,"column_name":column,
                         "profile":json_safe({"metadata":source["columns"][column],"metrics":metric,
                             "sample_size":source["sample_size"],
-                            "sampling_scope":"all rows obtained for this source"})})
+                            "sampling_scope":"sample within frozen scope" if result.get("resolved_scope") else "all rows obtained for this source",
+                            **({"resolved_scope":result["resolved_scope"]} if result.get("resolved_scope") else {})})})
                     for name,value in metric.items():
                         if isinstance(value,bool) or value is not None and not isinstance(value,(int,float,Decimal)):
                             continue
@@ -143,17 +153,19 @@ def run_job(settings,identifier):
         with ExitStack() as stack:
             for frozen in parameters["sources"]:
                 row=queue.repository.get(m.connections,UUID(frozen["connection_id"]))
-                source=stack.enter_context(manager.session(row))
+                source=stack.enter_context(manager.session(row,comparison=run["kind"]=="comparison" and bool(compact_options(parameters.get("comparison_options")))))
                 schema=frozen["schema_name"]
                 table=frozen["table_name"]
                 if (schema,table) not in source["adapter"].list_tables(source["conn"]):
                     raise DomainError(404,"source_table_not_found","A tabela não está no catálogo atual.")
-                selected.append({**source,"schema":schema,"table":table})
+                selected.append({**source,"schema":schema,"table":table,
+                    **({"expected_columns":frozen["expected_columns"]} if "expected_columns" in frozen else {})})
             options=SamplingOptions(**parameters["sampling_options"])
             if run["kind"]=="comparison":
                 result=execute_comparison(selected,mode=parameters["mode"],options=options,
                     sample_size=parameters.get("sample_size"),absolute_tolerance=Decimal(parameters["absolute_tolerance"]),
-                    relative_tolerance=Decimal(parameters["relative_tolerance"]),preview_limit=0,execution_id=identifier)
+                    relative_tolerance=Decimal(parameters["relative_tolerance"]),preview_limit=0,execution_id=identifier,
+                    comparison_options=parameters.get("comparison_options"),resolved_scope=parameters.get("resolved_scope"))
             else:
                 result=execute_profile(selected[0],options=options,sample_size=parameters.get("sample_size"),execution_id=identifier)
         queue.publish(identifier,result,[UUID(s["dataset_id"]) for s in parameters["sources"]])

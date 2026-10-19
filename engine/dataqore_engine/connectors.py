@@ -6,12 +6,20 @@ import importlib.util
 import json
 from pathlib import Path
 import sqlite3
+from time import monotonic
 
 from cryptography.fernet import Fernet,InvalidToken
 
 from .core.db_adapters import get_adapter
 from .schemas import ConnectionTest
 from .storage import DomainError
+
+
+class ReadOnlySQLiteConnection(sqlite3.Connection):
+    def cursor(self, *args, **kwargs):
+        deadline=monotonic()+30
+        self.set_progress_handler(lambda: int(monotonic() >= deadline),1000)
+        return super().cursor(*args,**kwargs)
 
 
 def postgres(creds):
@@ -60,8 +68,11 @@ PLUGINS={"postgresql":Plugin("psycopg",postgres),"mysql":Plugin("pymysql",mysql)
     "sqlite":Plugin("sqlite3",None)}
 
 
-def source_failure(kind,error):
+def source_failure(kind,error,connected=True):
     """Classify source failures without returning/logging driver messages."""
+    if kind=="sqlite" and "user-defined function raised exception" in str(error).lower():
+        return DomainError(503,"source_scope_encoding_invalid",
+            "SQLite scope values must match their declared numeric/text types or canonical ISO date/timestamp encoding; timestamp precision is at most six fractional digits.")
     if kind=="mssql" and any(marker in str(error).lower() for marker in (
         "self-signed certificate","certificate verify failed","certificate chain was issued by an authority that is not trusted",
         "hostname mismatch","certificate subject name does not match")):
@@ -91,6 +102,10 @@ def source_failure(kind,error):
                     reason=category;break
             if reason is None and "database" in message and "does not exist" in message:
                 reason="database_not_found"
+    if reason is None and kind != "postgresql":
+        message=str(error).lower()
+        if any(marker in message for marker in ("timeout", "timed out", "ora-01013", "ora-03156", "dpy-4024", "maximum statement execution time exceeded")) or kind=="sqlite" and message=="interrupted":
+            reason="query_timeout" if connected else "connection_timeout"
     descriptions={
         "authentication_failed":"O PostgreSQL recusou a autenticação. Confira usuário e senha da fonte.",
         "access_denied":"O PostgreSQL recusou o acesso. Confira pg_hba.conf, usuário e database da fonte.",
@@ -108,24 +123,51 @@ def source_failure(kind,error):
     return DomainError(503,"source_unavailable","Falha ao consultar a fonte. Verifique acesso, configuração e permissões.")
 
 
-def prepare_read_session(conn,kind):
+def prepare_read_session(conn,kind,comparison=False):
     cursor=conn.cursor()
+    consistency="best_effort"
     try:
         if kind=="postgresql":
             cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
             cursor.execute("SET LOCAL statement_timeout = '30000ms'")
+            consistency="stable_snapshot"
         elif kind=="mysql":
-            cursor.execute("START TRANSACTION READ ONLY")
+            if comparison:
+                cursor.execute("SET SESSION MAX_EXECUTION_TIME = 30000")
+                cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
+                cursor.execute("SET time_zone = '+00:00'")
+            cursor.execute("START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY" if comparison else "START TRANSACTION READ ONLY")
+            if comparison:
+                consistency="transactional_snapshot_pending"
         elif kind=="sqlite":
             cursor.execute("PRAGMA query_only = ON")
+            if comparison:
+                cursor.execute("PRAGMA journal_mode")
+                journal=cursor.fetchone()
+                if journal and str(journal[0]).lower()=="wal":
+                    cursor.execute("BEGIN")
+                    consistency="stable_snapshot"
         elif kind=="oracle":
             conn.call_timeout=30000
             cursor.execute("SET TRANSACTION READ ONLY")
+            consistency="stable_snapshot"
         elif kind=="mssql":
             conn.timeout=30
             cursor.execute("SET LOCK_TIMEOUT 15000")
+            if comparison:
+                try:
+                    cursor.execute("SELECT snapshot_isolation_state FROM sys.databases WHERE name = DB_NAME()")
+                    enabled=cursor.fetchone()[0] == 1
+                    conn.rollback()
+                    if enabled:
+                        cursor.execute("SET TRANSACTION ISOLATION LEVEL SNAPSHOT")
+                        consistency="stable_snapshot"
+                except Exception:
+                    conn.rollback()
+                cursor.execute("SET LOCK_TIMEOUT 15000")
     finally:
         cursor.close()
+    return consistency
 
 
 class SourceManager:
@@ -167,7 +209,7 @@ class SourceManager:
         return path
 
     @contextmanager
-    def session(self,row):
+    def session(self,row,comparison=False):
         if not row["is_active"]:
             raise DomainError(409,"connection_inactive","A conexão está desativada.")
         kind=row["connector"]
@@ -176,18 +218,19 @@ class SourceManager:
         try:
             if kind=="sqlite":
                 path=self.sqlite_path(creds["database"])
-                conn=sqlite3.connect(path.as_uri()+"?mode=ro",uri=True,timeout=30)
+                conn=sqlite3.connect(path.as_uri()+"?mode=ro",uri=True,timeout=30,factory=ReadOnlySQLiteConnection)
             else:
                 plugin=PLUGINS[kind]
                 if importlib.util.find_spec(plugin.module) is None:
                     raise DomainError(503,"driver_unavailable","O driver desta fonte não está instalado.")
                 conn=plugin.opener(creds)
-            prepare_read_session(conn,kind)
-            yield {"connection":row["name"],"creds":{"type":kind},"conn":conn,"adapter":get_adapter(kind)}
+            consistency=prepare_read_session(conn,kind,comparison=comparison)
+            yield {"connection":row["name"],"creds":{"type":kind},"conn":conn,"adapter":get_adapter(kind),
+                "read_consistency":consistency}
         except DomainError:
             raise
         except Exception as error:
-            raise source_failure(kind,error) from None
+            raise source_failure(kind,error,connected=conn is not None) from None
         finally:
             if conn is not None:
                 try:

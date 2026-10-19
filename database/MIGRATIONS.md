@@ -136,9 +136,15 @@ npm run db:baseline --prefix controller
 npm run db:migrate --prefix controller
 ```
 
-`verify` confere **o contrato inicial**, para adoção do baseline. Depois de
-evoluir o schema, use `status` e novas revisões; não registre novamente o
-baseline nem altere seus contratos históricos.
+`verify` confere o catálogo esperado para a revisão registrada. Sem histórico,
+confere o contrato inicial para adoção do baseline. O motor também possui um
+catálogo versionado para `0002_comparison_options`, obtido em PostgreSQL
+descartável. Não registre novamente o baseline nem altere os contratos históricos.
+
+A revisão `0002_comparison_options` acrescenta apenas uma coluna JSONB com
+padrão vazio e CHECK em `engine.comparison_definitions`. Consulte
+[recortes e chaves de negócio](../docs/SCOPED_COMPARISONS.md) antes de atualizar
+um ambiente existente. Não há migration do controller nesta entrega.
 
 ## 5. Ambiente novo
 

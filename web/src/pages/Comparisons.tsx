@@ -10,8 +10,19 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { api, allPages, patch, post, type Model, type Page } from "../api";
-import { normalizeTolerance, fractionToPercent, percentToFraction } from "../lib/tolerances";
+import {
+  normalizeTolerance,
+  fractionToPercent,
+  percentToFraction,
+} from "../lib/tolerances";
 import { ToleranceHelp } from "../components/ToleranceHelp";
+import {
+  ScopeEditor,
+  MappingEditor,
+  ScopeSummary,
+  FrozenComparisonContext,
+  type ComparisonOptions,
+} from "../components/ComparisonOptionsEditor";
 import {
   Badge,
   Button,
@@ -201,8 +212,16 @@ export function ComparisonDetail() {
         : false,
   });
   const latestSuccessful = useQuery({
-    queryKey: ["comparison-latest-success", id, runs.data?.items[0]?.id, runs.data?.items[0]?.status],
-    queryFn: () => api<Page<Model<"RunOut">>>(`/runs?comparison_id=${id}&status=succeeded&limit=1`),
+    queryKey: [
+      "comparison-latest-success",
+      id,
+      runs.data?.items[0]?.id,
+      runs.data?.items[0]?.status,
+    ],
+    queryFn: () =>
+      api<Page<Model<"RunOut">>>(
+        `/runs?comparison_id=${id}&status=succeeded&limit=1`,
+      ),
   });
   const latest = latestSuccessful.data?.items[0];
   const result = useQuery({
@@ -337,7 +356,13 @@ export function ComparisonDetail() {
                       <dt>Method</dt>
                       <dd>{c.data.mode}</dd>
                       <dt>Key alignment</dt>
-                      <dd>Automatic PK / non-null UNIQUE</dd>
+                      <dd>
+                        {c.data.comparison_options?.business_key?.length
+                          ? c.data.comparison_options.business_key
+                              .map((p) => `${p.left} ↔ ${p.right}`)
+                              .join(" + ")
+                          : "Automatic PK / non-null UNIQUE"}
+                      </dd>
                     </dl>
                   </Card>
                 </div>
@@ -378,26 +403,38 @@ export function ComparisonDetail() {
             ) : tab === "Rules" ? (
               <Card title="Comparison rules">
                 <dl>
-                  <dt>Absolute tolerance (units) <ToleranceHelp /></dt>
+                  <dt>
+                    Absolute tolerance (units) <ToleranceHelp />
+                  </dt>
                   <dd>{c.data.absolute_tolerance}</dd>
-                  <dt>Relative tolerance (%) <ToleranceHelp relative /></dt>
+                  <dt>
+                    Relative tolerance (%) <ToleranceHelp relative />
+                  </dt>
                   <dd>{fractionToPercent(c.data.relative_tolerance)}%</dd>
                   <dt>Strings</dt>
                   <dd>Exact; case and whitespace preserved</dd>
                   <dt>Column correspondence</dt>
-                  <dd>Automatic name matching</dd>
+                  <dd>Manual pairs followed by automatic name matching</dd>
+                  <dt>Scope & mapping configuration</dt>
+                  <dd>
+                    <JsonView value={c.data.comparison_options} />
+                  </dd>
                 </dl>
               </Card>
             ) : (
-              <Card title="Sampling settings">
-                <JsonView
-                  value={{
-                    mode: c.data.mode,
-                    sample_size: c.data.sample_size,
-                    ...c.data.sampling_options,
-                  }}
-                />
-              </Card>
+              <>
+                <FrozenComparisonContext result={r} />
+                <Card title="Sampling settings">
+                  <JsonView
+                    value={{
+                      mode: c.data.mode,
+                      sample_size: c.data.sample_size,
+                      ...c.data.sampling_options,
+                      comparison_options: c.data.comparison_options,
+                    }}
+                  />
+                </Card>
+              </>
             )}
           </>
         )
@@ -410,6 +447,12 @@ export function Wizard() {
   const navigate = useNavigate();
   const cache = useQueryClient();
   const [step, setStep] = useState(1);
+  const [comparisonOptions, setComparisonOptions] = useState<ComparisonOptions>(
+    {},
+  );
+  const [preview, setPreview] = useState<Model<"ComparisonPreviewOut"> | null>(
+    null,
+  );
   const [name, setName] = useState("");
   const [left, setLeft] = useState("");
   const [right, setRight] = useState("");
@@ -435,45 +478,70 @@ export function Wizard() {
     if (existing.data) {
       const c = existing.data;
       setName(c.name);
+      setComparisonOptions(c.comparison_options ?? {});
       setLeft(c.left_dataset_id);
       setRight(c.right_dataset_id);
       setMode(c.mode);
       setAbsolute(String(c.absolute_tolerance));
       setRelative(fractionToPercent(c.relative_tolerance));
-      setSampling({ ...defaults, ...Object.fromEntries(Object.entries(c.sampling_options ?? {}).filter(([, value]) => value != null)) });
+      setSampling({
+        ...defaults,
+        ...Object.fromEntries(
+          Object.entries(c.sampling_options ?? {}).filter(
+            ([, value]) => value != null,
+          ),
+        ),
+      });
       setSize(c.sample_size ? String(c.sample_size) : "");
     }
   }, [existing.data]);
   const l = datasets.data?.items.find((d) => d.id === left);
   const r = datasets.data?.items.find((d) => d.id === right);
   const columns = (d?: Model<"DatasetOut">) =>
-    Object.keys((d?.metadata as any)?.columns ?? {});
-  const common = columns(l).filter((n) =>
-    columns(r).some((x) => x.toLowerCase() === n.toLowerCase()),
-  );
+    (d?.metadata as any)?.columns ?? {};
+  function values() {
+    return {
+      name,
+      left_dataset_id: left,
+      right_dataset_id: right,
+      mode,
+      absolute_tolerance: normalizeTolerance(absolute),
+      relative_tolerance: percentToFraction(relative),
+      sampling_options: sampling,
+      sample_size: size ? Number(size) : null,
+      comparison_options: comparisonOptions,
+    };
+  }
+  async function refreshPreview() {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await post<Model<"ComparisonPreviewOut">>(
+        "/comparisons/preview",
+        values(),
+      );
+      setPreview(result);
+      return true;
+    } catch (e) {
+      setError(e);
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
   async function save(run: boolean) {
     setError(null);
     setBusy(true);
     try {
       let comparison = saved;
       if (!comparison) {
-        const values = {
-          name,
-          left_dataset_id: left,
-          right_dataset_id: right,
-          mode,
-          absolute_tolerance: normalizeTolerance(absolute),
-          relative_tolerance: percentToFraction(relative),
-          sampling_options: sampling,
-          sample_size: size ? Number(size) : null,
-        };
-        if (!size) delete (values as any).sample_size;
+        const payload = values();
         const c = id
           ? await patch<Model<"ComparisonOut">>("/comparisons/" + id, {
-              ...values,
+              ...payload,
               sample_size: size ? Number(size) : null,
             })
-          : await post<Model<"ComparisonOut">>("/comparisons", values);
+          : await post<Model<"ComparisonOut">>("/comparisons", payload);
         comparison = c.id;
         setSaved(c.id);
         await cache.invalidateQueries({ queryKey: ["comparisons"] });
@@ -519,7 +587,7 @@ export function Wizard() {
         </div>
       )}
       <div className="wizard-steps">
-        {["Datasets", "Rules", "Review"].map((label, i) => (
+        {["Datasets & scope", "Mapping & rules", "Review"].map((label, i) => (
           <div
             key={label}
             className={step === i + 1 ? "current" : step > i + 1 ? "done" : ""}
@@ -536,8 +604,8 @@ export function Wizard() {
               <small>
                 {
                   [
-                    "Choose sources",
-                    "Automatic matching & checks",
+                    "Sources & equivalent criteria",
+                    "Column pairs & identity",
                     "Save or run",
                   ][i]
                 }
@@ -547,73 +615,110 @@ export function Wizard() {
         ))}
       </div>
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           if (left === right) {
             setError(Error("Choose two distinct datasets."));
             return;
           }
           if (step === 2) {
-            try { normalizeTolerance(absolute); percentToFraction(relative); }
-            catch (error) { setError(error); return; }
+            try {
+              normalizeTolerance(absolute);
+              percentToFraction(relative);
+            } catch (error) {
+              setError(error);
+              return;
+            }
           }
           setError(null);
-          if (step < 3) setStep(step + 1);
+          if (step === 2) {
+            if (await refreshPreview()) setStep(3);
+          } else if (step < 3) setStep(step + 1);
           else void save(true);
         }}
       >
         <fieldset disabled={busy || !!saved} className="wizard-fieldset">
           {step === 1 ? (
+            <>
+              <div className="content-columns">
+                <Card
+                  title="Datasets to compare"
+                  subtitle="Select two registered source tables."
+                >
+                  <div className="dataset-pair">
+                    {[
+                      ["A", "Source dataset", left, setLeft],
+                      ["B", "Comparison dataset", right, setRight],
+                    ].map(([badge, title, value, setter]: any) => (
+                      <div className="dataset-choice" key={badge}>
+                        <h3>
+                          <span className="badge success">{badge}</span> {title}
+                        </h3>
+                        <label>
+                          Dataset
+                          <select
+                            aria-label="Dataset"
+                            value={value}
+                            onChange={(e) => {
+                              setter(e.target.value);
+                              setComparisonOptions({});
+                              setPreview(null);
+                            }}
+                            required
+                          >
+                            <option value="">Choose dataset</option>
+                            {datasets.data?.items.map((d) => (
+                              <option key={d.id} value={d.id}>
+                                {d.schema_name ? d.schema_name + "." : ""}
+                                {d.table_name} · {d.id.slice(0, 8)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <Link to="/catalog">Browse source catalog</Link>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="notice">
+                    Review the equivalent scope below. Column pairs and business
+                    keys are selected in the next step.
+                  </p>
+                </Card>
+                <Card title="Comparison settings">
+                  <label>
+                    Comparison name
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      maxLength={255}
+                    />
+                  </label>
+                </Card>
+              </div>
+              <ScopeEditor
+                value={comparisonOptions}
+                onChange={(v) => {
+                  setComparisonOptions(v);
+                  setPreview(null);
+                }}
+                left={columns(l)}
+                right={columns(r)}
+              />
+            </>
+          ) : step === 2 ? (
             <div className="content-columns">
-              <Card
-                title="Datasets to compare"
-                subtitle="Select two registered source tables."
-              >
-                <div className="dataset-pair">
-                  {[
-                    ["A", "Source dataset", left, setLeft],
-                    ["B", "Comparison dataset", right, setRight],
-                  ].map(([badge, title, value, setter]: any) => (
-                    <div className="dataset-choice" key={badge}>
-                      <h3>
-                        <span className="badge success">{badge}</span> {title}
-                      </h3>
-                      <label>
-                        Dataset
-                        <select
-                          aria-label="Dataset"
-                          value={value}
-                          onChange={(e) => setter(e.target.value)}
-                          required
-                        >
-                          <option value="">Choose dataset</option>
-                          {datasets.data?.items.map((d) => (
-                            <option key={d.id} value={d.id}>
-                              {d.schema_name ? d.schema_name + "." : ""}
-                              {d.table_name} · {d.id.slice(0, 8)}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <Link to="/catalog">Browse source catalog</Link>
-                    </div>
-                  ))}
-                </div>
-                <p className="notice">
-                  Column correspondence is automatic. Matching names make the
-                  evidence easier to interpret.
-                </p>
-              </Card>
-              <Card title="Comparison settings">
-                <label>
-                  Comparison name
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    maxLength={255}
-                  />
-                </label>
+              <MappingEditor
+                mode={mode}
+                value={comparisonOptions}
+                onChange={(v) => {
+                  setComparisonOptions(v);
+                  setPreview(null);
+                }}
+                left={columns(l)}
+                right={columns(r)}
+              />
+              <Card title="Validation rules">
                 <label>
                   Strategy
                   <select
@@ -627,7 +732,10 @@ export function Wizard() {
                     <option value="matched_keys">
                       Matched keys — require safe alignment
                     </option>
-                    <option value="independent_random">
+                    <option
+                      value="independent_random"
+                      disabled={!!comparisonOptions.business_key?.length}
+                    >
                       Independent random — profiles only
                     </option>
                   </select>
@@ -636,84 +744,74 @@ export function Wizard() {
                   Keys are discovered from compatible PK or non-null UNIQUE
                   constraints. Profiles alone cannot prove row correspondence.
                 </p>
-              </Card>
-            </div>
-          ) : step === 2 ? (
-            <div className="content-columns">
-              <Card
-                title="Automatic column correspondence"
-                subtitle="Matched by common column names. Compatibility is checked at execution."
-              >
-                <div className="table-scroll">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Source column</th>
-                        <th>Comparison column</th>
-                        <th>Method</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {common.map((n) => (
-                        <tr key={n}>
-                          <td>{n}</td>
-                          <td>
-                            {columns(r).find(
-                              (x) => x.toLowerCase() === n.toLowerCase(),
-                            )}
-                          </td>
-                          <td>
-                            <Badge value="name match" />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {!common.length && (
-                  <Empty title="No common column names">
-                    Review source metadata before proceeding.
-                  </Empty>
-                )}
-              </Card>
-              <Card title="Validation rules">
+
                 <div className="tolerance-field">
-                  <div className="tolerance-label"><label htmlFor="absolute-tolerance">Absolute tolerance (units)</label><ToleranceHelp /></div>
+                  <div className="tolerance-label">
+                    <label htmlFor="absolute-tolerance">
+                      Absolute tolerance (units)
+                    </label>
+                    <ToleranceHelp />
+                  </div>
                   <input
                     id="absolute-tolerance"
                     value={absolute}
-                    onChange={(e) => { setAbsolute(e.target.value); setError(null); }}
+                    onChange={(e) => {
+                      setAbsolute(e.target.value);
+                      setError(null);
+                    }}
                     required
                     inputMode="decimal"
                     aria-describedby="absolute-tolerance-hint"
                   />
-                  <p id="absolute-tolerance-hint" className="muted small">Fixed difference in each numeric column’s units, e.g. 0.50.</p>
+                  <p id="absolute-tolerance-hint" className="muted small">
+                    Fixed difference in each numeric column’s units, e.g. 0.50.
+                  </p>
                 </div>
                 <div className="tolerance-field">
-                  <div className="tolerance-label"><label htmlFor="relative-tolerance">Relative tolerance (%)</label><ToleranceHelp relative /></div>
+                  <div className="tolerance-label">
+                    <label htmlFor="relative-tolerance">
+                      Relative tolerance (%)
+                    </label>
+                    <ToleranceHelp relative />
+                  </div>
                   <div className="percentage-input">
-                  <input
-                    id="relative-tolerance"
-                    value={relative}
-                    onChange={(e) => { setRelative(e.target.value); setError(null); }}
-                    required
-                    inputMode="decimal"
-                    aria-describedby="relative-tolerance-hint"
-                  />
+                    <input
+                      id="relative-tolerance"
+                      value={relative}
+                      onChange={(e) => {
+                        setRelative(e.target.value);
+                        setError(null);
+                      }}
+                      required
+                      inputMode="decimal"
+                      aria-describedby="relative-tolerance-hint"
+                    />
                     <span aria-hidden="true">%</span>
                   </div>
-                  <p id="relative-tolerance-hint" className="muted small">Enter 1 for 1%. Use a dot or comma for decimals; no thousands separators.</p>
+                  <p id="relative-tolerance-hint" className="muted small">
+                    Enter 1 for 1%. Use a dot or comma for decimals; no
+                    thousands separators.
+                  </p>
                 </div>
                 <p className="notice">
-                  Numeric values match when their difference is within the larger of the absolute and relative limits. The limits are not added. Both at zero means exact numeric equality. These rules do not set a percentage of differing records.
+                  Numeric values match when their difference is within the
+                  larger of the absolute and relative limits. The limits are not
+                  added. Both at zero means exact numeric equality. These rules
+                  do not set a percentage of differing records.
                 </p>
                 <dl>
                   <dt>Strings</dt>
                   <dd>Exact match, preserving case and spaces</dd>
                   <dt>NULL handling</dt>
-                  <dd>NULL equals NULL; non-NULL values are compared normally</dd>
+                  <dd>
+                    NULL equals NULL; non-NULL values are compared normally
+                  </dd>
                   <dt>Matching key</dt>
-                  <dd>Automatic and checked at execution</dd>
+                  <dd>
+                    {comparisonOptions.business_key?.length
+                      ? "Explicit business key; full-scope validation at execution"
+                      : "Automatic and checked at execution"}
+                  </dd>
                 </dl>
               </Card>
             </div>
@@ -722,7 +820,10 @@ export function Wizard() {
               <Card title="Comparison summary" subtitle={name}>
                 <div className="stats-grid">
                   <Stat label="Datasets" value="2" />
-                  <Stat label="Common names" value={common.length} />
+                  <Stat
+                    label="Column pairs"
+                    value={preview?.mapping.length ?? "Preview required"}
+                  />
                 </div>
                 <dl>
                   <dt>Source A</dt>
@@ -736,6 +837,14 @@ export function Wizard() {
                     {absolute} units absolute / {relative}% relative
                   </dd>
                 </dl>
+                <ScopeSummary preview={preview} />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void refreshPreview()}
+                >
+                  Refresh preview
+                </Button>
                 <p className="notice">
                   The run freezes this definition and selected tables. It
                   resolves current credentials when execution starts. All

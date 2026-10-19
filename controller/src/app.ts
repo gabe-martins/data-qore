@@ -28,6 +28,21 @@ import type {
 import { engineSpec, openapi } from "./openapi.js";
 const COOKIE = "dataqore_refresh";
 const messages: Record<string, string> = {
+  invalid_comparison_options: "Review the scope, mapping and business key against source metadata.",
+  invalid_column_mapping: "Each existing column can be mapped only once. Review both sides.",
+  incompatible_column_mapping: "The selected columns have incompatible types. Mapping does not convert values.",
+  invalid_business_key: "Select distinct mapped columns with compatible key types and use key alignment.",
+  scope_column_not_found: "A scope column is missing. Refresh the dataset and review its filters.",
+  invalid_scope_type: "The scope column types do not preserve equivalent criteria on both sources.",
+  invalid_scope_value: "A filter value or operator is incompatible with its column type. Decimal values must use a dot.",
+  invalid_scope_period: "Use increasing period bounds with explicit offsets, or complete calendar dates.",
+  ambiguous_scope_period: "The timestamp boundary is ambiguous in the selected timezone. Choose unambiguous bounds.",
+  naive_timezone_required: "Specify how timestamps without a timezone must be interpreted on each source.",
+  source_timezone_required: "MySQL TIMESTAMP scopes require UTC interpretation; comparison sessions read these columns in UTC.",
+  source_scope_encoding_invalid: "SQLite scope values must match declared numeric/text types or canonical ISO date/timestamp encoding, with at most six fractional digits.",
+  scope_parameter_budget_exceeded: "Reduce the number of filter values to stay within the query parameter budget.",
+  source_schema_changed: "Source metadata changed. Refresh the datasets and review the comparison.",
+  comparison_key_unavailable: "No compatible PK / non-null UNIQUE key is available. Select mapped business-key columns or choose an automatic/profile strategy.",
   not_found: "Resource not found.",
   validation_error: "Invalid payload or parameters.",
   resource_conflict: "Duplicate resource or conflicting references.",

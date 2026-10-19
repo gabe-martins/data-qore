@@ -126,6 +126,12 @@ def differences(expected, actual, prefix=""):
 
 def _verify(connection, service):
     path = Path(__file__).with_name("baselines") / f"{service}.json"
+    if service == "engine":
+        exists = connection.execute("SELECT to_regclass('engine.alembic_version')").fetchone()[0]
+        if exists:
+            versions = connection.execute("SELECT version_num FROM engine.alembic_version").fetchall()
+            if versions == [("0002_comparison_options",)]:
+                path = path.with_name("engine_0002_comparison_options.json")
     expected = json.loads(path.read_text())
     actual = snapshot(connection, service)
     problems = differences(expected, actual)
