@@ -106,10 +106,16 @@ small {
   height: 45px;
   align-items: center;
   justify-content: center;
-  background: var(--primitive-green-700);
+  background: var(--semantic-background-surface);
   border-radius: 13px;
   color: var(--primitive-neutral-0);
   flex-shrink: 0;
+}
+.brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .sidebar nav {
   display: flex;
@@ -173,7 +179,9 @@ small {
 }
 .wordmark {
   margin-left: 20px;
-  font-size: 18px;
+  width: 138px;
+  height: auto;
+  flex-shrink: 0;
 }
 .page {
   padding: 30px 32px;
@@ -821,8 +829,21 @@ summary {
   position: relative;
   overflow: hidden;
 }
-.login-brand .brand-mark {
+.login-logo {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 12px 18px;
   margin-bottom: 35px;
+  border-radius: 13px;
+  background: var(--semantic-background-surface);
+}
+.login-logo img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.login-mobile-logo {
+  display: none;
 }
 .login-brand h1 {
   font-size: 55px;
@@ -866,6 +887,7 @@ summary {
   height: 95%;
 }
 .login-panel {
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -987,6 +1009,12 @@ select:focus-visible {
   .login-brand {
     display: none;
   }
+  .login-mobile-logo {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 28px;
+  }
   .login-panel {
     min-height: 100vh;
   }
@@ -1027,7 +1055,7 @@ select:focus-visible {
     display: none;
   }
   .wordmark {
-    font-size: 15px;
+    width: 110px;
   }
   .product-title {
     font-size: 15px;
