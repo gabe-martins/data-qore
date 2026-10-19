@@ -15,6 +15,8 @@ class FullStackTests(TemporaryPostgres):
     def test_browser_and_controller_against_real_disposable_services(self):
         self.command('app','baseline')
         self.command('app','apply')
+        self.command('engine','baseline')
+        self.command('engine','apply')
         engine_port,controller_port,web_port=free_port(),free_port(),free_port()
         source=self.directory/'sources';source.mkdir()
         for side in ('left','right'):
@@ -26,6 +28,13 @@ class FullStackTests(TemporaryPostgres):
                 db.execute('CREATE TABLE records(id integer, amount numeric)')
                 if side!='empty':
                     db.executemany('INSERT INTO records VALUES(?,?)',[(1,10),(2,20)])
+        for side in ('business-left','business-right'):
+            with sqlite3.connect(source/f'{side}.sqlite') as db:
+                cols='account text, item integer, day date, batch text, amount numeric' if side=='business-left' else 'customer text, line integer, loaded date, batch text, total numeric'
+                db.execute('CREATE TABLE records('+cols+')')
+                db.executemany('INSERT INTO records VALUES(?,?,?,?,?)',[
+                    ('A',1,'2026-10-01','B',10),('A',2,'2026-10-01','B',20),
+                    ('A',1,'2026-09-30','B',999),(None,9,'2026-10-01','OTHER',999)])
         env=os.environ.copy()
         for name in ('MIGRATION_DATABASE_URL','DATAQORE_ENV_FILE'):
             env.pop(name,None)
@@ -112,6 +121,6 @@ class FullStackTests(TemporaryPostgres):
             self.assertTrue(audit)
         with self.connect('engine') as c:
             rows=c.execute('SELECT result FROM engine.run_results').fetchall()
-            self.assertEqual(len(rows),5)
+            self.assertEqual(len(rows),6)
             self.assertNotIn('sample_rows',json.dumps(rows))
-            self.assertEqual(c.execute('SELECT count(*) FROM engine.runs WHERE status=\'succeeded\'').fetchone()[0],5)
+            self.assertEqual(c.execute('SELECT count(*) FROM engine.runs WHERE status=\'succeeded\'').fetchone()[0],6)

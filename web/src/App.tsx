@@ -111,7 +111,7 @@ export function App() {
     <div className={"app-shell " + (menu ? "menu-open" : "")}>
       <aside className="sidebar">
         <NavLink className="brand-mark" to="/" aria-label="DataQore overview">
-          <Database size={27} />
+          <img src="/branding/dataqore-symbol.svg" alt="" width="45" height="45" />
         </NavLink>
         <nav aria-label="Main navigation">
           {links.map(([to, label, Icon]) => (
@@ -154,7 +154,7 @@ export function App() {
           </button>
           <div className="product-title">
             <div className="brand-mark">
-              <Database size={25} />
+              <img src="/branding/dataqore-symbol.svg" alt="" width="40" height="40" />
             </div>
             <strong>
               ADQ <span>— Advanced Data Quality</span>
@@ -164,7 +164,7 @@ export function App() {
             <UserRound size={21} />
             <span>{user.display_name}</span>
           </NavLink>
-          <strong className="wordmark">DataQore</strong>
+          <img className="wordmark" src="/branding/dataqore-logo.svg" alt="DataQore" width="138" height="30" />
         </header>
         <main className="page">
           <Suspense fallback={<Loading />}>
@@ -205,8 +205,8 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
   return (
     <div className="login-screen">
       <section className="login-brand">
-        <div className="brand-mark">
-          <Database size={32} />
+        <div className="login-logo">
+          <img src="/branding/dataqore-logo.svg" alt="DataQore" width="276" height="60" />
         </div>
         <p className="eyebrow">DATAQORE / ADQ</p>
         <h1>Trust your data.</h1>
@@ -242,6 +242,7 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
             }
           }}
         >
+          <img className="login-mobile-logo" src="/branding/dataqore-logo.svg" alt="DataQore" width="230" height="50" />
           <p className="eyebrow">ADVANCED DATA QUALITY</p>
           <h1>Welcome back</h1>
           <p className="muted">Sign in to your local DataQore account.</p>

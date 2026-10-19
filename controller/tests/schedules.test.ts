@@ -119,7 +119,15 @@ test("authenticated schedule API and real scheduled run use the engine queue", {
     const right = await engine("/connections", { name: "Scheduled right", connector: "sqlite", credentials: { database: "right.sqlite" } });
     const a = await engine("/datasets", { connection_id: left.id, schema_name: "", table_name: "records" });
     const b = await engine("/datasets", { connection_id: right.id, schema_name: "", table_name: "records" });
-    const comparison = await engine("/comparisons", { name: "Scheduled acceptance", left_dataset_id: a.id, right_dataset_id: b.id });
+    const comparison = await engine("/comparisons", {
+      name: "Scheduled acceptance", left_dataset_id: a.id, right_dataset_id: b.id,
+      absolute_tolerance: "0.50", relative_tolerance: "0.01",
+      comparison_options: {
+        mapping: [{ left: "amount", right: "amount" }],
+        business_key: [{ left: "id", right: "id" }],
+        scope: { filters: [{ left: "status", right: "status", operator: "eq", value: "paid" }] },
+      },
+    });
     const preview = await client("/schedules/preview", { cron_expression: "0 8 * * 1-5", timezone: "America/Sao_Paulo" }, token);
     assert.equal(preview.status, 200); assert.equal(((await preview.json()) as any).next_runs.length, 3);
     assert.equal((await client("/schedules/preview", { cron_expression: "* * * * * *" }, token)).status, 422);
@@ -139,6 +147,16 @@ test("authenticated schedule API and real scheduled run use the engine queue", {
       if (run.status === "succeeded") break;
       assert.notEqual(run.status, "failed"); assert.ok(n < 99); await new Promise(r => setTimeout(r, 200));
     }
+    const resultResponse = await fetch(config.engineUrl + "/v1/runs/" + dispatch.runId + "/result", {
+      headers: { "X-API-Key": config.engineKey },
+    });
+    assert.equal(resultResponse.status, 200);
+    const resultBody = await resultResponse.json() as any;
+    const result = resultBody.result;
+    assert.equal(result.format_version, 5);
+    assert.deepEqual(result.comparison_options, comparison.comparison_options);
+    assert.deepEqual(result.key_validation.map((v: any) => v.total_rows), [1, 1]);
+    assert.ok(result.key_validation.every((v: any) => v.valid));
     const paused = await client("/schedules/" + id, { is_active: false }, token, "PATCH");
     assert.equal(paused.status, 200); assert.equal(((await paused.json()) as any).is_active, false);
   } finally { if (id) await db.schedule.delete({ where: { id } }); await db.$disconnect(); }

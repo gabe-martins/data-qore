@@ -106,10 +106,16 @@ small {
   height: 45px;
   align-items: center;
   justify-content: center;
-  background: var(--primitive-green-700);
+  background: var(--semantic-background-surface);
   border-radius: 13px;
   color: var(--primitive-neutral-0);
   flex-shrink: 0;
+}
+.brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .sidebar nav {
   display: flex;
@@ -173,7 +179,9 @@ small {
 }
 .wordmark {
   margin-left: 20px;
-  font-size: 18px;
+  width: 138px;
+  height: auto;
+  flex-shrink: 0;
 }
 .page {
   padding: 30px 32px;
@@ -308,6 +316,18 @@ label:has(input:required)::after {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0 20px;
+}
+.scope-filter {
+  min-width: 0;
+  border: 1px solid var(--semantic-border-default);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+.scope-filter legend {
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 600;
 }
 .check-label {
   display: flex;
@@ -821,8 +841,21 @@ summary {
   position: relative;
   overflow: hidden;
 }
-.login-brand .brand-mark {
+.login-logo {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 12px 18px;
   margin-bottom: 35px;
+  border-radius: 13px;
+  background: var(--semantic-background-surface);
+}
+.login-logo img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.login-mobile-logo {
+  display: none;
 }
 .login-brand h1 {
   font-size: 55px;
@@ -866,6 +899,7 @@ summary {
   height: 95%;
 }
 .login-panel {
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -987,6 +1021,12 @@ select:focus-visible {
   .login-brand {
     display: none;
   }
+  .login-mobile-logo {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 28px;
+  }
   .login-panel {
     min-height: 100vh;
   }
@@ -1027,7 +1067,7 @@ select:focus-visible {
     display: none;
   }
   .wordmark {
-    font-size: 15px;
+    width: 110px;
   }
   .product-title {
     font-size: 15px;
@@ -1163,3 +1203,13 @@ select:focus-visible {
 .schedule-mode legend { font-weight: 600; padding: 0 6px; }
 .schedule-mode input[type="radio"] { width: 16px; height: 16px; min-height: 16px; padding: 0; margin: 0; flex-shrink: 0; accent-color: var(--semantic-action-primary); }
 .schedule-mode .check-label { margin: 4px 0; white-space: nowrap; }
+.tolerance-field { margin-bottom: 20px; }
+.tolerance-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tolerance-label label { margin: 0; }
+.percentage-input { position: relative; }
+.percentage-input input { padding-right: 36px; }
+.percentage-input > span { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--semantic-text-secondary); }
+.help-tip { position: relative; display: inline-flex; vertical-align: middle; }
+.help-tip-button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; color: var(--semantic-text-secondary); background: transparent; }
+.help-tip-button:hover { background: var(--semantic-background-subtle); }
+.help-tip-content { position: fixed; width: min(320px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; z-index: 40; padding: 14px; border: 1px solid var(--semantic-border-default); border-radius: 9px; background: var(--semantic-background-surface); color: var(--semantic-text-primary); box-shadow: 0 8px 24px #172c3c26; font-size: 12px; font-weight: 400; line-height: 1.6; white-space: normal; }

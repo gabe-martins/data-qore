@@ -1,56 +1,109 @@
+<p align="center">
+  <img src="web/public/branding/dataqore-logo.svg" alt="DataQore" width="360">
+</p>
+
 # DataQore
 
-Trust your data.
+**Trust your data.**
 
-**DataQore** é o nome comercial da aplicação. Sua funcionalidade de análise e
-comparação de dados é **ADQ — Advanced Data Quality**. O repositório mantém
-o nome `data-qore`; databases e contas de serviço usam o prefixo `dataqore`.
+DataQore is a web platform for understanding data quality, comparing datasets,
+and reviewing results in one place. Its Advanced Data Quality (ADQ) workspace
+helps you explore your data and follow up on differences with clear reports.
 
-## Início rápido local
+## What you can do
+
+- Connect your data sources and browse their tables.
+- Organize datasets in a shared catalog.
+- Run data profiles and review quality indicators.
+- Compare datasets and review reported differences.
+- Track runs and revisit previous results.
+
+PostgreSQL and SQLite are included by default. MySQL, Oracle, and SQL Server
+require the optional drivers described in the [engine setup guide](engine/README.md#optional-connectors).
+
+## Get started
+
+### 1. Check the requirements
+
+Use Linux with Python 3.12 or later (including `venv` and pip), Node.js 24 or
+later, npm, and an accessible PostgreSQL 15 or later server. The local launcher
+also requires `flock` from util-linux. Internet access is needed to install
+packages the first time.
+
+Run the following commands from the `data-qore` project directory.
+
+### 2. Prepare the databases
+
+Follow the [database setup guide](database/README.md#first-time-setup) to create
+the application's databases and service accounts. If you already have a working
+installation, keep its databases and configuration.
+
+The launcher does **not** create databases or apply migrations.
+
+### 3. Configure your local environment
+
+For a new installation, copy the examples without overwriting existing files:
+
+```bash
+cp -n engine.env.example engine.env
+cp -n controller.env.example controller.env
+```
+
+Set `DATABASE_URL` in each file to the corresponding database address and service
+account from the database guide. Replace the host, port, and password placeholders.
+If you use SQLite sources, set `SQLITE_ALLOWED_ROOT` to their absolute directory.
+Keep both files private and out of version control.
+
+The launcher prepares missing internal secrets and preserves valid existing
+settings. Keep the original encryption key when reusing an existing installation.
+
+### 4. Start DataQore
 
 ```bash
 ./dataqore.sh
 ```
 
-Prepara dependências, preserva os arquivos de ambiente e inicia os quatro
-serviços em segundo plano. Abra http://127.0.0.1:5173/.
-Use `./dataqore.sh status`, `./dataqore.sh logs`, `./dataqore.sh stop` ou
-`./dataqore.sh restart`. [Detalhes da inicialização](scripts/README.md).
+The launcher installs project dependencies, builds the app, checks database
+access, and starts the local services. On the first run, use an interactive
+terminal and follow the prompts to create your administrator: name, email, and
+a password of 12–128 characters. There is no default account or password.
 
-## Banco de dados — primeira entrega
+Open [DataQore](http://127.0.0.1:5173/) and sign in with that account.
+Use this exact address for the local setup.
 
-Scripts PostgreSQL para os databases isolados `dataqore_app` e `dataqore_engine`,
-tabelas iniciais, contas `srv_dataqore_app` / `srv_dataqore_engine`, grants e partições
-mensais de métricas: [instruções e DDL](database/README.md).
+### 5. Explore your data
 
-Exemplos de configuração: [controller](controller.env.example) e
-[motor](engine.env.example). O inicializador não executa DDL ou migrations.
+Add a source in **Connections**, register a table in **Catalog**, and open the
+dataset to run a profile. Use **Comparisons** to compare datasets and **Runs**
+to follow progress and review results.
 
-## Migrations
+## Everyday commands
 
-Prisma 7 no controller e SQLAlchemy/Alembic no motor, com contas dedicadas,
-conferência de catálogo e baseline sem recriação das tabelas existentes.
-Consulte o [roteiro de migrations](database/MIGRATIONS.md) para provisionar os
-migrators, configurar `MIGRATION_DATABASE_URL` e registrar os bancos atuais.
+```bash
+./dataqore.sh status   # Check the local services
+./dataqore.sh logs     # View recent logs
+./dataqore.sh stop     # Stop the local services
+./dataqore.sh restart  # Reload after code or configuration changes
+```
 
-## API do motor ADQ
+DataQore currently runs locally. See the [launcher guide](scripts/README.md)
+for setup details and troubleshooting.
 
-FastAPI, cinco conectores, perfis e comparações amostrais, fila Postgres e
-worker separado. Consulte [instalação, configuração e exemplos](engine/README.md)
-e o [OpenAPI do motor](docs/openapi-engine.json).
+## Project guides
 
-## App Controller e Web App
+| Guide | What it covers |
+| --- | --- |
+| [Web app](web/README.md) | Frontend development and builds |
+| [Controller](controller/README.md) | Application configuration and account management |
+| [Engine](engine/README.md) | Service setup and optional connectors |
+| [Database](database/README.md) | Initial provisioning and database maintenance |
+| [Launcher](scripts/README.md) | Starting, stopping, and troubleshooting local services |
 
-BFF NestJS/Fastify com autenticação local e Web App React integrado. Consulte
-[configuração e administrador](controller/README.md) e
-[inicialização do Web App](web/README.md). Use `./dataqore.sh` para iniciar
-motor, worker, controller e Vite, ou os comandos individuais dos guias.
+## Schedules
 
-O manual operacional completo fica fora do repositório, em
-`/home/biel/analytics-data-quality/docs/DATAQORE_CONFIGURACAO.html`.
+Schedule comparisons from **Schedules**, using a traditional cron expression or the guided form.
+The scheduler runs inside the controller. See the [scheduling guide](docs/SCHEDULES.md) for migration and operation instructions.
 
-## Agendamentos
-
-Comparações podem ser agendadas no menu **Schedules**, por expressão cron
-tradicional ou formulário guiado, com fuso, prévia, pausa e histórico.
-O agendador executa no controller. [Instalação e regras](docs/SCHEDULES.md).
+<p align="center">
+  <img src="web/public/branding/dataqore-symbol.svg" alt="DataQore symbol" width="64">
+</p>

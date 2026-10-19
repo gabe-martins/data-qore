@@ -42,6 +42,27 @@ def settings(url='postgresql+psycopg://srv_dataqore_engine@localhost/dataqore_en
 
 
 class SecurityTests(unittest.TestCase):
+    def test_sqlite_uses_snapshot_only_with_existing_wal_without_blocking_writes(self):
+        from dataqore_engine.schemas import Credentials
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);path=root/'journal.sqlite'
+            with sqlite3.connect(path) as writer:
+                writer.execute('CREATE TABLE records(id integer)');writer.execute('INSERT INTO records VALUES(1)')
+            manager=SourceManager(settings(root=root))
+            row={'name':'test','connector':'sqlite','is_active':True,'encryption_key_version':'v1',
+                'credentials_ciphertext':manager.encrypt('sqlite',Credentials(database=str(path)))}
+            with manager.session(row,comparison=True) as source:
+                self.assertEqual(source['read_consistency'],'best_effort')
+                self.assertFalse(source['conn'].in_transaction)
+                source['conn'].execute('SELECT count(*) FROM records').fetchone()
+                with sqlite3.connect(path,timeout=0.1) as writer:writer.execute('INSERT INTO records VALUES(2)')
+            with sqlite3.connect(path) as writer:writer.execute('PRAGMA journal_mode=WAL')
+            with manager.session(row,comparison=True) as source:
+                self.assertEqual(source['read_consistency'],'stable_snapshot')
+                before=source['conn'].execute('SELECT count(*) FROM records').fetchone()[0]
+                with sqlite3.connect(path,timeout=0.1) as writer:writer.execute('INSERT INTO records VALUES(3)')
+                self.assertEqual(source['conn'].execute('SELECT count(*) FROM records').fetchone()[0],before)
+
     def test_mssql_certificate_error_is_actionable_without_exposing_driver_details(self):
         for text in ('self-signed certificate','certificate verify failed',
             'certificate chain was issued by an authority that is not trusted','hostname mismatch'):
@@ -191,6 +212,8 @@ class APITests(TemporaryPostgres):
 
     def setUp(self):
         super().setUp()
+        self.command('engine','baseline')
+        self.command('engine','apply')
         self.files=tempfile.TemporaryDirectory(prefix='dataqore-sources-')
         self.addCleanup(self.files.cleanup)
         root=Path(self.files.name)
@@ -231,6 +254,64 @@ class APITests(TemporaryPostgres):
         self.assertEqual(self.queue.claim(),UUID(identifier))
         run_job(self.settings,UUID(identifier))
         return self.request('GET',f'/runs/{identifier}')
+
+    def test_scoped_preview_business_key_and_schema_change_without_partial_results(self):
+        connections,datasets,identifier=self.fixture()
+        options={'mapping':[{'left':'value','right':'value'}],
+            'business_key':[{'left':'value','right':'value'}],
+            'scope':{'filters':[{'left':'amount','right':'amount','operator':'gte','value':'10'}]}}
+        payload={'name':'preview','left_dataset_id':datasets[0],'right_dataset_id':datasets[1],
+            'comparison_options':options,'sample_size':1}
+        with patch('dataqore_engine.core.db_adapters.DatabaseAdapter.validate_key',side_effect=AssertionError('Preview must not scan keys')):
+            preview=self.request('POST','/comparisons/preview',json=payload)
+        self.assertEqual(preview['business_key'],options['business_key'])
+        self.assertNotIn('predicates',preview)
+        self.request('PATCH',f'/comparisons/{identifier}',json={'comparison_options':options,'sample_size':1})
+        job=self.request('POST',f'/comparisons/{identifier}/runs',202)
+        self.assertEqual(self.finish(job['id'])['status'],'succeeded')
+        result=self.request('GET',f"/runs/{job['id']}/result")
+        self.assertEqual(result['format_version'],5)
+        self.assertEqual(result['conclusion'],'inconclusive')
+        self.assertEqual(result['result']['key_validation'][0]['null_key_rows'],1)
+        self.assertEqual(result['result']['row_comparisons'],[])
+        next_job=self.request('POST',f'/comparisons/{identifier}/runs',202)
+        with sqlite3.connect(Path(self.files.name)/'left.sqlite') as source:
+            source.execute('ALTER TABLE records RENAME COLUMN value TO renamed')
+        failed=self.finish(next_job['id'])
+        self.assertEqual(failed['status'],'failed')
+        self.assertEqual(failed['error_code'],'source_schema_changed')
+        with self.engine.connect() as conn:
+            for table in (m.run_results,m.column_profiles,m.metrics):
+                self.assertEqual(conn.scalar(select(func.count()).select_from(table).where(table.c.run_id==UUID(next_job['id']))),0)
+
+    def test_relative_scope_freezes_once_before_wait_and_idempotent_retry(self):
+        _,datasets,identifier=self.fixture()
+        for side in ('left','right'):
+            with sqlite3.connect(Path(self.files.name)/(side+'.sqlite')) as source:
+                source.execute('ALTER TABLE records ADD COLUMN day date')
+            self.request('POST',f'/datasets/{datasets[0 if side=="left" else 1]}/refresh')
+        options={'scope':{'period':{'kind':'relative','left':'day','right':'day','days':2,
+            'timezone':'America/Sao_Paulo','safety_delay_minutes':30}}}
+        self.request('PATCH',f'/comparisons/{identifier}',json={'comparison_options':options})
+        at=datetime(2026,10,19,3,15,tzinfo=timezone.utc)
+        with patch('dataqore_engine.jobs.datetime') as clock:
+            clock.now.return_value=at
+            job=self.request('POST',f'/comparisons/{identifier}/runs',202,headers={'Idempotency-Key':'frozen-period'})
+        period=job['parameters']['resolved_scope']['period']
+        self.assertEqual((period['start_day'],period['end_day']),('2026-10-16','2026-10-18'))
+        # Even an updated definition and much later retry must return the old run.
+        options['scope']['period']['days']=5
+        self.request('PATCH',f'/comparisons/{identifier}',json={'comparison_options':options})
+        with patch('dataqore_engine.jobs.resolve_scope',side_effect=AssertionError('Must return original before resolving')):
+            retry=self.request('POST',f'/comparisons/{identifier}/runs',202,headers={'Idempotency-Key':'frozen-period'})
+        self.assertEqual(job,retry)
+        for side in ('left','right'):
+            with sqlite3.connect(Path(self.files.name)/(side+'.sqlite')) as source:
+                source.execute("UPDATE records SET day='2026-10-17'")
+        self.assertEqual(self.finish(job['id'])['status'],'succeeded')
+        result=self.request('GET',f"/runs/{job['id']}/result")['result']
+        self.assertEqual(result['resolved_scope']['period'],period)
+        self.assertEqual([s['sample_size'] for s in result['sources']],[2,2])
 
     def test_read_models_search_quality_coverage_and_no_source_access(self):
         overview=self.request('GET','/overview')
@@ -404,6 +485,62 @@ class APITests(TemporaryPostgres):
         with SourceManager(self.settings).session(saved) as source:
             with self.assertRaises(psycopg.Error):
                 source['conn'].execute('UPDATE public.records SET amount=0')
+
+    def test_real_postgres_sqlite_scopes_and_transaction_snapshot(self):
+        with self.connect('source') as db:
+            db.execute('CREATE TABLE public.scoped_records(account text, line integer, day date, batch text, amount numeric)')
+            with db.cursor() as cursor:
+                cursor.executemany('INSERT INTO public.scoped_records VALUES(%s,%s,%s,%s,%s)',[
+                    ('A',1,'2026-10-01','B',10),('A',2,'2026-10-01','B',20),
+                    ('A',1,'2026-09-30','B',999),(None,9,'2026-10-02','B',999)])
+            db.execute('GRANT SELECT ON public.scoped_records TO source_reader')
+        with sqlite3.connect(Path(self.files.name)/'scoped.sqlite') as db:
+            db.execute('PRAGMA journal_mode=WAL')
+            db.execute('CREATE TABLE records(customer text, item integer, event_date date, batch text, total numeric)')
+            db.executemany('INSERT INTO records VALUES(?,?,?,?,?)',[
+                ('A',1,'2026-10-01','B',10),('A',2,'2026-10-01','B',20),
+                ('A',1,'2026-10-01','OTHER',999)])
+        pg=self.request('POST','/connections',201,json={'name':'scoped-postgres','connector':'postgresql',
+            'credentials':{'hostname':'127.0.0.1','port':self.port,'database':'dataqore_source',
+                'username':'source_reader','password':'','sslmode':'disable'}})
+        sqlite=self.request('POST','/connections',201,json={'name':'scoped-sqlite','connector':'sqlite','credentials':{'database':'scoped.sqlite'}})
+        a=self.request('POST','/datasets',201,json={'connection_id':pg['id'],'schema_name':'public','table_name':'scoped_records'})
+        b=self.request('POST','/datasets',201,json={'connection_id':sqlite['id'],'table_name':'records'})
+        pairs=[{'left':x,'right':y} for x,y in [('account','customer'),('line','item'),('day','event_date'),('amount','total')]]
+        options={'mapping':pairs,'business_key':pairs[:2], 'scope':{'period':{'left':'day','right':'event_date',
+            'kind':'fixed','start':'2026-10-01','end':'2026-10-02'},'filters':[{'left':'batch','right':'batch','operator':'eq','value':'B'}]}}
+        comparison=self.request('POST','/comparisons',201,json={'name':'pg-sqlite','left_dataset_id':a['id'],'right_dataset_id':b['id'],
+            'comparison_options':options,'sample_size':2})
+        job=self.request('POST',f"/comparisons/{comparison['id']}/runs",202)
+        self.assertEqual(self.finish(job['id'])['status'],'succeeded')
+        result=self.request('GET',f"/runs/{job['id']}/result")['result']
+        self.assertEqual(result['summary']['status'],'compatible_in_sample')
+        self.assertEqual([k['total_rows'] for k in result['key_validation']],[2,2])
+        self.assertTrue(all(k['read_consistency']=='stable_snapshot' for k in result['key_validation']))
+        saved=self.queue.repository.get(m.connections,UUID(pg['id']))
+        with SourceManager(self.settings).session(saved,comparison=True) as source:
+            with source['conn'].cursor() as cursor:
+                cursor.execute('SELECT count(*) FROM public.scoped_records');before=cursor.fetchone()[0]
+                with self.connect('source') as writer:
+                    writer.execute("INSERT INTO public.scoped_records VALUES ('AFTER',3,'2026-10-01','B',30)")
+                cursor.execute('SELECT count(*) FROM public.scoped_records')
+                self.assertEqual(cursor.fetchone()[0],before)
+                with self.assertRaises(psycopg.Error):cursor.execute('DELETE FROM public.scoped_records')
+
+    def test_postgres_text_scope_keeps_fixed_char_padding_and_unicode_exact(self):
+        from dataqore_engine.comparison_options import validate_options
+        from dataqore_engine.core.db_adapters import get_adapter
+        with self.connect('source') as conn:
+            conn.execute('CREATE TABLE public.text_scope(id integer PRIMARY KEY,batch text,fixed character(2))')
+            conn.execute("INSERT INTO public.text_scope VALUES(1,'B','B'),(2,'b','b'),(3,'B ','B '),(4,'é','é'),(5,'É','É')")
+            conn.execute('GRANT SELECT ON public.text_scope TO source_reader')
+        with self.connect('source','source_reader') as conn:
+            adapter=get_adapter('postgresql');columns=adapter.metadata(conn,'public','text_scope')
+            for name,value,expected in [('batch','B',1),('batch','é',1),('fixed','B',0),('fixed','B ',2)]:
+                options={'scope':{'filters':[{'left':name,'right':name,'operator':'eq','value':value}]}}
+                context=validate_options(options,[columns,columns])
+                _,rows=adapter.fetch_random(conn,'public','text_scope',['id'],10,metadata=columns,scope=context['predicates'][0])
+                self.assertEqual(len(rows),expected)
 
 
 if __name__=='__main__':

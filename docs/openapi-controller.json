@@ -1508,6 +1508,92 @@
         }
       }
     },
+    "/api/v1/comparisons/preview": {
+      "post": {
+        "tags": [
+          "comparisons"
+        ],
+        "summary": "Preview Comparison",
+        "operationId": "preview_comparison_v1_comparisons_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComparisonCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComparisonPreviewOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/comparisons": {
       "post": {
         "tags": [
@@ -3475,6 +3561,31 @@
         ],
         "title": "AttentionOut"
       },
+      "ColumnPair": {
+        "properties": {
+          "left": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "title": "Left"
+          },
+          "right": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "title": "Right"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "left",
+          "right"
+        ],
+        "title": "ColumnPair"
+      },
       "ComparisonCreate": {
         "properties": {
           "sampling_options": {
@@ -3545,6 +3656,9 @@
             ],
             "title": "Relative Tolerance",
             "default": "0"
+          },
+          "comparison_options": {
+            "$ref": "#/components/schemas/ComparisonOptions"
           }
         },
         "additionalProperties": false,
@@ -3555,6 +3669,39 @@
           "right_dataset_id"
         ],
         "title": "ComparisonCreate"
+      },
+      "ComparisonOptions": {
+        "properties": {
+          "scope": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Scope"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mapping": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnPair"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Mapping"
+          },
+          "business_key": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnPair"
+            },
+            "type": "array",
+            "maxItems": 32,
+            "title": "Business Key"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ComparisonOptions"
       },
       "ComparisonOut": {
         "properties": {
@@ -3611,6 +3758,9 @@
             "title": "Relative Tolerance",
             "default": "0"
           },
+          "comparison_options": {
+            "$ref": "#/components/schemas/ComparisonOptions"
+          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -3643,6 +3793,59 @@
           "updated_at"
         ],
         "title": "ComparisonOut"
+      },
+      "ComparisonPreviewOut": {
+        "properties": {
+          "mapping": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Mapping"
+          },
+          "unmatched_columns": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Unmatched Columns"
+          },
+          "business_key": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Business Key"
+          },
+          "resolved_scope": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Resolved Scope"
+          },
+          "key_validation": {
+            "type": "string",
+            "title": "Key Validation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mapping",
+          "unmatched_columns",
+          "business_key",
+          "resolved_scope",
+          "key_validation"
+        ],
+        "title": "ComparisonPreviewOut"
       },
       "ComparisonSummaryOut": {
         "properties": {
@@ -3698,6 +3901,9 @@
             "type": "string",
             "title": "Relative Tolerance",
             "default": "0"
+          },
+          "comparison_options": {
+            "$ref": "#/components/schemas/ComparisonOptions"
           },
           "id": {
             "type": "string",
@@ -3873,6 +4079,16 @@
               }
             ],
             "title": "Is Active"
+          },
+          "comparison_options": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ComparisonOptions"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -4847,6 +5063,103 @@
         ],
         "title": "Page[str]"
       },
+      "Period": {
+        "properties": {
+          "left": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "title": "Left"
+          },
+          "right": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "title": "Right"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "fixed",
+              "relative"
+            ],
+            "title": "Kind"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone",
+            "default": "America/Sao_Paulo"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "days": {
+            "type": "integer",
+            "maximum": 3660,
+            "minimum": 1,
+            "title": "Days",
+            "default": 1
+          },
+          "safety_delay_minutes": {
+            "type": "integer",
+            "maximum": 525600,
+            "minimum": 0,
+            "title": "Safety Delay Minutes",
+            "default": 0
+          },
+          "left_naive_timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Naive Timezone"
+          },
+          "right_naive_timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Right Naive Timezone"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "left",
+          "right",
+          "kind"
+        ],
+        "title": "Period"
+      },
       "ProfileOut": {
         "properties": {
           "id": {
@@ -5284,6 +5597,104 @@
         "additionalProperties": false,
         "type": "object",
         "title": "Sampling"
+      },
+      "Scope": {
+        "properties": {
+          "period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Period"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "filters": {
+            "items": {
+              "$ref": "#/components/schemas/ScopeFilter"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Filters"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Scope"
+      },
+      "ScopeFilter": {
+        "properties": {
+          "left": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "title": "Left"
+          },
+          "right": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "title": "Right"
+          },
+          "operator": {
+            "type": "string",
+            "enum": [
+              "eq",
+              "in",
+              "gte",
+              "lt",
+              "is_null",
+              "is_not_null"
+            ],
+            "title": "Operator"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 4096
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "left",
+          "right",
+          "operator"
+        ],
+        "title": "ScopeFilter"
       },
       "TableOut": {
         "properties": {

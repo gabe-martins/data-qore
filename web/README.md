@@ -1,50 +1,75 @@
-# DataQore — Web App
+# DataQore Web App
 
-React + Vite + TypeScript, TanStack Query, componentes shadcn/ui baseados em
-Radix, ícones Lucide e gráficos Recharts. Interface em inglês, layout baseado
-nas dez páginas do PDF de referência e cores de `src/color-system.json`.
-As fontes Inter são servidas localmente pelo pacote @fontsource/inter.
+The DataQore web app provides the workspace for connections, datasets, profiles,
+comparisons, and run history. It uses React, Vite, and TypeScript, with locally
+served Inter fonts and the project's shared color tokens.
 
-## Iniciar
+For a first installation, follow the [project quick start](../README.md#get-started).
+The commands below run from the project root.
 
-Na raiz, com controller, motor e worker configurados:
+## Local development
+
+With the databases, engine, worker, and controller already configured and running:
 
 ```bash
 npm ci --prefix web
 npm run dev --prefix web
 ```
 
-Abra **http://127.0.0.1:5173**. Crie antes o administrador pelo comando local
-do controller. Nenhuma senha padrão é incluída. O Vite encaminha `/api`
-ao controller em 127.0.0.1:3000; o navegador não recebe a API key do motor.
+Open [the web app](http://127.0.0.1:5173/). Vite forwards `/api` requests to the
+controller at `127.0.0.1:3000`. The browser does not receive the engine API key.
+Use `./dataqore.sh` to manage all local services together.
+
+## Build and generated assets
+
+```bash
+npm run build --prefix web
+```
+
+The build checks TypeScript and writes the output to `web/dist`.
+To inspect it locally with the controller running:
+
+```bash
+npm run preview --prefix web
+```
+
+Regenerate color tokens or API types only when their source files change:
 
 ```bash
 npm run tokens:generate --prefix web
 npm run types:generate --prefix web
-npm run build --prefix web
 ```
 
-O build verifica os tipos e gera `web/dist`. O fluxo desta entrega é local;
-publicação, servidor de arquivos e HTTPS não estão incluídos. `preview`
-permite conferir localmente o build com o mesmo proxy.
+Brand assets are SVG files in `public/branding/`: the full DataQore logo and
+its standalone symbol. The app uses them on the sign-in screen, navigation,
+header, and browser tab. Keep their proportions and original colors.
 
-## Fluxo
+## Using the workspace
 
-Connections → New connection → Test → Save. Em Catalog, selecione a fonte e
-registre uma tabela. Abra o dataset e use Run profile. Em Comparisons,
-escolha dois datasets, configure estratégia, tolerâncias e orçamento amostral;
-salve a definição ou execute. O histórico distingue estado de execução da
-conclusão analítica. Resultados e Differences contêm agregados; não há
-linhas, chaves amostradas, agendamentos, IA ou incidentes.
+Start in **Connections** to add and test a data source. In **Catalog**, register
+a table and open its dataset to run a profile. Use **Comparisons** to create or
+run a comparison, then visit **Runs** to review progress and results.
 
-Tokens de acesso ficam somente na memória. O refresh usa cookie HttpOnly;
-credenciais digitadas não são gravadas em localStorage/sessionStorage.
-Credenciais salvas não são recuperadas para edição: substituir exige o
-payload completo. A configuração de conexão não exibe host/usuário/senha.
+Access tokens stay in memory; session renewal uses an HttpOnly cookie.
+Saved connection passwords are not displayed when editing a connection.
 
-## Teste ponta a ponta descartável
+Comparison rules show **Absolute tolerance (units)** and **Relative tolerance (%)**.
+Enter `1` for 1% relative tolerance. Dot/comma decimals are accepted without
+thousands separators. Absolute values retain the column's units. Help buttons
+explain how the larger of the two limits is applied to numeric values and can
+be opened with hover, focus or tap and closed with Escape. The API still uses
+decimal fractions as strings; editing an existing comparison preserves its
+numeric meaning. These limits do not represent a percentage of differing rows.
 
-Instale o navegador de teste:
+Exact conversion checks (no database required):
+
+```bash
+node --experimental-strip-types web/unit/tolerances.test.ts
+```
+
+## Browser checks
+
+Install the test browser once:
 
 ```bash
 cd web
@@ -52,15 +77,18 @@ npx playwright install chromium
 cd ..
 ```
 
-Com binários PostgreSQL instalados em local próprio (sem usar o servidor pessoal):
+With local PostgreSQL binaries available, run the disposable full-stack fixture:
 
 ```bash
-PYTHONPATH=engine:tests DATAQORE_PG_BIN=/CAMINHO/POSTGRESQL/bin \
+PYTHONPATH=engine:tests DATAQORE_PG_BIN=/PATH/TO/POSTGRESQL/bin \
   engine/.venv/bin/python -m unittest discover -s tests -v
 ```
 
-O fixture cria um cluster temporário, usa portas livres para os quatro
-processos e configura um administrador e duas fontes SQLite de teste.
-Também executa os testes de autenticação/proxy do controller. Os processos
-são encerrados e o cluster é removido ao terminar. Não usa os `.env` reais.
-As capturas visuais ficam em `web/test-results/`, ignorado pelo Git.
+The fixture creates a temporary PostgreSQL cluster, starts the services on free
+ports, and supplies test accounts and SQLite sources. It does not use real local
+environment files. Processes and the temporary cluster are removed afterward;
+screenshots are written to the ignored `web/test-results/` directory.
+
+Check branding on desktop and mobile, including the sign-in screen, header,
+expanded mobile menu, and favicon. Deployment and HTTPS hosting are outside
+the current local workflow.

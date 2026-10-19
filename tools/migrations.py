@@ -86,7 +86,7 @@ def execute(service, action):
             return
         if action == "verify":
             verify(connection, service)
-            print("Catálogo inicial, proprietários e grants conferidos.")
+            print("Catálogo da revisão registrada, proprietários e grants conferidos.")
             return
         if action == "status":
             versions=history(connection, service)
