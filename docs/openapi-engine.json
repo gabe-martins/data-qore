@@ -2624,6 +2624,111 @@
         }
       }
     },
+    "/v1/overview/quality-trend": {
+      "get": {
+        "tags": [
+          "overview"
+        ],
+        "summary": "Quality Trend",
+        "operationId": "quality_trend_v1_overview_quality_trend_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                7,
+                15,
+                30
+              ],
+              "default": 7,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "timezone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "default": "America/Sao_Paulo",
+              "title": "Timezone"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityTrendOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
     "/v1/comparison-summaries": {
       "get": {
         "tags": [
@@ -3116,6 +3221,34 @@
           "key_validation"
         ],
         "title": "ComparisonPreviewOut"
+      },
+      "ComparisonQualitySeries": {
+        "properties": {
+          "comparison_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Comparison Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/DailyQualityPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "comparison_id",
+          "name",
+          "points"
+        ],
+        "title": "ComparisonQualitySeries"
       },
       "ComparisonSummaryOut": {
         "properties": {
@@ -3635,6 +3768,101 @@
           "database"
         ],
         "title": "Credentials"
+      },
+      "DailyQualityPoint": {
+        "properties": {
+          "passed": {
+            "type": "integer",
+            "title": "Passed"
+          },
+          "evaluated": {
+            "type": "integer",
+            "title": "Evaluated"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentage"
+          },
+          "coverage_percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Percentage"
+          },
+          "day": {
+            "type": "string",
+            "title": "Day"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "succeeded",
+                  "failed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "passed",
+          "evaluated",
+          "total",
+          "percentage",
+          "coverage_percentage",
+          "day",
+          "run_id",
+          "status",
+          "finished_at"
+        ],
+        "title": "DailyQualityPoint"
       },
       "DatasetCreate": {
         "properties": {
@@ -4496,6 +4724,54 @@
         "additionalProperties": false,
         "type": "object",
         "title": "ProfileRequest"
+      },
+      "QualityTrendOut": {
+        "properties": {
+          "days": {
+            "type": "integer",
+            "enum": [
+              7,
+              15,
+              30
+            ],
+            "title": "Days"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          },
+          "start_day": {
+            "type": "string",
+            "title": "Start Day"
+          },
+          "end_day": {
+            "type": "string",
+            "title": "End Day"
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonQualitySeries"
+            },
+            "type": "array",
+            "title": "Series"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "days",
+          "timezone",
+          "start_day",
+          "end_day",
+          "as_of",
+          "series"
+        ],
+        "title": "QualityTrendOut"
       },
       "RecentRunOut": {
         "properties": {

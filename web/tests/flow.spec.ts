@@ -586,3 +586,35 @@ test("unaligned comparisons and empty profiles remain explicit and inconclusive"
     fullPage: true,
   });
 });
+
+test("overview daily comparison quality supports periods, details and mobile", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Email", { exact: true }).fill("admin@dataqore.test");
+  await page.getByLabel("Password", { exact: true }).fill("DataQore-test-password-2026");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  const card = page.locator("section.card").filter({ has: page.getByRole("heading", { name: "Quality over time", exact: true }) });
+  await expect(card.getByLabel("Quality period")).toHaveValue("7");
+  await expect(card.getByRole("list", { name: "Comparison legend" })).toContainText("Sales sample validation");
+  for (const days of [15, 30]) {
+    const response = page.waitForResponse(r => r.url().includes(`/api/v1/overview/quality-trend?days=${days}&`) && r.status() === 200);
+    await card.getByLabel("Quality period").selectOption(String(days));
+    const body = await (await response).json();
+    expect(body.days).toBe(days);
+    expect(body.timezone).toBe("America/Sao_Paulo");
+    expect(body.series.every((s: any) => s.points.length === days)).toBe(true);
+    await expect(card.getByRole("list", { name: "Comparison legend" })).toBeVisible();
+  }
+  const dot = card.locator(".recharts-line-dot").last();
+  await dot.hover();
+  await expect(card.locator(".quality-tooltip")).toContainText("Sample quality:");
+  await expect(card.locator(".quality-tooltip")).toContainText("Coverage:");
+  await page.screenshot({ path: "test-results/quality-trend-desktop.png", fullPage: true });
+  await card.getByText("Daily run details", { exact: true }).click();
+  await expect(card.locator(".quality-daily-details")).toContainText("passed /");
+  await expect(card.locator(".quality-daily-details")).toContainText("No completed run");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await card.getByLabel("Quality period").focus();
+  await expect(card.getByLabel("Quality period")).toBeFocused();
+  await page.screenshot({ path: "test-results/quality-trend-mobile.png", fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)).toBe(false);
+});

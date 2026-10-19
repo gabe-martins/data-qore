@@ -98,7 +98,8 @@ class FullStackTests(TemporaryPostgres):
         python=str(ROOT/'engine/.venv/bin/python')
         start([python,'-c',f'import uvicorn;uvicorn.run("dataqore_engine.api:create_app",factory=True,host="127.0.0.1",port={engine_port},access_log=False)'],engine_env,ROOT,'engine')
         start([python,'-m','dataqore_engine','worker'],engine_env,ROOT,'worker')
-        start(['node','--import','tsx','tests/server.ts'],env,ROOT/'controller','controller')
+        controller_command=['node','--import','tsx','tests/server.ts']
+        controller_process=start(controller_command,env,ROOT/'controller','controller')
         start(['node','node_modules/vite/bin/vite.js','--host','127.0.0.1','--port',str(web_port),'--strictPort'],env,ROOT/'web','web')
         for url in (cfg['ENGINE_API_URL']+'/health/ready',cfg['DATAQORE_CONTROLLER_URL']+'/health/ready',cfg['DATAQORE_WEB_URL']):
             deadline=time.monotonic()+60
@@ -112,7 +113,20 @@ class FullStackTests(TemporaryPostgres):
                     self.fail('Service did not start: '+url)
                 time.sleep(.2)
         commands=[(['node','--import','tsx','--test','tests/controller.test.ts'],ROOT/'controller'),(['node','node_modules/@playwright/test/cli.js','test'],ROOT/'web'),(['node','--import','tsx','--test','tests/schedules.test.ts'],ROOT/'controller')]
-        for cmd,cwd in commands:
+        for group,(cmd,cwd) in enumerate(commands):
+            if group:
+                # Each suite gets fresh process-local rate limits; database sessions
+                # remain intact. Do not relax the application's production limits.
+                controller_process.terminate();controller_process.wait(timeout=10)
+                controller_process=start(controller_command,env,ROOT/'controller',f'controller-{group}')
+                deadline=time.monotonic()+20
+                while True:
+                    try:
+                        with urllib.request.urlopen(cfg['DATAQORE_CONTROLLER_URL']+'/health/ready',timeout=1) as r:
+                            if r.status==200:break
+                    except Exception:pass
+                    if time.monotonic()>deadline:self.fail('Isolated controller did not restart')
+                    time.sleep(.1)
             result=subprocess.run(cmd,cwd=cwd,env=env,text=True,capture_output=True,timeout=240)
             self.assertEqual(result.returncode,0,result.stdout+result.stderr)
             print(result.stdout)

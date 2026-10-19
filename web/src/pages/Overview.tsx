@@ -1,15 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Plus, ArrowUpRight } from "lucide-react";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-} from "recharts";
+import { QualityTrend } from "../components/QualityTrend";
 import { api, type Model } from "../api";
 import {
   Badge,
@@ -78,43 +70,7 @@ export function Overview() {
               </div>
             </div>
             <div className="content-columns">
-              <Card
-                title="Quality over time"
-                subtitle="Weighted sample checks · last 7 UTC days"
-              >
-                <div className="chart">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={d.trend.map((t) => ({
-                        ...t,
-                        quality:
-                          t.percentage === null ? null : Number(t.percentage),
-                      }))}
-                    >
-                      <CartesianGrid
-                        stroke="var(--semantic-border-default)"
-                        vertical={false}
-                      />
-                      <XAxis dataKey="day" tickFormatter={(v) => v.slice(5)} />
-                      <YAxis domain={[0, 100]} unit="%" />
-                      <Tooltip />
-                      <Area
-                        type="monotone"
-                        dataKey="quality"
-                        name="Sample quality %"
-                        stroke="var(--primitive-green-700)"
-                        fill="var(--primitive-green-100)"
-                        connectNulls={false}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-                <p className="small muted">
-                  Latest successful sample per active comparison above. Daily
-                  trend includes all comparisons completed that day. No value
-                  means no evaluation.
-                </p>
-              </Card>
+              <QualityTrend />
               <Card
                 title="Requires attention"
                 subtitle="Latest outcomes from active comparisons"

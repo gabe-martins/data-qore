@@ -1,10 +1,12 @@
 """Read models for the UI; never open source connections."""
 from datetime import datetime,timedelta,timezone
 from decimal import Decimal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from fastapi import Query
 from sqlalchemy import select,func,text
 from . import models as m
 from .storage import json_safe
-from .schemas import Page,ComparisonSummaryOut,OverviewOut
+from .schemas import Page,ComparisonSummaryOut,OverviewOut,QualityTrendOut
 
 
 def ratio(passed,evaluated,total):
@@ -27,6 +29,58 @@ LEFT JOIN LATERAL (SELECT jsonb_build_object('run_id',r.id,'conclusion',rr.concl
 
 
 def register_read_api(router,engine):
+    @router.get('/overview/quality-trend',tags=['overview'],response_model=QualityTrendOut)
+    def quality_trend(days:int=Query(7,enum=[7,15,30]),
+                      timezone:str=Query('America/Sao_Paulo',min_length=1,max_length=100)):
+        from .storage import DomainError
+        if days not in (7,15,30):
+            raise DomainError(422,'validation_error','Use 7, 15 or 30 days.')
+        try:
+            zone=ZoneInfo(timezone)
+        except (ZoneInfoNotFoundError,ValueError):
+            raise DomainError(422,'validation_error','Use a valid IANA timezone.') from None
+        now=datetime.now(ZoneInfo('UTC'))
+        today=now.astimezone(zone).date()
+        start_day=today-timedelta(days=days-1)
+        start=datetime.combine(start_day,datetime.min.time(),tzinfo=zone)
+        # Rank runs before joining results: a final failure must hide an earlier success.
+        with engine.connect() as c:
+            rows=c.execute(text("""WITH ranked AS (
+                SELECT r.id,r.comparison_id,r.status,r.finished_at,
+                    (r.finished_at AT TIME ZONE :zone)::date AS day,
+                    row_number() OVER (PARTITION BY r.comparison_id,
+                        (r.finished_at AT TIME ZONE :zone)::date
+                        ORDER BY r.finished_at DESC,r.id DESC) AS position
+                FROM engine.runs r JOIN engine.comparison_definitions cd ON cd.id=r.comparison_id
+                WHERE cd.is_active AND r.kind='comparison' AND r.status IN ('succeeded','failed')
+                    AND r.finished_at>=:start AND r.finished_at<=:now
+            ) SELECT cd.id AS comparison_id,cd.name,r.id AS run_id,r.status,r.finished_at,r.day,
+                CASE WHEN r.status='succeeded' THEN rr.result#>'{indicators,quality,overall}' END AS quality
+                FROM engine.comparison_definitions cd
+                LEFT JOIN ranked r ON r.comparison_id=cd.id AND r.position=1
+                LEFT JOIN engine.run_results rr ON rr.run_id=r.id
+                WHERE cd.is_active ORDER BY cd.name,cd.id,r.day"""),
+                {'zone':timezone,'start':start,'now':now}).mappings().all()
+        series={}
+        for row in rows:
+            item=series.setdefault(row['comparison_id'],{'comparison_id':row['comparison_id'],
+                'name':row['name'],'by_day':{}})
+            if row['day'] is not None:
+                q=row['quality'] or {}
+                item['by_day'][row['day']]={'run_id':row['run_id'],'status':row['status'],
+                    'finished_at':row['finished_at'],**ratio(int(q.get('passed') or 0),
+                        int(q.get('evaluated') or 0),int(q.get('total') or 0))}
+        output=[]
+        for item in series.values():
+            points=[]
+            for n in range(days):
+                day=start_day+timedelta(days=n)
+                point=item['by_day'].get(day,{'run_id':None,'status':None,'finished_at':None,**ratio(0,0,0)})
+                points.append({'day':day.isoformat(),**point})
+            output.append({'comparison_id':item['comparison_id'],'name':item['name'],'points':points})
+        return json_safe({'days':days,'timezone':timezone,'start_day':start_day.isoformat(),
+            'end_day':today.isoformat(),'as_of':now,'series':output})
+
     @router.get('/comparison-summaries',tags=['overview'],response_model=Page[ComparisonSummaryOut])
     def summaries(limit:int=50,offset:int=0,search:str=''):
         from .storage import DomainError

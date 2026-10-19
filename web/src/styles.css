@@ -1213,3 +1213,15 @@ select:focus-visible {
 .help-tip-button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; color: var(--semantic-text-secondary); background: transparent; }
 .help-tip-button:hover { background: var(--semantic-background-subtle); }
 .help-tip-content { position: fixed; width: min(320px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; z-index: 40; padding: 14px; border: 1px solid var(--semantic-border-default); border-radius: 9px; background: var(--semantic-background-surface); color: var(--semantic-text-primary); box-shadow: 0 8px 24px #172c3c26; font-size: 12px; font-weight: 400; line-height: 1.6; white-space: normal; }
+
+.quality-period { display: flex; align-items: center; gap: 12px; margin: 16px 0; }
+.quality-period select { width: auto; min-width: 110px; }
+.quality-legend { display: flex; flex-wrap: wrap; gap: 10px 20px; list-style: none; padding: 0; font-size: 12px; }
+.quality-legend li { min-width: 0; overflow-wrap: anywhere; }
+.quality-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+.quality-tooltip { background: var(--semantic-background-surface); border: 1px solid var(--semantic-border-default); border-radius: 8px; padding: 12px; max-width: min(340px, 75vw); max-height: 330px; overflow: auto; font-size: 12px; overflow-wrap: anywhere; }
+.quality-point { margin-top: 10px; }
+.quality-details { margin: 16px 0; font-size: 12px; }
+.quality-details summary { cursor: pointer; }
+.quality-daily-details { max-height: 360px; overflow: auto; }
+.quality-daily-details section { padding: 12px 0; border-bottom: 1px solid var(--semantic-border-default); }

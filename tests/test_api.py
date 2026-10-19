@@ -339,6 +339,89 @@ class APITests(TemporaryPostgres):
         self.assertNotIn('PRIVATE_VALUE',json.dumps(overview))
         self.request('GET','/comparison-summaries',422,params={'limit':201})
 
+    def test_daily_quality_trend_latest_finished_run_and_gaps(self):
+        from datetime import timedelta
+        from dataqore_engine import read_api
+        _,datasets,identifier=self.fixture()
+        now=datetime(2026,10,19,12,tzinfo=timezone.utc)
+        class Clock(datetime):
+            @classmethod
+            def now(cls,tz=None): return now.astimezone(tz) if tz else now.replace(tzinfo=None)
+        with self.engine.begin() as c:
+            empty=c.execute(m.comparison_definitions.insert().values(name='No runs',left_dataset_id=datasets[0],right_dataset_id=datasets[1]).returning(m.comparison_definitions.c.id)).scalar_one()
+            inactive=c.execute(m.comparison_definitions.insert().values(name='Inactive',left_dataset_id=datasets[0],right_dataset_id=datasets[1],is_active=False).returning(m.comparison_definitions.c.id)).scalar_one()
+            def add(at,passed=1,evaluated=1,total=1,status='succeeded',comparison=identifier,kind='comparison',key=None):
+                values=dict(kind=kind,parameters={},status=status,requested_at=at-timedelta(minutes=2),
+                    started_at=at-timedelta(minutes=1),finished_at=at,
+                    **({'comparison_id':comparison} if kind=='comparison' else {'dataset_id':datasets[0]}))
+                if key:values['id']=key
+                run=c.execute(m.runs.insert().values(**values).returning(m.runs.c.id)).scalar_one()
+                if status=='succeeded':
+                    c.execute(m.run_results.insert().values(run_id=run,format_version=4,conclusion='inconclusive',
+                        result={'indicators':{'quality':{'overall':{'passed':passed,'evaluated':evaluated,'total':total,'percentage':'999'}}}}))
+                return str(run)
+            # 02:59Z belongs to the previous day in Sao Paulo; 03:00Z starts today.
+            old=add(datetime(2026,10,19,2,59,tzinfo=timezone.utc),passed=1,evaluated=2,total=4)
+            today=add(datetime(2026,10,19,3,tzinfo=timezone.utc),passed=1,evaluated=4,total=8)
+            failure=add(now-timedelta(hours=1),status='failed')
+            add(now,kind='profile');add(now,comparison=inactive)
+            add(now+timedelta(minutes=1)) # Future completions must not enter the response.
+            add(now-timedelta(days=10));add(now-timedelta(days=20));add(now-timedelta(days=30))
+            # An evaluated success followed by an unevaluated success must leave a gap.
+            at=now-timedelta(days=2)
+            add(at-timedelta(minutes=2))
+            zero=add(at,evaluated=0,passed=0,total=5)
+            tie=now-timedelta(days=3)
+            add(tie,passed=1,evaluated=1,key=UUID(int=1))
+            winner=add(tie,passed=1,evaluated=3,key=UUID(int=2))
+        for path in Path(self.files.name).glob('*.sqlite'):path.unlink()
+        with patch.object(read_api,'datetime',Clock):
+            default=self.request('GET','/overview/quality-trend')
+            self.assertEqual((default['days'],default['timezone'],default['start_day'],default['end_day']),
+                (7,'America/Sao_Paulo','2026-10-13','2026-10-19'))
+            self.assertEqual(len(default['series']),2)
+            for days,count in [(7,4),(15,5),(30,6)]:
+                result=self.request('GET','/overview/quality-trend',params={'days':days})
+                series=next(s for s in result['series'] if s['comparison_id']==identifier)
+                self.assertEqual(len(series['points']),days)
+                self.assertEqual(sum(p['run_id'] is not None for p in series['points']),count)
+            points=next(s for s in default['series'] if s['comparison_id']==identifier)['points']
+            self.assertEqual(points[-1]['run_id'],failure)
+            self.assertEqual(points[-1]['status'],'failed')
+            self.assertIsNone(points[-1]['percentage'])
+            self.assertEqual((points[-2]['run_id'],points[-2]['percentage'],points[-2]['coverage_percentage']),
+                (old,'50.0000','50.0000'))
+            self.assertEqual(points[-3]['run_id'],zero);self.assertIsNone(points[-3]['percentage'])
+            self.assertEqual((points[-4]['run_id'],points[-4]['percentage']),(winner,'33.3333'))
+            self.assertIsNone(points[0]['run_id']);self.assertIsNone(points[0]['percentage'])
+            self.assertTrue(all(p['percentage'] is None for s in default['series'] if s['comparison_id']==str(empty) for p in s['points']))
+            utc=self.request('GET','/overview/quality-trend',params={'timezone':'UTC'})
+            self.assertEqual(next(s for s in utc['series'] if s['comparison_id']==identifier)['points'][-2]['run_id'],None)
+            for invalid in ({'days':8},{'days':0},{'days':'invalid'},{'timezone':'Invalid/Zone'},{'timezone':'../etc/passwd'},{'timezone':''},{'timezone':'x'*101}):
+                self.request('GET','/overview/quality-trend',422,params=invalid)
+        self.assertNotIn('PRIVATE_VALUE',json.dumps(default))
+        self.assertEqual(self.client.get('/v1/overview/quality-trend').status_code,401)
+
+    def test_daily_quality_trend_dst_and_empty_comparisons(self):
+        from dataqore_engine import read_api
+        now=datetime(2026,11,1,16,tzinfo=timezone.utc)
+        class Clock(datetime):
+            @classmethod
+            def now(cls,tz=None): return now.astimezone(tz) if tz else now.replace(tzinfo=None)
+        with patch.object(read_api,'datetime',Clock):
+            empty=self.request('GET','/overview/quality-trend',params={'days':7,'timezone':'America/New_York'})
+            self.assertEqual(empty['series'],[])
+            self.assertEqual(empty['start_day'],'2026-10-26')
+            _,_,identifier=self.fixture()
+            with self.engine.begin() as c:
+                ids=[]
+                for hour,minute in [(3,59),(4,0)]:
+                    at=datetime(2026,11,1,hour,minute,tzinfo=timezone.utc)
+                    ids.append(str(c.execute(m.runs.insert().values(kind='comparison',comparison_id=identifier,parameters={},
+                        status='failed',requested_at=at,finished_at=at).returning(m.runs.c.id)).scalar_one()))
+            result=self.request('GET','/overview/quality-trend',params={'timezone':'America/New_York'})
+            self.assertEqual([p['run_id'] for p in result['series'][0]['points'][-2:]],ids)
+
     def test_http_flow_comparison_profile_metrics_and_no_private_rows(self):
         connections,datasets,definition=self.fixture()
         self.assertEqual(self.request('GET',f'/connections/{connections[0]}/schemas')['items'],[''])

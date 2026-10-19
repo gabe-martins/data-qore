@@ -383,6 +383,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/overview/quality-trend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quality Trend */
+        get: operations["quality_trend_v1_overview_quality_trend_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/comparison-summaries": {
         parameters: {
             query?: never;
@@ -554,6 +571,18 @@ export interface components {
             /** Key Validation */
             key_validation: string;
         };
+        /** ComparisonQualitySeries */
+        ComparisonQualitySeries: {
+            /**
+             * Comparison Id
+             * Format: uuid
+             */
+            comparison_id: string;
+            /** Name */
+            name: string;
+            /** Points */
+            points: components["schemas"]["DailyQualityPoint"][];
+        };
         /** ComparisonSummaryOut */
         ComparisonSummaryOut: {
             sampling_options?: components["schemas"]["Sampling"];
@@ -724,6 +753,27 @@ export interface components {
              * @default false
              */
             trust_server_certificate: boolean;
+        };
+        /** DailyQualityPoint */
+        DailyQualityPoint: {
+            /** Passed */
+            passed: number;
+            /** Evaluated */
+            evaluated: number;
+            /** Total */
+            total: number;
+            /** Percentage */
+            percentage: string | null;
+            /** Coverage Percentage */
+            coverage_percentage: string | null;
+            /** Day */
+            day: string;
+            /** Run Id */
+            run_id: string | null;
+            /** Status */
+            status: ("succeeded" | "failed") | null;
+            /** Finished At */
+            finished_at: string | null;
         };
         /** DatasetCreate */
         DatasetCreate: {
@@ -1061,6 +1111,27 @@ export interface components {
             sampling_options?: components["schemas"]["Sampling"];
             /** Sample Size */
             sample_size?: number | null;
+        };
+        /** QualityTrendOut */
+        QualityTrendOut: {
+            /**
+             * Days
+             * @enum {integer}
+             */
+            days: 7 | 15 | 30;
+            /** Timezone */
+            timezone: string;
+            /** Start Day */
+            start_day: string;
+            /** End Day */
+            end_day: string;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Series */
+            series: components["schemas"]["ComparisonQualitySeries"][];
         };
         /** RecentRunOut */
         RecentRunOut: {
@@ -2974,6 +3045,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Page_MetricOut_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    quality_trend_v1_overview_quality_trend_get: {
+        parameters: {
+            query?: {
+                days?: 7 | 15 | 30;
+                timezone?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QualityTrendOut"];
                 };
             };
             /** @description Unauthorized */

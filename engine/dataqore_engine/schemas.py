@@ -254,6 +254,27 @@ class TrendOut(IndicatorOut):
     day:str
 
 
+class DailyQualityPoint(TrendOut):
+    run_id:UUID | None
+    status:Literal["succeeded","failed"] | None
+    finished_at:datetime | None
+
+
+class ComparisonQualitySeries(Model):
+    comparison_id:UUID
+    name:str
+    points:list[DailyQualityPoint]
+
+
+class QualityTrendOut(Model):
+    days:Literal[7,15,30]
+    timezone:str
+    start_day:str
+    end_day:str
+    as_of:datetime
+    series:list[ComparisonQualitySeries]
+
+
 class RecentRunOut(Model):
     id:UUID
     kind:str
