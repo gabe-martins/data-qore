@@ -329,6 +329,17 @@
               "default": 0,
               "title": "Offset"
             }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 255,
+              "default": "",
+              "title": "Search"
+            }
           }
         ],
         "responses": {
@@ -1655,6 +1666,17 @@
               "default": 0,
               "title": "Offset"
             }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 255,
+              "default": "",
+              "title": "Search"
+            }
           }
         ],
         "responses": {
@@ -2515,10 +2537,214 @@
           }
         }
       }
+    },
+    "/v1/comparison-summaries": {
+      "get": {
+        "tags": [
+          "overview"
+        ],
+        "summary": "Summaries",
+        "operationId": "summaries_v1_comparison_summaries_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Search"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ComparisonSummaryOut_"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/overview": {
+      "get": {
+        "tags": [
+          "overview"
+        ],
+        "summary": "Overview",
+        "operationId": "overview_v1_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
     }
   },
   "components": {
     "schemas": {
+      "AttentionOut": {
+        "properties": {
+          "comparison_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Comparison Id"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "comparison_id",
+          "state"
+        ],
+        "title": "AttentionOut"
+      },
       "ComparisonCreate": {
         "properties": {
           "sampling_options": {
@@ -2688,6 +2914,116 @@
         ],
         "title": "ComparisonOut"
       },
+      "ComparisonSummaryOut": {
+        "properties": {
+          "sampling_options": {
+            "$ref": "#/components/schemas/Sampling"
+          },
+          "sample_size": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Size"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Name"
+          },
+          "left_dataset_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Left Dataset Id"
+          },
+          "right_dataset_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Right Dataset Id"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "matched_keys",
+              "independent_random"
+            ],
+            "title": "Mode",
+            "default": "auto"
+          },
+          "absolute_tolerance": {
+            "type": "string",
+            "title": "Absolute Tolerance",
+            "default": "0"
+          },
+          "relative_tolerance": {
+            "type": "string",
+            "title": "Relative Tolerance",
+            "default": "0"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "latest_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestRunOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestResultOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "left_dataset_id",
+          "right_dataset_id",
+          "id",
+          "is_active",
+          "created_at",
+          "updated_at",
+          "latest_run",
+          "latest_result"
+        ],
+        "title": "ComparisonSummaryOut"
+      },
       "ComparisonUpdate": {
         "properties": {
           "name": {
@@ -2848,6 +3184,11 @@
       },
       "ConnectionOut": {
         "properties": {
+          "dataset_count": {
+            "type": "integer",
+            "title": "Dataset Count",
+            "default": 0
+          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -3182,6 +3523,157 @@
         ],
         "title": "ErrorOut"
       },
+      "IndicatorOut": {
+        "properties": {
+          "passed": {
+            "type": "integer",
+            "title": "Passed"
+          },
+          "evaluated": {
+            "type": "integer",
+            "title": "Evaluated"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentage"
+          },
+          "coverage_percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Percentage"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "passed",
+          "evaluated",
+          "total",
+          "percentage",
+          "coverage_percentage"
+        ],
+        "title": "IndicatorOut"
+      },
+      "LatestResultOut": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Run Id"
+          },
+          "conclusion": {
+            "type": "string",
+            "title": "Conclusion"
+          },
+          "finished_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Finished At"
+          },
+          "agreement": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agreement"
+          },
+          "quality": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run_id",
+          "conclusion",
+          "finished_at",
+          "agreement",
+          "quality"
+        ],
+        "title": "LatestResultOut"
+      },
+      "LatestRunOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Requested At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "requested_at",
+          "finished_at",
+          "error_code"
+        ],
+        "title": "LatestRunOut"
+      },
       "MetricOut": {
         "properties": {
           "id": {
@@ -3268,6 +3760,75 @@
         ],
         "title": "MetricOut"
       },
+      "OverviewOut": {
+        "properties": {
+          "active_comparisons": {
+            "type": "integer",
+            "title": "Active Comparisons"
+          },
+          "sample_quality": {
+            "$ref": "#/components/schemas/IndicatorOut"
+          },
+          "latest_conclusions": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Latest Conclusions"
+          },
+          "run_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Run Counts"
+          },
+          "trend": {
+            "items": {
+              "$ref": "#/components/schemas/TrendOut"
+            },
+            "type": "array",
+            "title": "Trend"
+          },
+          "recent_runs": {
+            "items": {
+              "$ref": "#/components/schemas/RecentRunOut"
+            },
+            "type": "array",
+            "title": "Recent Runs"
+          },
+          "attention": {
+            "items": {
+              "$ref": "#/components/schemas/AttentionOut"
+            },
+            "type": "array",
+            "title": "Attention"
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "active_comparisons",
+          "sample_quality",
+          "latest_conclusions",
+          "run_counts",
+          "trend",
+          "recent_runs",
+          "attention",
+          "as_of",
+          "scope"
+        ],
+        "title": "OverviewOut"
+      },
       "Page_ComparisonOut_": {
         "properties": {
           "items": {
@@ -3299,6 +3860,38 @@
           "offset"
         ],
         "title": "Page[ComparisonOut]"
+      },
+      "Page_ComparisonSummaryOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonSummaryOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[ComparisonSummaryOut]"
       },
       "Page_ConnectionOut_": {
         "properties": {
@@ -3591,6 +4184,138 @@
         "type": "object",
         "title": "ProfileRequest"
       },
+      "RecentRunOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "comparison_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparison Id"
+          },
+          "dataset_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Requested At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "conclusion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conclusion"
+          },
+          "agreement": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agreement"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "comparison_id",
+          "dataset_id",
+          "requested_at",
+          "started_at",
+          "finished_at",
+          "error_code",
+          "name",
+          "conclusion",
+          "agreement"
+        ],
+        "title": "RecentRunOut"
+      },
       "ResultOut": {
         "properties": {
           "run_id": {
@@ -3861,6 +4586,59 @@
         "additionalProperties": false,
         "type": "object",
         "title": "TestOut"
+      },
+      "TrendOut": {
+        "properties": {
+          "passed": {
+            "type": "integer",
+            "title": "Passed"
+          },
+          "evaluated": {
+            "type": "integer",
+            "title": "Evaluated"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentage"
+          },
+          "coverage_percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Percentage"
+          },
+          "day": {
+            "type": "string",
+            "title": "Day"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "passed",
+          "evaluated",
+          "total",
+          "percentage",
+          "coverage_percentage",
+          "day"
+        ],
+        "title": "TrendOut"
       }
     },
     "securitySchemes": {

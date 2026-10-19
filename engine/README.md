@@ -125,6 +125,10 @@ transporte e valida o certificado; `trust_server_certificate: true` permite
 configurar explicitamente a exceção para o ambiente pessoal. `sslmode` é a
 opção de transporte do conector PostgreSQL. Portas padrão: PostgreSQL 5432,
 MySQL 3306, SQL Server 1433 e Oracle 1521.
+No SQL Server, o timeout de login usa `connect(..., timeout=10)`; não incluir
+`Connection Timeout` na string, pois a versão fixada do driver rejeita esse
+atributo. Certificados autoassinados produzem mensagem específica. A exceção
+de confiança deve ser escolhida explicitamente para cada conexão local.
 
 Registrar dataset:
 
@@ -240,5 +244,21 @@ PYTHONPATH=engine DATAQORE_PG_BIN=/CAMINHO/POSTGRES/bin \
 Os testes não usam arquivos `.env` reais nem aceitam URL de servidor pessoal.
 Há integração real PostgreSQL/SQLite, contratos SQL dos cinco adaptadores e
 testes de worker, falhas, idempotência, precisão e ausência de dados privados.
-MySQL, SQL Server e Oracle ainda precisam de servidores reais para comprovar
-a integração completa nesta versão; contratos de consulta não substituem isso.
+MySQL e Oracle ainda precisam de servidores reais. SQL Server teve conexão
+e `SELECT 1` validados no servidor pessoal autorizado em 18/10/2026; perfil e
+comparação completos nessa fonte continuam pendentes de aceite. Os testes
+automatizados usam o parser real do driver para validar strings e timeout.
+
+## Consultas para o Web App
+
+`GET /v1/overview` resume comparações ativas, estado/conclusão, execuções
+recentes e tendência de sete dias UTC. Sample quality soma verificações
+aprovadas/avaliadas do último resultado bem-sucedido de cada comparação
+ativa; cobertura e disponibilidade são explícitas. A tendência diária
+considera as comparações concluídas naquele dia, sem substituir ausência
+de avaliação por zero.
+
+`GET /v1/comparison-summaries` aceita `search`, `limit` e `offset`, com última
+execução e último resultado disponível. Listagens de conexões e comparações
+aceitam pesquisa por nome; conexões incluem `dataset_count`. Todas essas
+consultas usam apenas o armazenamento interno e exigem X-API-Key.

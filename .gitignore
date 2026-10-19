@@ -11,3 +11,8 @@ dist/
 .pytest_cache/
 *.egg-info/
 engine/local_sources/
+controller/generated/
+web/playwright-report/
+web/test-results/
+*.tsbuildinfo
+.local/

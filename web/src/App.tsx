@@ -1,0 +1,354 @@
+import { lazy, Suspense, useEffect, useState } from "react";
+import {
+  NavLink,
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+} from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  Database,
+  GitCompareArrows,
+  LayoutDashboard,
+  Library,
+  History,
+  Settings,
+  LogOut,
+  Menu,
+  UserRound,
+} from "lucide-react";
+import {
+  login,
+  logout,
+  refresh,
+  onSessionExpired,
+  post,
+  type User,
+} from "./api";
+import {
+  Button,
+  Card,
+  ErrorBox,
+  Loading,
+  PageTitle,
+} from "./components/common";
+const Overview = lazy(() =>
+  import("./pages/Overview").then((m) => ({ default: m.Overview })),
+);
+const Connections = lazy(() =>
+  import("./pages/Connections").then((m) => ({ default: m.Connections })),
+);
+const Catalog = lazy(() =>
+  import("./pages/Catalog").then((m) => ({ default: m.Catalog })),
+);
+const DatasetProfile = lazy(() =>
+  import("./pages/Catalog").then((m) => ({ default: m.DatasetProfile })),
+);
+const Comparisons = lazy(() =>
+  import("./pages/Comparisons").then((m) => ({ default: m.Comparisons })),
+);
+const ComparisonDetail = lazy(() =>
+  import("./pages/Comparisons").then((m) => ({ default: m.ComparisonDetail })),
+);
+const Wizard = lazy(() =>
+  import("./pages/Comparisons").then((m) => ({ default: m.Wizard })),
+);
+const Runs = lazy(() =>
+  import("./pages/Runs").then((m) => ({ default: m.Runs })),
+);
+const RunResult = lazy(() =>
+  import("./pages/Runs").then((m) => ({ default: m.RunResult })),
+);
+export function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [ready, setReady] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const cache = useQueryClient();
+  const navigate = useNavigate();
+  function expire() {
+    setUser(null);
+    cache.clear();
+  }
+  useEffect(() => {
+    let active = true;
+    onSessionExpired(() => {
+      if (active) expire();
+    });
+    refresh().then((u) => {
+      if (active) {
+        setUser(u);
+        setReady(true);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+  if (!ready) return <Loading />;
+  if (!user)
+    return (
+      <Login
+        onLogin={(u) => {
+          cache.clear();
+          setUser(u);
+          navigate("/");
+        }}
+      />
+    );
+  const links = [
+    ["/", "Overview", LayoutDashboard],
+    ["/connections", "Connections", Database],
+    ["/catalog", "Catalog", Library],
+    ["/comparisons", "Comparisons", GitCompareArrows],
+    ["/runs", "Runs", History],
+    ["/account", "Account", Settings],
+  ] as const;
+  return (
+    <div className={"app-shell " + (menu ? "menu-open" : "")}>
+      <aside className="sidebar">
+        <NavLink className="brand-mark" to="/" aria-label="DataQore overview">
+          <Database size={27} />
+        </NavLink>
+        <nav aria-label="Main navigation">
+          {links.map(([to, label, Icon]) => (
+            <NavLink
+              end={to === "/"}
+              key={to}
+              to={to}
+              title={label}
+              onClick={() => setMenu(false)}
+              className={({ isActive }) =>
+                "nav-item " + (isActive ? "active" : "")
+              }
+            >
+              <Icon size={23} />
+              <span>{label}</span>
+            </NavLink>
+          ))}
+        </nav>
+        <button
+          className="nav-item logout"
+          onClick={async () => {
+            await logout();
+            expire();
+          }}
+          title="Sign out"
+          aria-label="Sign out"
+        >
+          <LogOut size={22} />
+          <span>Sign out</span>
+        </button>
+      </aside>
+      <div className="app-main">
+        <header className="topbar">
+          <button
+            className="icon-button mobile-menu"
+            aria-label="Toggle navigation"
+            onClick={() => setMenu(!menu)}
+          >
+            <Menu />
+          </button>
+          <div className="product-title">
+            <div className="brand-mark">
+              <Database size={25} />
+            </div>
+            <strong>
+              ADQ <span>— Advanced Data Quality</span>
+            </strong>
+          </div>
+          <NavLink to="/account" className="profile-link">
+            <UserRound size={21} />
+            <span>{user.display_name}</span>
+          </NavLink>
+          <strong className="wordmark">DataQore</strong>
+        </header>
+        <main className="page">
+          <Suspense fallback={<Loading />}>
+            <Routes>
+              <Route path="/" element={<Overview />} />
+              <Route path="/connections" element={<Connections />} />
+              <Route path="/catalog" element={<Catalog />} />
+              <Route path="/datasets/:id" element={<DatasetProfile />} />
+              <Route path="/comparisons" element={<Comparisons />} />
+              <Route path="/comparisons/new" element={<Wizard />} />
+              <Route path="/comparisons/:id/edit" element={<Wizard />} />
+              <Route path="/comparisons/:id" element={<ComparisonDetail />} />
+              <Route path="/runs" element={<Runs />} />
+              <Route path="/runs/:id" element={<RunResult />} />
+              <Route
+                path="/runs/:id/differences"
+                element={<RunResult differences />}
+              />
+              <Route
+                path="/account"
+                element={<Account user={user} onChanged={expire} />}
+              />
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </Suspense>
+        </main>
+        <footer className="app-footer">
+          DataQore · ADQ · Sample-based evidence, with context and coverage.
+        </footer>
+      </div>
+    </div>
+  );
+}
+function Login({ onLogin }: { onLogin: (u: User) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  return (
+    <div className="login-screen">
+      <section className="login-brand">
+        <div className="brand-mark">
+          <Database size={32} />
+        </div>
+        <p className="eyebrow">DATAQORE / ADQ</p>
+        <h1>Trust your data.</h1>
+        <p>
+          Understand quality. Compare with evidence.
+          <br />
+          Make every result count.
+        </p>
+        <div className="login-lines" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+          <i />
+          <i />
+        </div>
+      </section>
+      <section className="login-panel">
+        <form
+          className="login-form"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const f = new FormData(e.currentTarget);
+            setBusy(true);
+            setError(null);
+            try {
+              onLogin(
+                await login(String(f.get("email")), String(f.get("password"))),
+              );
+            } catch (err) {
+              setError(err);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <p className="eyebrow">ADVANCED DATA QUALITY</p>
+          <h1>Welcome back</h1>
+          <p className="muted">Sign in to your local DataQore account.</p>
+          <label>
+            Email
+            <input name="email" type="email" autoComplete="username" required />
+          </label>
+          <label>
+            Password
+            <input
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              maxLength={128}
+            />
+          </label>
+          <ErrorBox error={error} />
+          <Button disabled={busy}>{busy ? "Signing in…" : "Sign in"}</Button>
+          <p className="muted small">
+            First time here? Create your administrator using the local setup
+            command.
+          </p>
+        </form>
+      </section>
+    </div>
+  );
+}
+function Account({ user, onChanged }: { user: User; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  return (
+    <>
+      <PageTitle
+        title="Account"
+        subtitle="Manage your local administrator credentials."
+      />
+      <div className="two-columns">
+        <Card title="Profile">
+          <dl>
+            <dt>Name</dt>
+            <dd>{user.display_name}</dd>
+            <dt>Email</dt>
+            <dd>{user.email}</dd>
+            <dt>Role</dt>
+            <dd>Administrator</dd>
+          </dl>
+        </Card>
+        <Card
+          title="Change password"
+          subtitle="Changing your password signs out all sessions."
+        >
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const f = new FormData(e.currentTarget);
+              if (f.get("new_password") !== f.get("confirm")) {
+                setError(Error("Passwords do not match."));
+                return;
+              }
+              setBusy(true);
+              setError(null);
+              try {
+                await post("/auth/change-password", {
+                  current_password: f.get("current_password"),
+                  new_password: f.get("new_password"),
+                });
+                onChanged();
+              } catch (err) {
+                setError(err);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <label>
+              Current password
+              <input
+                name="current_password"
+                type="password"
+                autoComplete="current-password"
+                required
+              />
+            </label>
+            <label>
+              New password
+              <input
+                name="new_password"
+                type="password"
+                autoComplete="new-password"
+                minLength={12}
+                maxLength={128}
+                required
+              />
+            </label>
+            <label>
+              Confirm new password
+              <input
+                name="confirm"
+                type="password"
+                autoComplete="new-password"
+                minLength={12}
+                maxLength={128}
+                required
+              />
+            </label>
+            <ErrorBox error={error} />
+            <Button disabled={busy}>Change password</Button>
+          </form>
+        </Card>
+      </div>
+    </>
+  );
+}

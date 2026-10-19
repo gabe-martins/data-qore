@@ -45,8 +45,8 @@ def mssql(creds):
     fields={"SERVER":f"{creds['hostname']},{creds.get('port') or 1433}",
         "DATABASE":creds["database"],"UID":creds["username"],"PWD":creds["password"]}
     dsn=";".join(f"{k}={odbc_value(v)}" for k,v in fields.items())
-    dsn+=";Encrypt=yes;TrustServerCertificate="+("yes" if creds.get("trust_server_certificate") else "no")+";Connection Timeout=10;"
-    return driver.connect(dsn)
+    dsn+=";Encrypt=yes;TrustServerCertificate="+("yes" if creds.get("trust_server_certificate") else "no")+";"
+    return driver.connect(dsn,timeout=10)
 
 
 @dataclass(frozen=True)
@@ -58,6 +58,54 @@ class Plugin:
 PLUGINS={"postgresql":Plugin("psycopg",postgres),"mysql":Plugin("pymysql",mysql),
     "oracle":Plugin("oracledb",oracle),"mssql":Plugin("mssql_python",mssql),
     "sqlite":Plugin("sqlite3",None)}
+
+
+def source_failure(kind,error):
+    """Classify source failures without returning/logging driver messages."""
+    if kind=="mssql" and any(marker in str(error).lower() for marker in (
+        "self-signed certificate","certificate verify failed","certificate chain was issued by an authority that is not trusted",
+        "hostname mismatch","certificate subject name does not match")):
+        return DomainError(503,"source_mssql_certificate_invalid",
+            "O certificado do SQL Server não foi validado. Configure um certificado confiável; para uma exceção local explícita, use Trust server certificate.")
+    reason=None
+    if kind=="postgresql":
+        reason={"28P01":"authentication_failed","28000":"access_denied",
+            "3D000":"database_not_found","42501":"permission_denied",
+            "57P03":"server_unavailable","53300":"server_unavailable",
+            "57014":"query_timeout"}.get(getattr(error,"sqlstate",None))
+        # libpq connection failures often lack SQLSTATE. Inspect locally only;
+        # never interpolate this text, which can contain user/database/password.
+        message=str(error).lower()
+        if reason is None:
+            for markers,category in [
+                (("no pg_hba.conf entry",),"access_denied"),
+                (("password authentication failed","no password supplied","authentication failed"),"authentication_failed"),
+                (("could not translate host name","name or service not known","nodename nor servname provided"),"host_unresolved"),
+                (("connection refused",),"connection_refused"),
+                (("timeout expired","connection timed out"),"connection_timeout"),
+                (("no route to host","network is unreachable"),"network_unreachable"),
+                (("certificate verify failed","server does not support ssl","ssl error","ssl connection","root certificate file","private key file"),"tls_error"),
+                (("database system is starting up","database system is shutting down","too many clients","remaining connection slots"),"server_unavailable"),
+            ]:
+                if category and any(marker in message for marker in markers):
+                    reason=category;break
+            if reason is None and "database" in message and "does not exist" in message:
+                reason="database_not_found"
+    descriptions={
+        "authentication_failed":"O PostgreSQL recusou a autenticação. Confira usuário e senha da fonte.",
+        "access_denied":"O PostgreSQL recusou o acesso. Confira pg_hba.conf, usuário e database da fonte.",
+        "database_not_found":"O database informado não existe no servidor PostgreSQL.",
+        "permission_denied":"A conta da fonte não possui permissão para esta operação de leitura.",
+        "host_unresolved":"Não foi possível resolver o host da fonte. Informe somente o hostname ou IP.",
+        "connection_refused":"A fonte recusou a conexão. Confira host, porta e se o PostgreSQL está escutando.",
+        "connection_timeout":"A conexão com a fonte excedeu o tempo limite. Confira rede e firewall.",
+        "network_unreachable":"Não há rota de rede até a fonte. Confira conectividade e firewall.",
+        "tls_error":"Falha na negociação SSL da fonte. Confira o modo SSL e os certificados do servidor.",
+        "server_unavailable":"O PostgreSQL da fonte não está aceitando conexões neste momento.",
+        "query_timeout":"A consulta na fonte excedeu o tempo limite.",
+    }
+    if reason:return DomainError(503,"source_"+reason,descriptions[reason])
+    return DomainError(503,"source_unavailable","Falha ao consultar a fonte. Verifique acesso, configuração e permissões.")
 
 
 def prepare_read_session(conn,kind):
@@ -138,8 +186,8 @@ class SourceManager:
             yield {"connection":row["name"],"creds":{"type":kind},"conn":conn,"adapter":get_adapter(kind)}
         except DomainError:
             raise
-        except Exception:
-            raise DomainError(503,"source_unavailable","Falha ao consultar a fonte. Verifique acesso, configuração e permissões.") from None
+        except Exception as error:
+            raise source_failure(kind,error) from None
         finally:
             if conn is not None:
                 try:

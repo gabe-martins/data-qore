@@ -41,3 +41,23 @@ PYTHONPATH=engine DATAQORE_PG_BIN=/CAMINHO/POSTGRES/bin \
 
 Consulte o [guia do motor](../engine/README.md) e o
 [OpenAPI exportado](openapi-engine.json).
+
+## Verificação operacional SQL Server — 18/10/2026
+
+Sob autorização do usuário, a conexão SQL Server já cadastrada no servidor
+pessoal foi testada com suas credenciais criptografadas. Corrigido o parâmetro
+`Connection Timeout`, rejeitado pelo parser de mssql-python 1.16.0; o login
+agora usa `connect(..., timeout=10)`.
+
+O servidor usa certificado autoassinado. A exceção `TrustServerCertificate`
+foi autorizada e aplicada somente a essa conexão, mantendo `Encrypt=yes`.
+Após reiniciar os serviços, os endpoints de teste, schemas e tabelas
+retornaram HTTP 200: `SELECT 1` aprovado, um schema e seis tabelas no catálogo.
+Nenhum registro das tabelas foi capturado, nem houve alteração na fonte.
+
+Nove testes de segurança/configuração passaram, incluindo o parser real do
+driver, caracteres especiais na senha, timeout, validação padrão do
+certificado e mensagem sanitizada para certificado inválido. Controller e Web
+App compilaram durante a reinicialização. Essa verificação operacional é
+separada da suíte descartável descrita acima; perfil e comparação completos
+no SQL Server ainda não foram validados nesse servidor.

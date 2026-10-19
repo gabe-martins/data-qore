@@ -21,7 +21,7 @@ from sqlalchemy import func,select
 from postgres_fixture import TemporaryPostgres
 from dataqore_engine.api import create_app
 from dataqore_engine import models as m
-from dataqore_engine.connectors import SourceManager,prepare_read_session,odbc_value
+from dataqore_engine.connectors import SourceManager,prepare_read_session,odbc_value,source_failure
 from dataqore_engine.jobs import Queue,run_job
 from dataqore_engine.settings import Settings
 from dataqore_engine.storage import DomainError,database_engine,json_safe
@@ -42,6 +42,79 @@ def settings(url='postgresql+psycopg://srv_dataqore_engine@localhost/dataqore_en
 
 
 class SecurityTests(unittest.TestCase):
+    def test_mssql_certificate_error_is_actionable_without_exposing_driver_details(self):
+        for text in ('self-signed certificate','certificate verify failed',
+            'certificate chain was issued by an authority that is not trusted','hostname mismatch'):
+            failure=source_failure('mssql',RuntimeError(text+' PRIVATE_PASSWORD'))
+            self.assertEqual(failure.code,'source_mssql_certificate_invalid')
+            self.assertIn('Trust server certificate',failure.message)
+            self.assertNotIn('PRIVATE_PASSWORD',failure.message)
+
+    def test_mssql_connection_string_matches_installed_driver(self):
+        try:
+            import mssql_python
+            from mssql_python.connection_string_parser import _ConnectionStringParser
+        except ImportError:self.skipTest('Optional SQL Server driver is not installed')
+        from dataqore_engine.connectors import mssql
+        creds={'hostname':'localhost','database':'example','username':'reader',
+            'password':'special};PWD=injection;{value','port':1433}
+        with patch.object(mssql_python,'connect') as connect:
+            mssql(creds)
+            args,kwargs=connect.call_args
+            # Use the real driver's validator: unsupported keywords must fail here.
+            parsed=_ConnectionStringParser(validate_keywords=True)._parse(args[0])
+            self.assertEqual(parsed['server'],'localhost,1433')
+            self.assertEqual(parsed['pwd'],creds['password'])
+            self.assertEqual(parsed['encrypt'],'yes')
+            self.assertEqual(parsed['trustservercertificate'],'no')
+            self.assertEqual(kwargs,{'timeout':10})
+            mssql({**creds,'trust_server_certificate':True})
+            parsed=_ConnectionStringParser(validate_keywords=True)._parse(connect.call_args.args[0])
+            self.assertEqual(parsed['encrypt'],'yes')
+            self.assertEqual(parsed['trustservercertificate'],'yes')
+
+    def test_postgres_failures_provide_safe_actionable_codes(self):
+        cases=[
+            ('28P01','PRIVATE_PASSWORD','authentication_failed'),
+            ('28000','PRIVATE_PASSWORD','access_denied'),
+            ('3D000','PRIVATE_PASSWORD','database_not_found'),
+            ('42501','PRIVATE_PASSWORD','permission_denied'),
+            ('57P03','PRIVATE_PASSWORD','server_unavailable'),
+            ('57014','PRIVATE_PASSWORD','query_timeout'),
+            (None,'password authentication failed for user PRIVATE_PASSWORD','authentication_failed'),
+            (None,'no pg_hba.conf entry for PRIVATE_PASSWORD','access_denied'),
+            (None,'database PRIVATE_PASSWORD does not exist','database_not_found'),
+            (None,'could not translate host name PRIVATE_PASSWORD','host_unresolved'),
+            (None,'connection refused PRIVATE_PASSWORD','connection_refused'),
+            (None,'timeout expired PRIVATE_PASSWORD','connection_timeout'),
+            (None,'no route to host PRIVATE_PASSWORD','network_unreachable'),
+            (None,'SSL error: certificate verify failed PRIVATE_PASSWORD','tls_error'),
+            (None,'database system is starting up PRIVATE_PASSWORD','server_unavailable'),
+            (None,'PRIVATE_PASSWORD','unavailable'),
+        ]
+        for state,message,reason in cases:
+            with self.subTest(reason=reason,state=state):
+                error=RuntimeError(message);error.sqlstate=state
+                failure=source_failure('postgresql',error)
+                self.assertEqual(failure.code,'source_'+reason)
+                self.assertEqual(failure.status,503)
+                self.assertNotIn('PRIVATE_PASSWORD',failure.message)
+        self.assertEqual(source_failure('mysql',RuntimeError('connection refused')).code,'source_unavailable')
+
+    def test_postgres_session_preserves_safe_failure_and_closes_connection(self):
+        from dataqore_engine.schemas import Credentials
+        from dataqore_engine.connectors import Plugin
+        manager=SourceManager(settings())
+        row={'name':'test','connector':'postgresql','is_active':True,'encryption_key_version':'v1',
+            'credentials_ciphertext':manager.encrypt('postgresql',Credentials(database='db',hostname='host',username='reader',password='PRIVATE_PASSWORD'))}
+        conn=MagicMock();error=psycopg.errors.InsufficientPrivilege('PRIVATE_PASSWORD')
+        conn.cursor.return_value.execute.side_effect=error
+        with patch.dict('dataqore_engine.connectors.PLUGINS',{'postgresql':Plugin('psycopg',lambda _:conn)}):
+            with self.assertRaises(DomainError) as raised:manager.test(row)
+        self.assertEqual(raised.exception.code,'source_permission_denied')
+        self.assertNotIn('PRIVATE_PASSWORD',raised.exception.message)
+        conn.close.assert_called_once()
+
     def test_configuration_rejects_owner_credentials_and_invalid_encryption_key(self):
         with self.assertRaises(ValueError):
             settings('postgresql+psycopg://dataqore_engine_owner@localhost/dataqore_engine')
@@ -158,6 +231,32 @@ class APITests(TemporaryPostgres):
         self.assertEqual(self.queue.claim(),UUID(identifier))
         run_job(self.settings,UUID(identifier))
         return self.request('GET',f'/runs/{identifier}')
+
+    def test_read_models_search_quality_coverage_and_no_source_access(self):
+        overview=self.request('GET','/overview')
+        self.assertIsNone(overview['sample_quality']['percentage'])
+        self.assertEqual(len(overview['trend']),7)
+        connections,datasets,definition=self.fixture()
+        listed=self.request('GET','/connections',params={'search':'left'})
+        self.assertEqual(listed['total'],1)
+        self.assertEqual(listed['items'][0]['dataset_count'],1)
+        self.assertEqual(self.request('GET','/connections',params={'search':'%'})['total'],0)
+        run=self.request('POST',f'/comparisons/{definition}/runs',202)
+        self.finish(run['id'])
+        # Catalog/source files may disappear; all summaries must still be readable.
+        for path in Path(self.files.name).glob('*.sqlite'):
+            path.unlink()
+        overview=self.request('GET','/overview')
+        self.assertEqual(overview['active_comparisons'],1)
+        self.assertEqual(overview['latest_conclusions']['difference_observed'],1)
+        self.assertEqual(overview['sample_quality']['percentage'],'100.0000')
+        self.assertEqual(overview['recent_runs'][0]['id'],run['id'])
+        summary=self.request('GET','/comparison-summaries',params={'search':'compare'})
+        self.assertEqual(summary['items'][0]['latest_result']['run_id'],run['id'])
+        self.assertEqual(summary['items'][0]['absolute_tolerance'],'0')
+        self.assertEqual(self.request('GET','/comparison-summaries',params={'search':'%'})['total'],0)
+        self.assertNotIn('PRIVATE_VALUE',json.dumps(overview))
+        self.request('GET','/comparison-summaries',422,params={'limit':201})
 
     def test_http_flow_comparison_profile_metrics_and_no_private_rows(self):
         connections,datasets,definition=self.fixture()

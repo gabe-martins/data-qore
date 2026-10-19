@@ -1,0 +1,114 @@
+{
+  "name": "DataQore Color System",
+  "version": "1.0.0",
+  "primitive": {
+    "ink": {
+      "900": "#172C3C"
+    },
+    "slate": {
+      "600": "#516575"
+    },
+    "green": {
+      "700": "#116B58",
+      "300": "#A6D3BF",
+      "100": "#DBF2E8"
+    },
+    "blue": {
+      "700": "#235E9D",
+      "300": "#B9CCE6",
+      "100": "#E7EFFA"
+    },
+    "amber": {
+      "700": "#845313",
+      "500": "#B98228",
+      "300": "#DFC694",
+      "100": "#FFF2D9",
+      "text": "#60451C"
+    },
+    "neutral": {
+      "0": "#FFFFFF",
+      "50": "#F4F6F3",
+      "100": "#F3F7F6",
+      "150": "#EDF1EF",
+      "200": "#EAF0ED",
+      "300": "#D5DFDC",
+      "400": "#C6D7D0",
+      "500": "#6C8390"
+    },
+    "inverse": {
+      "mint_text": "#A9DDCC",
+      "secondary_text": "#D2E0E8",
+      "primary_text": "#F0F7F5"
+    }
+  },
+  "semantic": {
+    "background": {
+      "app": "{primitive.neutral.50}",
+      "surface": "{primitive.neutral.0}",
+      "subtle": "{primitive.neutral.100}",
+      "code": "{primitive.neutral.150}",
+      "table_header": "{primitive.neutral.200}"
+    },
+    "text": {
+      "primary": "{primitive.ink.900}",
+      "secondary": "{primitive.slate.600}",
+      "inverse": "{primitive.neutral.0}",
+      "inverse_muted": "{primitive.inverse.secondary_text}"
+    },
+    "border": {
+      "default": "{primitive.neutral.300}",
+      "muted": "{primitive.neutral.400}",
+      "success": "{primitive.green.300}",
+      "info": "{primitive.blue.300}",
+      "warning": "{primitive.amber.300}"
+    },
+    "action": {
+      "primary": "{primitive.ink.900}",
+      "primary_text": "{primitive.neutral.0}",
+      "success": "{primitive.green.700}",
+      "info": "{primitive.blue.700}",
+      "warning": "{primitive.amber.700}"
+    },
+    "status": {
+      "success": {
+        "foreground": "{primitive.green.700}",
+        "background": "{primitive.green.100}"
+      },
+      "info": {
+        "foreground": "{primitive.blue.700}",
+        "background": "{primitive.blue.100}"
+      },
+      "warning": {
+        "foreground": "{primitive.amber.700}",
+        "background": "{primitive.amber.100}"
+      }
+    },
+    "brand": {
+      "primary": "{primitive.ink.900}",
+      "success": "{primitive.green.700}",
+      "information": "{primitive.blue.700}",
+      "warning": "{primitive.amber.700}"
+    }
+  },
+  "component_guidance": {
+    "sidebar_background": "{semantic.brand.primary}",
+    "primary_button_background": "{semantic.action.primary}",
+    "primary_button_text": "{semantic.action.primary_text}",
+    "page_background": "{semantic.background.app}",
+    "card_background": "{semantic.background.surface}",
+    "default_border": "{semantic.border.default}",
+    "healthy_status": "{semantic.status.success.foreground}",
+    "healthy_status_background": "{semantic.status.success.background}",
+    "info_status": "{semantic.status.info.foreground}",
+    "info_status_background": "{semantic.status.info.background}",
+    "warning_status": "{semantic.status.warning.foreground}",
+    "warning_status_background": "{semantic.status.warning.background}",
+    "connector": "{primitive.neutral.500}"
+  },
+  "deprecated": {
+    "purple_family": {
+      "replacement": "#172C3C",
+      "reason": "Purple tones such as #6750A4 are outside the DataQore brand palette."
+    }
+  }
+}

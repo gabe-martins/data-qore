@@ -54,6 +54,7 @@ class ConnectionUpdate(Model):
 
 
 class ConnectionOut(Model):
+    dataset_count: int=0
     id: UUID
     name: str
     connector: Connector
@@ -206,3 +207,67 @@ class ErrorOut(Model):
     code: str
     message: str
     request_id: UUID | None=None
+
+class IndicatorOut(Model):
+    passed:int
+    evaluated:int
+    total:int
+    percentage:str | None
+    coverage_percentage:str | None
+
+
+class LatestRunOut(Model):
+    id:UUID
+    status:str
+    requested_at:datetime
+    finished_at:datetime | None
+    error_code:str | None
+
+
+class LatestResultOut(Model):
+    run_id:UUID
+    conclusion:str
+    finished_at:datetime
+    agreement:dict[str,Any] | None
+    quality:dict[str,Any] | None
+
+
+class ComparisonSummaryOut(ComparisonOut):
+    latest_run:LatestRunOut | None
+    latest_result:LatestResultOut | None
+
+
+class TrendOut(IndicatorOut):
+    day:str
+
+
+class RecentRunOut(Model):
+    id:UUID
+    kind:str
+    status:str
+    comparison_id:UUID | None
+    dataset_id:UUID | None
+    requested_at:datetime
+    started_at:datetime | None
+    finished_at:datetime | None
+    error_code:str | None
+    name:str | None
+    conclusion:str | None
+    agreement:dict[str,Any] | None
+
+
+class AttentionOut(Model):
+    comparison_id:UUID
+    state:str
+
+
+class OverviewOut(Model):
+    active_comparisons:int
+    sample_quality:IndicatorOut
+    latest_conclusions:dict[str,int]
+    run_counts:dict[str,int]
+    trend:list[TrendOut]
+    recent_runs:list[RecentRunOut]
+    attention:list[AttentionOut]
+    as_of:datetime
+    scope:str

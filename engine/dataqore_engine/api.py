@@ -9,7 +9,7 @@ from fastapi import APIRouter,Depends,FastAPI,Header,Query,Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
-from sqlalchemy import select,text
+from sqlalchemy import select,text,func
 from sqlalchemy.exc import DBAPIError,IntegrityError
 from pydantic import ValidationError
 
@@ -120,8 +120,13 @@ def create_app(settings=None):
         return out(s.ConnectionOut,row)
 
     @router.get("/connections",response_model=s.Page[s.ConnectionOut],tags=["connections"])
-    def list_connections(limit:Limit=50,offset:Offset=0):
-        return page(s.ConnectionOut,m.connections,limit,offset)
+    def list_connections(limit:Limit=50,offset:Offset=0,search:str=Query(default="",max_length=255)):
+        pattern="%"+search.replace("\\","\\\\").replace("%","\\%").replace("_","\\_")+"%"
+        result=page(s.ConnectionOut,m.connections,limit,offset,m.connections.c.name.ilike(pattern))
+        with engine.connect() as conn:
+            counts=dict(conn.execute(select(m.datasets.c.connection_id,func.count()).group_by(m.datasets.c.connection_id)).all())
+        result["items"]=[row.model_copy(update={"dataset_count":counts.get(row.id,0)}) for row in result["items"]]
+        return result
 
     @router.get("/connections/{identifier}",response_model=s.ConnectionOut,tags=["connections"])
     def get_connection(identifier:UUID):
@@ -207,8 +212,9 @@ def create_app(settings=None):
         return repository.add(m.comparison_definitions,values)
 
     @router.get("/comparisons",response_model=s.Page[s.ComparisonOut],tags=["comparisons"])
-    def list_comparisons(limit:Limit=50,offset:Offset=0):
-        return page(s.ComparisonOut,m.comparison_definitions,limit,offset)
+    def list_comparisons(limit:Limit=50,offset:Offset=0,search:str=Query(default="",max_length=255)):
+        pattern="%"+search.replace("\\","\\\\").replace("%","\\%").replace("_","\\_")+"%"
+        return page(s.ComparisonOut,m.comparison_definitions,limit,offset,m.comparison_definitions.c.name.ilike(pattern))
 
     @router.get("/comparisons/{identifier}",response_model=s.ComparisonOut,tags=["comparisons"])
     def get_comparison(identifier:UUID):
@@ -272,5 +278,7 @@ def create_app(settings=None):
             conditions.append(m.metrics.c.metric_name==metric_name)
         return page(s.MetricOut,m.metrics,limit,offset,*conditions,order=[m.metrics.c.measured_at.desc(),m.metrics.c.id])
 
+    from .read_api import register_read_api
+    register_read_api(router,engine)
     app.include_router(router)
     return app
