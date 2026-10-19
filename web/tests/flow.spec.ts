@@ -111,16 +111,44 @@ test("real login → connection → catalog → profile → comparison → resul
   await expect(
     page.getByRole("heading", { name: "Automatic column correspondence" }),
   ).toBeVisible();
+  await page.getByLabel("Absolute tolerance (units)", { exact: true }).fill("0,50");
+  await page.getByLabel("Relative tolerance (%)", { exact: true }).fill("-1");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("non-negative decimal");
+  await page.getByLabel("Relative tolerance (%)", { exact: true }).fill("1");
+  const relativeHelp = page.getByRole("button", { name: "About relative tolerance", exact: true });
+  await relativeHelp.focus();
+  await expect(page.getByRole("tooltip")).toContainText("Enter 1 for 1%");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  await page.getByRole("button", { name: "About absolute tolerance", exact: true }).hover();
+  await expect(page.getByRole("tooltip")).toContainText("column’s units");
+  await page.mouse.move(0, 0);
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await relativeHelp.click();
+  await expect(page.getByRole("tooltip")).toBeVisible();
+  await expect(page.getByRole("tooltip")).toContainText("limits are not added");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  await page.screenshot({ path: "test-results/tolerance-help-mobile.png", fullPage: true });
+  await relativeHelp.click();
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  await page.setViewportSize({ width: 1440, height: 1100 });
   await page.screenshot({
     path: "test-results/wizard-rules.png",
     fullPage: true,
   });
   await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(page.getByText("0,50 units absolute / 1% relative", { exact: true })).toBeVisible();
   await page.screenshot({
     path: "test-results/wizard-review.png",
     fullPage: true,
   });
+  const savedRequest = page.waitForRequest(r => r.method() === "POST" && r.url().endsWith("/api/v1/comparisons"));
   await page.getByRole("button", { name: "Run now", exact: true }).click();
+  const tolerancePayload = (await savedRequest).postDataJSON();
+  expect(tolerancePayload.relative_tolerance).toBe("0.01");
+  expect(tolerancePayload.absolute_tolerance).toBe("0.50");
   await expect(
     page.getByText("succeeded", { exact: true }).first(),
   ).toBeVisible({ timeout: 30000 });
@@ -154,6 +182,19 @@ test("real login → connection → catalog → profile → comparison → resul
   await page.screenshot({path:'test-results/comparisons.png',fullPage:true});
   await page.getByRole('link',{name:'Sales sample validation',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Source configuration',exact:true})).toBeVisible();
+  await page.getByRole('tab',{name:'Rules',exact:true}).click();
+  await expect(page.getByText('1%',{exact:true})).toBeVisible();
+  await expect(page.getByText('0.50',{exact:true})).toBeVisible();
+  await page.getByRole('link',{name:'Edit',exact:true}).click();
+  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.getByLabel('Relative tolerance (%)',{exact:true})).toHaveValue('1');
+  await expect(page.getByLabel('Absolute tolerance (units)',{exact:true})).toHaveValue('0.50');
+  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  const updated = page.waitForRequest(r => r.method() === 'PATCH' && r.url().includes('/api/v1/comparisons/'));
+  await page.getByRole('button',{name:'Save comparison',exact:true}).click();
+  expect((await updated).postDataJSON().relative_tolerance).toBe('0.01');
+  expect((await updated).postDataJSON().absolute_tolerance).toBe('0.50');
+  await expect(page.getByRole('heading',{name:'Source configuration',exact:true})).toBeVisible();
   await page.screenshot({path:'test-results/comparison-detail.png',fullPage:true});
   await page.getByRole('tab',{name:'Runs',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Run history',exact:true})).toBeVisible();
@@ -183,6 +224,27 @@ test("real login → connection → catalog → profile → comparison → resul
     ),
   ).toBe(true);
   expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([]);
+});
+test.describe("touch tolerance help", () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+  test("opens and closes help by touch without horizontal overflow", async ({ page }) => {
+    await page.goto("/");
+    await page.getByLabel("Email", { exact: true }).fill("admin@dataqore.test");
+    await page.getByLabel("Password", { exact: true }).fill("DataQore-test-password-2026");
+    await page.getByRole("button", { name: "Sign in", exact: true }).tap();
+    await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Toggle navigation", exact: true }).tap();
+    await page.getByRole("link", { name: "Comparisons", exact: true }).tap();
+    await page.getByRole("link", { name: "Sales sample validation", exact: true }).tap();
+    await page.getByRole("tab", { name: "Rules", exact: true }).tap();
+    const help = page.getByRole("button", { name: "About relative tolerance", exact: true });
+    await help.tap();
+    await expect(page.getByRole("tooltip")).toContainText("Enter 1 for 1%");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    await page.screenshot({ path: "test-results/tolerance-help-touch.png", fullPage: true });
+    await help.tap();
+    await expect(page.getByRole("tooltip")).toHaveCount(0);
+  });
 });
 test("unaligned comparisons and empty profiles remain explicit and inconclusive", async ({
   page,

@@ -10,6 +10,8 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { api, allPages, patch, post, type Model, type Page } from "../api";
+import { normalizeTolerance, fractionToPercent, percentToFraction } from "../lib/tolerances";
+import { ToleranceHelp } from "../components/ToleranceHelp";
 import {
   Badge,
   Button,
@@ -376,10 +378,10 @@ export function ComparisonDetail() {
             ) : tab === "Rules" ? (
               <Card title="Comparison rules">
                 <dl>
-                  <dt>Absolute tolerance</dt>
+                  <dt>Absolute tolerance (units) <ToleranceHelp /></dt>
                   <dd>{c.data.absolute_tolerance}</dd>
-                  <dt>Relative tolerance</dt>
-                  <dd>{c.data.relative_tolerance}</dd>
+                  <dt>Relative tolerance (%) <ToleranceHelp relative /></dt>
+                  <dd>{fractionToPercent(c.data.relative_tolerance)}%</dd>
                   <dt>Strings</dt>
                   <dd>Exact; case and whitespace preserved</dd>
                   <dt>Column correspondence</dt>
@@ -437,8 +439,8 @@ export function Wizard() {
       setRight(c.right_dataset_id);
       setMode(c.mode);
       setAbsolute(String(c.absolute_tolerance));
-      setRelative(String(c.relative_tolerance));
-      setSampling({ ...defaults, ...c.sampling_options });
+      setRelative(fractionToPercent(c.relative_tolerance));
+      setSampling({ ...defaults, ...Object.fromEntries(Object.entries(c.sampling_options ?? {}).filter(([, value]) => value != null)) });
       setSize(c.sample_size ? String(c.sample_size) : "");
     }
   }, [existing.data]);
@@ -460,8 +462,8 @@ export function Wizard() {
           left_dataset_id: left,
           right_dataset_id: right,
           mode,
-          absolute_tolerance: absolute,
-          relative_tolerance: relative,
+          absolute_tolerance: normalizeTolerance(absolute),
+          relative_tolerance: percentToFraction(relative),
           sampling_options: sampling,
           sample_size: size ? Number(size) : null,
         };
@@ -475,6 +477,7 @@ export function Wizard() {
         comparison = c.id;
         setSaved(c.id);
         await cache.invalidateQueries({ queryKey: ["comparisons"] });
+        await cache.invalidateQueries({ queryKey: ["comparison", comparison] });
       }
       if (run) {
         const key = retryKey ?? crypto.randomUUID();
@@ -550,6 +553,11 @@ export function Wizard() {
             setError(Error("Choose two distinct datasets."));
             return;
           }
+          if (step === 2) {
+            try { normalizeTolerance(absolute); percentToFraction(relative); }
+            catch (error) { setError(error); return; }
+          }
+          setError(null);
           if (step < 3) setStep(step + 1);
           else void save(true);
         }}
@@ -669,27 +677,35 @@ export function Wizard() {
                 )}
               </Card>
               <Card title="Validation rules">
-                <label>
-                  Absolute numeric tolerance
+                <div className="tolerance-field">
+                  <div className="tolerance-label"><label htmlFor="absolute-tolerance">Absolute tolerance (units)</label><ToleranceHelp /></div>
                   <input
+                    id="absolute-tolerance"
                     value={absolute}
-                    onChange={(e) => setAbsolute(e.target.value)}
+                    onChange={(e) => { setAbsolute(e.target.value); setError(null); }}
                     required
                     inputMode="decimal"
+                    aria-describedby="absolute-tolerance-hint"
                   />
-                </label>
-                <label>
-                  Relative numeric tolerance
+                  <p id="absolute-tolerance-hint" className="muted small">Fixed difference in each numeric column’s units, e.g. 0.50.</p>
+                </div>
+                <div className="tolerance-field">
+                  <div className="tolerance-label"><label htmlFor="relative-tolerance">Relative tolerance (%)</label><ToleranceHelp relative /></div>
+                  <div className="percentage-input">
                   <input
+                    id="relative-tolerance"
                     value={relative}
-                    onChange={(e) => setRelative(e.target.value)}
+                    onChange={(e) => { setRelative(e.target.value); setError(null); }}
                     required
                     inputMode="decimal"
+                    aria-describedby="relative-tolerance-hint"
                   />
-                </label>
+                    <span aria-hidden="true">%</span>
+                  </div>
+                  <p id="relative-tolerance-hint" className="muted small">Enter 1 for 1%. Use a dot or comma for decimals; no thousands separators.</p>
+                </div>
                 <p className="notice">
-                  Relative tolerance is a fraction: 0.01 means 1%. Decimal
-                  values are sent as strings.
+                  Numeric values match when their difference is within the larger of the absolute and relative limits. The limits are not added. Both at zero means exact numeric equality. These rules do not set a percentage of differing records.
                 </p>
                 <dl>
                   <dt>Strings</dt>
@@ -717,7 +733,7 @@ export function Wizard() {
                   <dd>{mode}</dd>
                   <dt>Tolerances</dt>
                   <dd>
-                    {absolute} absolute / {relative} relative
+                    {absolute} units absolute / {relative}% relative
                   </dd>
                 </dl>
                 <p className="notice">

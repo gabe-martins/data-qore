@@ -53,6 +53,20 @@ run a comparison, then visit **Runs** to review progress and results.
 Access tokens stay in memory; session renewal uses an HttpOnly cookie.
 Saved connection passwords are not displayed when editing a connection.
 
+Comparison rules show **Absolute tolerance (units)** and **Relative tolerance (%)**.
+Enter `1` for 1% relative tolerance. Dot/comma decimals are accepted without
+thousands separators. Absolute values retain the column's units. Help buttons
+explain how the larger of the two limits is applied to numeric values and can
+be opened with hover, focus or tap and closed with Escape. The API still uses
+decimal fractions as strings; editing an existing comparison preserves its
+numeric meaning. These limits do not represent a percentage of differing rows.
+
+Exact conversion checks (no database required):
+
+```bash
+node --experimental-strip-types web/unit/tolerances.test.ts
+```
+
 ## Browser checks
 
 Install the test browser once:
