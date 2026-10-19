@@ -1186,3 +1186,13 @@ select:focus-visible {
   opacity: 0.5;
   cursor: progress;
 }
+.tolerance-field { margin-bottom: 20px; }
+.tolerance-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tolerance-label label { margin: 0; }
+.percentage-input { position: relative; }
+.percentage-input input { padding-right: 36px; }
+.percentage-input > span { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--semantic-text-secondary); }
+.help-tip { position: relative; display: inline-flex; vertical-align: middle; }
+.help-tip-button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; color: var(--semantic-text-secondary); background: transparent; }
+.help-tip-button:hover { background: var(--semantic-background-subtle); }
+.help-tip-content { position: fixed; width: min(320px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; z-index: 40; padding: 14px; border: 1px solid var(--semantic-border-default); border-radius: 9px; background: var(--semantic-background-surface); color: var(--semantic-text-primary); box-shadow: 0 8px 24px #172c3c26; font-size: 12px; font-weight: 400; line-height: 1.6; white-space: normal; }
