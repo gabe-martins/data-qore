@@ -83,6 +83,11 @@ no upload flow. Use read-only source credentials for other database systems.
 
 ## Operations
 
+For equivalent time/batch scopes, explicit column pairs and composite business
+keys, see [the comparison guide](../docs/SCOPED_COMPARISONS.md). This update needs
+engine migration `0002_comparison_options`; existing definitions default to `{}`.
+The preview endpoint checks current metadata without scanning key uniqueness.
+
 Review execution progress and results in the web app's **Runs** page. After
 restarting a worker, review interrupted runs before submitting a new request.
 Maintain database partitions using the [database guide](../database/README.md#monthly-partitions).

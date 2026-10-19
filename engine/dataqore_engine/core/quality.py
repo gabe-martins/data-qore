@@ -294,9 +294,10 @@ def _numeric_summary(values):
     return result
 
 
-def profile_rows(metadata, names, rows):
+def profile_rows(metadata, names, rows, allow_ambiguous=False):
     names, rows = list(names), list(rows)
-    name_map(names)
+    if not allow_ambiguous:
+        name_map(names)
     if any(len(row) != len(names) for row in rows):
         raise ValueError("Every sampled row must match the projected columns")
     metrics = {}

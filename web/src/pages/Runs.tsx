@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { FrozenComparisonContext } from "../components/ComparisonOptionsEditor";
 import { api, type Model, type Page } from "../api";
 import {
   Badge,
@@ -404,6 +405,7 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
                       </Card>
                     </>
                   )}
+                  <FrozenComparisonContext result={r} />
                   <Card title="Scope and interpretation">
                     <ul className="warnings">
                       {r.warnings?.map((w: string, i: number) => (

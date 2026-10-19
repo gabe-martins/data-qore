@@ -147,6 +147,7 @@ class PostgreSQLMigrationTests(TemporaryPostgres):
 
     def test_monthly_partitions_are_ignored_by_alembic_autogenerate(self):
         self.command('engine','baseline')
+        self.command('engine','apply')
         with self.connect('engine', 'srv_dataqore_engine_migrator') as connection:
             connection.execute("SELECT engine.ensure_metrics_partitions('2035-01-01'::date,2)")
         environment=os.environ.copy()
@@ -155,6 +156,27 @@ class PostgreSQLMigrationTests(TemporaryPostgres):
             env=environment,cwd=ROOT,capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stdout+result.stderr)
         self.assertIn('No new upgrade operations',result.stdout)
+
+    def test_comparison_options_upgrade_preserves_existing_definition_and_grants(self):
+        with self.connect('engine','srv_dataqore_engine') as conn:
+            c=conn.execute("INSERT INTO engine.connections(name,connector,credentials_ciphertext) VALUES ('preserved','sqlite','test') RETURNING id").fetchone()[0]
+            a,b=[conn.execute("INSERT INTO engine.datasets(connection_id,table_name) VALUES (%s,%s) RETURNING id",(c,t)).fetchone()[0] for t in ('a','b')]
+            identifier=conn.execute("INSERT INTO engine.comparison_definitions(name,left_dataset_id,right_dataset_id) VALUES ('legacy',%s,%s) RETURNING id",(a,b)).fetchone()[0]
+        before=self.table_oids('engine')
+        self.command('engine','baseline');self.command('engine','apply');self.command('engine','verify')
+        self.command('engine','apply')
+        self.assertEqual(before,self.table_oids('engine'))
+        with self.connect('engine','srv_dataqore_engine') as conn:
+            name,options=conn.execute('SELECT name,comparison_options FROM engine.comparison_definitions WHERE id=%s',(identifier,)).fetchone()
+            self.assertEqual((name,options),('legacy',{}))
+            conn.execute("UPDATE engine.comparison_definitions SET comparison_options='{\"mapping\":[]}' WHERE id=%s",(identifier,))
+            with self.assertRaises(psycopg.errors.CheckViolation):
+                conn.execute("UPDATE engine.comparison_definitions SET comparison_options='[]' WHERE id=%s",(identifier,))
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                conn.execute('ALTER TABLE engine.comparison_definitions ADD COLUMN forbidden text')
+        with self.connect('engine') as conn:
+            owner=conn.execute("SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid='engine.comparison_definitions'::regclass").fetchone()[0]
+            self.assertEqual(owner,'dataqore_engine_owner')
 
     def test_metrics_route_to_monthly_partitions_with_decimal_precision(self):
         expected=Decimal('0.123456789012345678901234567890123456789')

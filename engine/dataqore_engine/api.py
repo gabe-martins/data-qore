@@ -17,6 +17,7 @@ from . import models as m
 from . import schemas as s
 from .connectors import SourceManager
 from .jobs import Queue
+from .comparison_options import compact_options, metadata_signature, validate_options
 from .settings import load_settings
 from .storage import DomainError,Repository,database_engine,json_safe
 
@@ -200,10 +201,30 @@ def create_app(settings=None):
             order=[m.column_profiles.c.created_at.desc(),m.column_profiles.c.id])
 
     def validate_comparison(values,require_active=True):
+        columns=[]
         for name in ("left_dataset_id","right_dataset_id"):
             dataset=repository.get(m.datasets,values[name])
+            columns.append(dataset["metadata"].get("columns",{}))
             if require_active and not repository.get(m.connections,dataset["connection_id"])["is_active"]:
                 raise DomainError(409,"connection_inactive","Uma conexão está desativada.")
+        values["comparison_options"]=compact_options(values.get("comparison_options"))
+        if values["comparison_options"]:
+            validate_options(values["comparison_options"],columns,values["mode"])
+
+    @router.post("/comparisons/preview",response_model=s.ComparisonPreviewOut,tags=["comparisons"])
+    def preview_comparison(payload:s.ComparisonCreate):
+        values=payload.model_dump()
+        validate_comparison(values)
+        columns=[]
+        for name in ("left_dataset_id","right_dataset_id"):
+            dataset=repository.get(m.datasets,values[name])
+            _,metadata=sources.table_metadata(repository.get(m.connections,dataset["connection_id"]),
+                dataset["schema_name"],dataset["table_name"])
+            if metadata_signature(metadata["columns"]) != metadata_signature(dataset["metadata"].get("columns",{})):
+                raise DomainError(409,"source_schema_changed","Refresh the dataset metadata before previewing this definition.")
+            columns.append(metadata["columns"])
+        context=validate_options(values["comparison_options"],columns,values["mode"])
+        return {k:v for k,v in context.items() if k!="predicates"}
 
     @router.post("/comparisons",response_model=s.ComparisonOut,status_code=201,tags=["comparisons"])
     def create_comparison(payload:s.ComparisonCreate):

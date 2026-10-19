@@ -5,6 +5,7 @@ from typing import Annotated, Any, Generic, Literal, TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
+from .comparison_options import ComparisonOptions
 
 
 class Model(BaseModel):
@@ -118,11 +119,14 @@ class ComparisonCreate(ProfileRequest):
     mode: Mode="auto"
     absolute_tolerance: Annotated[Decimal,Field(ge=0,allow_inf_nan=False)]=Decimal(0)
     relative_tolerance: Annotated[Decimal,Field(ge=0,allow_inf_nan=False)]=Decimal(0)
+    comparison_options: ComparisonOptions=Field(default_factory=ComparisonOptions)
 
     @model_validator(mode="after")
     def distinct_sources(self):
         if self.left_dataset_id==self.right_dataset_id:
             raise ValueError("Selecione dois datasets distintos.")
+        if self.mode=="independent_random" and self.comparison_options.business_key:
+            raise ValueError("Business keys require key alignment.")
         return self
 
 
@@ -143,12 +147,21 @@ class ComparisonUpdate(Model):
     absolute_tolerance: Annotated[Decimal,Field(ge=0,allow_inf_nan=False)] | None=None
     relative_tolerance: Annotated[Decimal,Field(ge=0,allow_inf_nan=False)] | None=None
     is_active: bool | None=None
+    comparison_options: ComparisonOptions | None=None
 
     @model_validator(mode="after")
     def nonempty(self):
         if not self.model_fields_set or any(getattr(self,k) is None for k in self.model_fields_set if k!="sample_size"):
             raise ValueError("Informe campos válidos para atualização.")
         return self
+
+
+class ComparisonPreviewOut(Model):
+    mapping: list[dict[str,str]]
+    unmatched_columns: dict[str,list[str]]
+    business_key: list[dict[str,str]]
+    resolved_scope: dict[str,Any]
+    key_validation: str
 
 
 class RunOut(Model):

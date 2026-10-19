@@ -5,6 +5,8 @@ bounded; the database may still scan and sort the entire eligible table.
 """
 
 from decimal import Decimal
+from datetime import date, datetime, timezone
+from dataclasses import dataclass
 import re
 from uuid import UUID
 
@@ -14,6 +16,12 @@ MAX_CELL_BYTES = 65_536
 MAX_SAMPLE_ROWS = 10_000
 KEY_BATCH_ROWS = 100
 KEY_BATCH_PARAMETERS = 900
+
+
+@dataclass(frozen=True)
+class TextCriterion:
+    value: str
+    fixed_width: bool = False
 
 
 def _column(kind, nullable, **attributes):
@@ -135,6 +143,8 @@ class DatabaseAdapter:
                     info["family"] = "uuid"
                 elif self.db_type == "mysql" and kind.startswith("bit"):
                     info["family"] = "binary"  # PyMySQL returns raw bytes for BIT.
+                elif self.db_type == "mysql" and kind.startswith("timestamp"):
+                    info["comparison_timezone"] = "UTC"
             return metadata
         finally:
             cursor.close()
@@ -365,25 +375,167 @@ class DatabaseAdapter:
             materialized.append(tuple(values))
         return materialized
 
-    def fetch_random(self, conn, schema, table, columns, limit, metadata=None):
+    def _scope_sql(self, scope, start=1):
+        terms, params = [], []
+        for name, operator, values in scope or []:
+            column = self._bound_identifier(name)
+            sqlite_decimal = self.db_type == "sqlite" and any(isinstance(v, Decimal) for v in values)
+            markers = []
+            for value in values:
+                if isinstance(value, TextCriterion):
+                    params.append(value.value)
+                    marker = self._placeholder(start + len(params) - 1)
+                    if self.db_type == "sqlite":
+                        marker = f"dataqore_scope_text({column}, {marker}) = 1"
+                    elif self.db_type == "postgresql":
+                        # Casting bpchar to text trims padding; its output
+                        # function retains the value seen by the source driver.
+                        expression = f"pg_catalog.textin(pg_catalog.bpcharout({column}))" if value.fixed_width else f"CAST({column} AS text)"
+                        marker = f"pg_catalog.convert_to({expression}, 'UTF8') = pg_catalog.convert_to(CAST({marker} AS text), 'UTF8')"
+                    elif self.db_type == "mysql":
+                        marker = f"CAST(CONVERT({column} USING utf8mb4) AS BINARY) = CAST(CONVERT({marker} USING utf8mb4) AS BINARY)"
+                    elif self.db_type == "mssql":
+                        # BIN2 preserves code points; a final sentinel prevents
+                        # SQL Server from ignoring trailing spaces at equality.
+                        marker = f"((CONVERT(nvarchar(max), {column}) + NCHAR(1)) COLLATE Latin1_General_100_BIN2) = ((CONVERT(nvarchar(max), {marker}) + NCHAR(1)) COLLATE Latin1_General_100_BIN2)"
+                    else:
+                        marker = f"DBMS_LOB.COMPARE(TO_NCLOB({column}), TO_NCLOB({marker})) = 0"
+                    markers.append(marker)
+                    continue
+                oracle_aware = self.db_type == "oracle" and isinstance(value, datetime) and value.tzinfo is not None
+                if self.db_type == "sqlite":
+                    if isinstance(value, Decimal):
+                        value = str(value)
+                    elif isinstance(value, (date, datetime)):
+                        if isinstance(value, datetime):
+                            aware = value.tzinfo is not None
+                            column = f"dataqore_scope_timestamp_{'aware' if aware else 'naive'}({self._bound_identifier(name)})"
+                            if aware:
+                                value = value.astimezone(timezone.utc).replace(tzinfo=None)
+                            value = value.isoformat(sep=" ", timespec="microseconds")
+                        else:
+                            column = f"dataqore_scope_date({self._bound_identifier(name)})"
+                            value = value.isoformat()
+                elif self.db_type == "oracle" and isinstance(value, datetime) and value.tzinfo is not None:
+                    value = value.isoformat(timespec="microseconds")
+                elif self.db_type in {"mysql", "mssql"} and isinstance(value, datetime) and value.tzinfo is not None:
+                    value = value.astimezone(timezone.utc).isoformat() if self.db_type == "mssql" else value.astimezone(timezone.utc).replace(tzinfo=None)
+                params.append(value)
+                marker = self._placeholder(start + len(params) - 1)
+                if oracle_aware:
+                    marker = f"TO_TIMESTAMP_TZ({marker}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FF6TZH:TZM')"
+                markers.append(marker)
+            if values and isinstance(values[0], TextCriterion):
+                term = "(" + " OR ".join(markers) + ")"
+            elif sqlite_decimal:
+                comparison = 'eq' if operator == 'in' else operator
+                term = "(" + " OR ".join(f"dataqore_scope_decimal({column}, {marker}, '{comparison}') = 1" for marker in markers) + ")"
+            elif operator in {"is_null", "is_not_null"}:
+                term = column + (" IS NULL" if operator == "is_null" else " IS NOT NULL")
+            elif operator == "in":
+                term = column + " IN (" + ", ".join(markers) + ")"
+            else:
+                op = {"eq": "=", "gte": ">=", "lt": "<"}[operator]
+                term = f"{column} {op} {markers[0]}"
+            terms.append(term)
+        if len(params) > 800:
+            raise ValueError("Scope parameter budget exceeded")
+        return " AND ".join(terms), params
+
+    def _prepare_scope(self, conn, scope):
+        if self.db_type != "sqlite" or not any(isinstance(v, (date, datetime, Decimal, TextCriterion)) for _, _, values in scope or [] for v in values):
+            return
+
+        def canonical_date(value):
+            if value is None:
+                return None
+            if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+                raise ValueError("Noncanonical source date")
+            return date.fromisoformat(value).isoformat()
+
+        def canonical_timestamp(value, aware):
+            if value is None:
+                return None
+            if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})?", value):
+                raise ValueError("Noncanonical source timestamp")
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            if (parsed.tzinfo is not None) != aware:
+                raise ValueError("Source timestamp timezone conflicts with declared type")
+            if aware:
+                parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+            return parsed.isoformat(sep=" ", timespec="microseconds")
+
+        def exact_decimal(value, threshold, operator):
+            if value is None:
+                return None
+            if not isinstance(value, (int, float)):
+                raise ValueError("Source numeric value conflicts with declared type")
+            actual, limit = Decimal(str(value)), Decimal(threshold)
+            if not actual.is_finite():
+                raise ValueError("Nonfinite source numeric value")
+            return int({'eq': actual == limit, 'gte': actual >= limit, 'lt': actual < limit}[operator])
+
+        def exact_text(value, threshold):
+            if value is None:
+                return None
+            if not isinstance(value, str):
+                raise ValueError("Source text value conflicts with declared type")
+            return int(value == threshold)
+
+        conn.create_function("dataqore_scope_date", 1, canonical_date, deterministic=True)
+        conn.create_function("dataqore_scope_timestamp_naive", 1, lambda v: canonical_timestamp(v, False), deterministic=True)
+        conn.create_function("dataqore_scope_timestamp_aware", 1, lambda v: canonical_timestamp(v, True), deterministic=True)
+        conn.create_function("dataqore_scope_decimal", 3, exact_decimal, deterministic=True)
+        conn.create_function("dataqore_scope_text", 2, exact_text, deterministic=True)
+
+    def validate_key(self, conn, schema, table, key_columns, scope=None):
+        """Only aggregates leave the source; the entire eligible set is checked."""
+        self._prepare_scope(conn, scope)
+        table_sql = self._bound_table(schema, table)
+        scope_sql, params = self._scope_sql(scope)
+        where = " WHERE " + scope_sql if scope_sql else ""
+        keys = [self._bound_identifier(k) for k in key_columns]
+        nulls = " OR ".join(k + " IS NULL" for k in keys)
+        count = "COUNT_BIG(*)" if self.db_type == "mssql" else "COUNT(*)"
+        cursor = conn.cursor()
+        try:
+            null_count = ("COUNT_BIG" if self.db_type == "mssql" else "COUNT") + f"(CASE WHEN {nulls} THEN 1 END)"
+            cursor.execute(f"SELECT {count}, {null_count} FROM {table_sql}{where}", tuple(params))
+            total, null_rows = cursor.fetchone()
+            # Nulls are diagnosed separately; duplicates among non-null keys.
+            nonnull = " AND ".join(k + " IS NOT NULL" for k in keys)
+            predicate = (scope_sql + " AND " if scope_sql else "") + nonnull
+            cursor.execute(f"SELECT {count}, COALESCE(SUM(adq_n - 1), 0) FROM "
+                f"(SELECT {count} AS adq_n FROM {table_sql} WHERE {predicate} "
+                f"GROUP BY {', '.join(keys)} HAVING {count} > 1) adq_duplicates", tuple(params))
+            groups, excess = cursor.fetchone()
+            return dict(total_rows=int(total), null_key_rows=int(null_rows), duplicate_groups=int(groups),
+                duplicate_excess_rows=int(excess), valid=not (null_rows or groups), scope="entire selected scope")
+        finally:
+            cursor.close()
+
+    def fetch_random(self, conn, schema, table, columns, limit, metadata=None, scope=None):
+        self._prepare_scope(conn, scope)
         if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= MAX_SAMPLE_ROWS:
             raise ValueError(f"Sample limit must be an integer between 1 and {MAX_SAMPLE_ROWS}")
         columns = list(columns)
         projection, guards, unavailable = self._projection(columns, metadata)
         table_sql = self._bound_table(schema, table)
-        marker = self._placeholder(1)
+        scope_sql, params = self._scope_sql(scope, start=2 if self.db_type == "mssql" else 1)
+        where = " WHERE " + scope_sql if scope_sql else ""
+        marker = self._placeholder(1 if self.db_type == "mssql" else len(params) + 1)
         order = {"postgresql": "RANDOM()", "mysql": "RAND()", "sqlite": "RANDOM()",
                  "mssql": "NEWID()", "oracle": "DBMS_RANDOM.VALUE"}[self.db_type]
         if self.db_type == "mssql":
-            sql = f"SELECT TOP ({marker}) {projection} FROM {table_sql} ORDER BY {order}"
+            sql = f"SELECT TOP ({marker}) {projection} FROM {table_sql}{where} ORDER BY {order}"
         elif self.db_type == "oracle":
             # ROWNUM works on Oracle versions before FETCH FIRST was introduced.
-            sql = f"SELECT * FROM (SELECT {projection} FROM {table_sql} ORDER BY {order}) WHERE ROWNUM <= {marker}"
+            sql = f"SELECT * FROM (SELECT {projection} FROM {table_sql}{where} ORDER BY {order}) WHERE ROWNUM <= {marker}"
         else:
-            sql = f"SELECT {projection} FROM {table_sql} ORDER BY {order} LIMIT {marker}"
+            sql = f"SELECT {projection} FROM {table_sql}{where} ORDER BY {order} LIMIT {marker}"
         cursor = conn.cursor()
         try:
-            cursor.execute(sql, (limit,))
+            cursor.execute(sql, tuple([limit] + params if self.db_type == "mssql" else params + [limit]))
             rows = cursor.fetchmany(limit)
             return columns, self._materialize(rows, columns, guards, unavailable)
         finally:
@@ -407,8 +559,13 @@ class DatabaseAdapter:
             return int(value)
         return value
 
-    def fetch_keys(self, conn, schema, table, columns, key_columns, values, metadata=None):
+    def fetch_keys(self, conn, schema, table, columns, key_columns, values, metadata=None, scope=None):
         columns, key_columns, values = list(columns), list(key_columns), list(values)
+        self._prepare_scope(conn, scope)
+        from .quality import metadata_family
+        exact_text_keys = {name for name in key_columns if scope is not None and metadata_family((metadata or {}).get(name, {})) == 'text'}
+        if exact_text_keys:
+            self._prepare_scope(conn, [(next(iter(exact_text_keys)), 'eq', [TextCriterion('')])])
         if not key_columns or any(key not in columns for key in key_columns):
             raise ValueError("Every key column must be present in the explicit projection")
         if len(key_columns) > KEY_BATCH_PARAMETERS:
@@ -418,21 +575,31 @@ class DatabaseAdapter:
         projection, guards, unavailable = self._projection(columns, metadata)
         if not values:
             return columns, []
-        batch_size = max(1, min(KEY_BATCH_ROWS, KEY_BATCH_PARAMETERS // len(key_columns)))
+        scope_sql, scope_params = self._scope_sql(scope)
+        capacity = KEY_BATCH_PARAMETERS - len(scope_params)
+        if len(key_columns) > capacity:
+            raise ValueError("Scope and key exceed parameter budget")
+        batch_size = max(1, min(KEY_BATCH_ROWS, capacity // len(key_columns)))
         table_sql = self._bound_table(schema, table)
         rows = []
         cursor = conn.cursor()
         try:
             for offset in range(0, len(values), batch_size):
                 batch = values[offset:offset + batch_size]
-                params, predicates = [], []
+                params, predicates = list(scope_params), []
                 for key_values in batch:
                     terms = []
                     for name, value in zip(key_columns, key_values):
+                        if name in exact_text_keys:
+                            native = (metadata or {}).get(name, {}).get('type', '').lower().split('(')[0].strip()
+                            exact, bound = self._scope_sql([(name, 'eq', [TextCriterion(value, native in {'char', 'character', 'nchar', 'bpchar'})])], start=len(params)+1)
+                            params.extend(bound)
+                            terms.append(exact)
+                            continue
                         params.append(self._bind_key(value, (metadata or {}).get(name, {})))
                         terms.append(f"{self._bound_identifier(name)} = {self._placeholder(len(params))}")
                     predicates.append("(" + " AND ".join(terms) + ")")
-                sql = f"SELECT {projection} FROM {table_sql} WHERE " + " OR ".join(predicates)
+                sql = f"SELECT {projection} FROM {table_sql} WHERE " + (scope_sql + " AND " if scope_sql else "") + "(" + " OR ".join(predicates) + ")"
                 cursor.execute(sql, tuple(params))
                 found = cursor.fetchmany(len(batch) + 1)
                 if len(found) > len(batch):

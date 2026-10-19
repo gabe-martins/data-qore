@@ -19,7 +19,7 @@ def _family(info):
     return info.get('family') or type_family(info.get('type'))
 
 
-def prepare_sources(selected):
+def prepare_sources(selected, explicit_options=False):
     if len(selected) != 2:
         raise ValueError('Select exactly two tables for a comparison')
     sources = []
@@ -30,21 +30,30 @@ def prepare_sources(selected):
         columns = adapter.metadata(item['conn'], item['schema'], item['table'])
         if not columns:
             raise ValueError(f"No column metadata for {item['table']}")
+        if explicit_options and item.get('read_consistency') == 'transactional_snapshot_pending':
+            cursor = item['conn'].cursor()
+            try:
+                cursor.execute("SELECT ENGINE FROM information_schema.tables WHERE table_schema = COALESCE(NULLIF(%s, ''), DATABASE()) AND table_name = %s", (item['schema'], item['table']))
+                row = cursor.fetchone()
+                item['read_consistency'] = 'stable_snapshot' if row and str(row[0]).lower() == 'innodb' else 'best_effort'
+            finally:
+                cursor.close()
         sources.append({**item, 'adapter': adapter, 'columns': columns, 'query_log': events,
-                        'names': name_map(columns),
+                        'names': {} if explicit_options else name_map(columns),
                         'estimated_rows': adapter.estimate_rows(item['conn'], item['schema'], item['table'])})
     return sources
 
 
 def _key_candidates(source):
     columns = source['columns']
-    primary = [name.casefold() for name, info in sorted(columns.items(),
+    reverse = {physical: logical for logical, physical in source['names'].items()}
+    primary = [reverse[name] for name, info in sorted(columns.items(),
                key=lambda pair: pair[1].get('primary_key_order') or 10**6) if info.get('primary_key')]
     result = [(primary, 'primary_key')] if primary else []
     groups = {}
     for name, info in columns.items():
         for group in info.get('unique_groups', []):
-            groups.setdefault(group, []).append(name.casefold())
+            groups.setdefault(group, []).append(reverse[name])
     for names in sorted(groups.values(), key=lambda group: (len(group), sorted(group))):
         if all(columns[source['names'][name]].get('nullable') is False for name in names):
             result.append((names, 'unique_constraint'))
@@ -80,16 +89,18 @@ def common_primary_key(sources):
 
 def _capture(source, limit):
     names, rows = source['adapter'].fetch_random(source['conn'], source['schema'], source['table'],
-                                               list(source['columns']), limit, metadata=source['columns'])
-    return profile_rows(source['columns'], names, rows)
+                                               list(source['columns']), limit, metadata=source['columns'],
+                                               **({'scope': source['scope']} if 'scope' in source else {}))
+    return profile_rows(source['columns'], names, rows, allow_ambiguous=source.get('explicit_options', False))
 
 
 def fetch_by_keys(source, keys, values):
     adapter = source.get('adapter') or get_adapter(source['creds']['type'])
     names, rows = adapter.fetch_keys(source['conn'], source['schema'], source['table'],
                                      list(source['columns']), [source['names'][key] for key in keys],
-                                     values, metadata=source['columns'])
-    return profile_rows(source['columns'], names, rows)
+                                     values, metadata=source['columns'],
+                                     **({'scope': source['scope']} if 'scope' in source else {}))
+    return profile_rows(source['columns'], names, rows, allow_ambiguous=source.get('explicit_options', False))
 
 
 def _key_token(value, info):
@@ -261,14 +272,16 @@ def _compare_rows(sources, profiles, keys, requested_tokens, abs_tol, rel_tol):
     result['agreement'] = agreement_score(len(universe) * len(columns),
                                           sum(differences.values()), missing_positions, unknown_positions)
     common_profiles = [profile_rows(source['columns'], profile['sample_columns'],
-                                   [index[token] for token in sorted(common, key=repr)])
+                                   [index[token] for token in sorted(common, key=repr)],
+                                   allow_ambiguous=source.get('explicit_options', False))
                        for source, profile, index in zip(sources, profiles, (left, right))]
     return result, common_profiles
 
 
 def execute_comparison(selected, mode='auto', sample_size=None, prepared=None, options=None,
                        absolute_tolerance=Decimal('0'), relative_tolerance=Decimal('0'),
-                       preview_callback=None, preview_limit=5, execution_id=None):
+                       preview_callback=None, preview_limit=5, execution_id=None,
+                       comparison_options=None, resolved_scope=None):
     started_at = datetime.now().astimezone().isoformat(timespec='microseconds')
     execution_id = str(execution_id or uuid4())
     if len(selected) != 2:
@@ -286,13 +299,44 @@ def execute_comparison(selected, mode='auto', sample_size=None, prepared=None, o
     abs_tol, rel_tol = Decimal(str(absolute_tolerance)), Decimal(str(relative_tolerance))
     if not abs_tol.is_finite() or not rel_tol.is_finite() or min(abs_tol, rel_tol) < 0:
         raise ValueError('Numeric tolerances must be finite nonnegative numbers')
-    sources = prepared if prepared is not None else prepare_sources(selected)
+    from ..comparison_options import compact_options, metadata_signature, validate_options
+    from ..storage import DomainError
+    configured = compact_options(comparison_options)
+    sources = prepared if prepared is not None else prepare_sources(selected, explicit_options=bool(configured))
     if len(sources) != 2:
         raise ValueError('Prepared sources must contain exactly two tables')
-    keys, key_kind = common_comparison_key(sources) if mode != 'independent_random' else ([], None)
-    if mode == 'matched_keys' and not keys:
+    context, key_validation = None, []
+    if configured:
+        for source in sources:
+            expected = source.get('expected_columns')
+            if expected is not None and metadata_signature(source['columns']) != expected:
+                raise DomainError(409, 'source_schema_changed', 'Source metadata changed after enqueue; refresh the dataset and review the definition.')
+        context = validate_options(configured, [s['columns'] for s in sources], mode, resolved_scope)
+        for i, side in enumerate(('left', 'right')):
+            names = {f'pair_{j}': pair[side] for j, pair in enumerate(context['mapping'])}
+            names.update({f'unpaired_{side}_{j}': name for j, name in enumerate(context['unmatched_columns'][side])})
+            sources[i].update(names=names, scope=context['predicates'][i], explicit_options=True)
+            if sources[i]['scope']:
+                sources[i]['estimated_rows'] = None
+        business = context['business_key']
+        if business:
+            keys = [next(k for k, v in sources[0]['names'].items() if v == pair['left']) for pair in business]
+            key_kind = 'business_key'
+            for source in sources:
+                physical = [source['names'][key] for key in keys]
+                diagnostic = source['adapter'].validate_key(source['conn'], source['schema'], source['table'], physical, source['scope'])
+                key_validation.append({**diagnostic, 'columns': physical,
+                    'read_consistency': source.get('read_consistency', 'best_effort')})
+        else:
+            keys, key_kind = common_comparison_key(sources) if mode != 'independent_random' else ([], None)
+    else:
+        keys, key_kind = common_comparison_key(sources) if mode != 'independent_random' else ([], None)
+    invalid_business_key = bool(key_validation) and not all(v['valid'] for v in key_validation)
+    if invalid_business_key:
+        keys = []  # Keep the selected identity in context; never try another key.
+    if mode == 'matched_keys' and not keys and not invalid_business_key:
         raise ValueError('Matched sampling requires compatible primary or non-null UNIQUE keys')
-    actual_mode = 'matched_keys' if keys else 'independent_random'
+    actual_mode = 'matched_keys' if keys else 'key_validation_failed' if invalid_business_key else 'independent_random'
     warnings = []
     initial = pilot_size(sources, options, sample_size)
     pilots = [_capture(source, initial) for source in sources]
@@ -301,10 +345,16 @@ def execute_comparison(selected, mode='auto', sample_size=None, prepared=None, o
             for source, profile in zip(sources, pilots):
                 _index(profile, source, keys)
         except ValueError:
-            if mode == 'matched_keys':
-                raise
-            warnings.append('Invalid keys observed in pilot; falling back to independent profiles.')
-            keys, key_kind, actual_mode = [], None, 'independent_random'
+            if key_kind == 'business_key':
+                invalid_business_key = True
+                for validation in key_validation:
+                    validation.update(valid=False, reason='key_unavailable_or_changed_after_validation')
+                keys, actual_mode = [], 'key_validation_failed'
+            else:
+                if mode == 'matched_keys':
+                    raise
+                warnings.append('Invalid keys observed in pilot; falling back to independent profiles.')
+                keys, key_kind, actual_mode = [], None, 'independent_random'
     plan = plan_sample(sources, pilots, options, actual_mode, keys, key_kind, sample_size)
     target = plan['target_rows']
     pools = []
@@ -324,27 +374,62 @@ def execute_comparison(selected, mode='auto', sample_size=None, prepared=None, o
         try:
             tokens, key_values = _select_union(sources, pools, keys, target, plan['seed'])
         except ValueError:
-            if mode == 'matched_keys':
+            if key_kind == 'business_key':
+                invalid_business_key = True
+                for validation in key_validation:
+                    validation.update(valid=False, reason='key_unavailable_or_changed_after_validation')
+            elif mode == 'matched_keys':
                 raise
             keys = []
-            plan.update(mode='independent_random', key_columns=[], key_kind=None,
-                        selection='independent random samples after invalid-key fallback',
-                        metric_scope='independent profiles; descriptive differences only')
-            warnings.append('Invalid keys observed after expansion; falling back to independent profiles.')
+            if not invalid_business_key:
+                plan.update(mode='independent_random', key_columns=[], key_kind=None,
+                            selection='independent random samples after invalid-key fallback',
+                            metric_scope='independent profiles; descriptive differences only')
+                warnings.append('Invalid keys observed after expansion; falling back to independent profiles.')
     if keys:
-        profiles = [fetch_by_keys(source, keys, key_values) for source in sources]
-        row_result, metric_profiles = _compare_rows(sources, profiles, keys, tokens, abs_tol, rel_tol)
-        row_results = [row_result]
-        plan['selected_keys'] = len(tokens)
-        plan['rounds'].append({'stage': 'common_key_lookup', 'requested_keys_per_source': len(tokens),
-                               'observed_rows': [p['sample_size'] for p in profiles]})
-    else:
-        profiles = [profile_rows(source['columns'], pool['sample_columns'], pool['sample_rows'][:target])
+        try:
+            profiles = [fetch_by_keys(source, keys, key_values) for source in sources]
+            row_result, metric_profiles = _compare_rows(sources, profiles, keys, tokens, abs_tol, rel_tol)
+            row_results = [row_result]
+            plan['selected_keys'] = len(tokens)
+            plan['rounds'].append({'stage': 'common_key_lookup', 'requested_keys_per_source': len(tokens),
+                                   'observed_rows': [p['sample_size'] for p in profiles]})
+        except ValueError:
+            if key_kind != 'business_key':
+                raise
+            invalid_business_key = True
+            for validation in key_validation:
+                validation.update(valid=False, reason='key_unavailable_or_changed_after_validation')
+            keys = []
+    if not keys:
+        profiles = [profile_rows(source['columns'], pool['sample_columns'], pool['sample_rows'][:target],
+                                 allow_ambiguous=source.get('explicit_options', False))
                     for source, pool in zip(sources, pools)]
         metric_profiles, row_results = profiles, []
     findings = schema_findings(sources)
     quality = quality_findings(profiles)
-    metrics = compare_profiles(*metric_profiles)
+    if context:
+        metrics = compare_profiles(*[{'metrics': {logical: profile['metrics'][physical]
+            for logical, physical in source['names'].items()}} for source, profile in zip(sources, metric_profiles)])
+        for finding in findings + metrics:
+            logical = finding['column']
+            finding.update(left_column=sources[0]['names'].get(logical), right_column=sources[1]['names'].get(logical))
+            finding['column'] = finding['left_column'] or finding['right_column']
+            if 'reference_column' in finding:
+                finding.update(reference_column=finding['left_column'], target_column=finding['right_column'])
+        for row in row_results:
+            row['column_pairs'] = context['mapping']
+            for field in ('different_values', 'incomparable_values'):
+                row[field] = {sources[0]['names'].get(k, k): v for k, v in row[field].items()}
+            for field in ('compared_columns', 'incompatible_columns', 'unmatched_columns'):
+                row[field] = [sources[0]['names'].get(k) or sources[1]['names'].get(k) for k in row[field]]
+        for finding in quality:
+            side = 'left' if finding['source'] == 1 else 'right'
+            pair = next((p for p in context['mapping'] if p[side] == finding['column']), None)
+            finding.update(left_column=pair['left'] if pair else finding['column'] if side == 'left' else None,
+                           right_column=pair['right'] if pair else finding['column'] if side == 'right' else None)
+    else:
+        metrics = compare_profiles(*metric_profiles)
     status = row_results[0]['status'] if row_results else 'profile_only'
     if any(p['sample_size'] == 0 for p in profiles) and status != 'difference_observed':
         status = 'inconclusive'
@@ -353,6 +438,15 @@ def execute_comparison(selected, mode='auto', sample_size=None, prepared=None, o
         status = 'difference_observed'
     elif any(f['severity'] == 'inconclusive' for f in quality) and status != 'difference_observed':
         status = 'inconclusive'
+    if invalid_business_key:
+        status = 'inconclusive'
+        warnings.append('Business key is invalid or unavailable: nulls, duplicates, or a changed key after full-scope validation. Record agreement was not evaluated; no alternative key was selected.')
+    if context:
+        if any(_family(source['columns'][pair[side]]) == 'text' for source, side in zip(sources, ('left', 'right')) for pair in context['business_key']):
+            warnings.append('Full-scope text-key grouping uses source equality semantics; case, accent or padding equivalence can conservatively invalidate a key. Record lookups and value comparisons remain exact.')
+        for i, source in enumerate(sources, 1):
+            if source.get('read_consistency') != 'stable_snapshot':
+                warnings.append(f'Source {i}: stable read unavailable. Full-scope validation and sample reads can observe different states.')
     warnings.extend(['A sample cannot establish equality of entire tables.',
                      'No synchronized snapshot across databases; concurrent changes can affect results.',
                      'Random ordering may scan/sort the table; sample limits do not bound server work.',
@@ -380,7 +474,7 @@ def execute_comparison(selected, mode='auto', sample_size=None, prepared=None, o
         **{name: value for name, value in profile.items() if name not in {'sample_rows', 'sample_columns'}},
     } for source, profile in zip(sources, profiles)]
     finished_at = datetime.now().astimezone().isoformat(timespec='microseconds')
-    return {'format_version': 4, 'engine_version': '4.0', 'indicators': indicators,
+    result = {'format_version': 5 if context else 4, 'engine_version': '5.0' if context else '4.0', 'indicators': indicators,
             'execution_id': execution_id, 'started_at': started_at, 'finished_at': finished_at,
             'created_at': datetime.now().astimezone().isoformat(timespec='seconds'),
             'sample_size': target, 'sampling_plan': plan, 'sources': public_sources,
@@ -391,3 +485,20 @@ def execute_comparison(selected, mode='auto', sample_size=None, prepared=None, o
             'value_distributions': value_distributions(sources, profiles) if not keys else [],
             'query_log': [{'source': index, **event} for index, source in enumerate(sources, 1)
                           for event in source.get('query_log', [])], 'warnings': warnings}
+    if context:
+        for distribution in result['value_distributions']:
+            logical = distribution['column']
+            distribution.update(column=sources[0]['names'][logical], left_column=sources[0]['names'][logical],
+                                right_column=sources[1]['names'][logical])
+        result.update(comparison_options=configured, resolved_scope=context['resolved_scope'],
+            column_mapping=context['mapping'], unmatched_columns=context['unmatched_columns'],
+            business_key=context['business_key'], key_validation=key_validation,
+            read_consistency=[{'source': i, 'mode': s.get('read_consistency', 'best_effort')}
+                              for i, s in enumerate(sources, 1)])
+        plan['column_matching'] = 'explicit pairs followed by unambiguous name matching'
+        plan['key_columns'] = [sources[0]['names'][k] for k in keys]
+        if invalid_business_key:
+            plan.update(mode='key_validation_failed', key_kind='business_key',
+                        key_columns=[p['left'] for p in context['business_key']],
+                        metric_scope='descriptive profiles only; selected business key is invalid')
+    return result

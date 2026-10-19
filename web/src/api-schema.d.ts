@@ -211,6 +211,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/comparisons/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Comparison */
+        post: operations["preview_comparison_v1_comparisons_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/comparisons": {
         parameters: {
             query?: never;
@@ -628,6 +645,13 @@ export interface components {
             /** State */
             state: string;
         };
+        /** ColumnPair */
+        ColumnPair: {
+            /** Left */
+            left: string;
+            /** Right */
+            right: string;
+        };
         /** ComparisonCreate */
         ComparisonCreate: {
             sampling_options?: components["schemas"]["Sampling"];
@@ -661,6 +685,15 @@ export interface components {
              * @default 0
              */
             relative_tolerance: number | string;
+            comparison_options?: components["schemas"]["ComparisonOptions"];
+        };
+        /** ComparisonOptions */
+        ComparisonOptions: {
+            scope?: components["schemas"]["Scope"] | null;
+            /** Mapping */
+            mapping?: components["schemas"]["ColumnPair"][];
+            /** Business Key */
+            business_key?: components["schemas"]["ColumnPair"][];
         };
         /** ComparisonOut */
         ComparisonOut: {
@@ -695,6 +728,7 @@ export interface components {
              * @default 0
              */
             relative_tolerance: string;
+            comparison_options?: components["schemas"]["ComparisonOptions"];
             /**
              * Id
              * Format: uuid
@@ -712,6 +746,27 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** ComparisonPreviewOut */
+        ComparisonPreviewOut: {
+            /** Mapping */
+            mapping: {
+                [key: string]: string;
+            }[];
+            /** Unmatched Columns */
+            unmatched_columns: {
+                [key: string]: string[];
+            };
+            /** Business Key */
+            business_key: {
+                [key: string]: string;
+            }[];
+            /** Resolved Scope */
+            resolved_scope: {
+                [key: string]: unknown;
+            };
+            /** Key Validation */
+            key_validation: string;
         };
         /** ComparisonSummaryOut */
         ComparisonSummaryOut: {
@@ -746,6 +801,7 @@ export interface components {
              * @default 0
              */
             relative_tolerance: string;
+            comparison_options?: components["schemas"]["ComparisonOptions"];
             /**
              * Id
              * Format: uuid
@@ -785,6 +841,7 @@ export interface components {
             relative_tolerance?: number | string | null;
             /** Is Active */
             is_active?: boolean | null;
+            comparison_options?: components["schemas"]["ComparisonOptions"] | null;
         };
         /** ConnectionCreate */
         ConnectionCreate: {
@@ -1149,6 +1206,41 @@ export interface components {
             /** Offset */
             offset: number;
         };
+        /** Period */
+        Period: {
+            /** Left */
+            left: string;
+            /** Right */
+            right: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "fixed" | "relative";
+            /**
+             * Timezone
+             * @default America/Sao_Paulo
+             */
+            timezone: string;
+            /** Start */
+            start?: string | null;
+            /** End */
+            end?: string | null;
+            /**
+             * Days
+             * @default 1
+             */
+            days: number;
+            /**
+             * Safety Delay Minutes
+             * @default 0
+             */
+            safety_delay_minutes: number;
+            /** Left Naive Timezone */
+            left_naive_timezone?: string | null;
+            /** Right Naive Timezone */
+            right_naive_timezone?: string | null;
+        };
         /** ProfileOut */
         ProfileOut: {
             /**
@@ -1318,6 +1410,26 @@ export interface components {
             proportion_margin: number;
             /** Seed */
             seed?: number | null;
+        };
+        /** Scope */
+        Scope: {
+            period?: components["schemas"]["Period"] | null;
+            /** Filters */
+            filters?: components["schemas"]["ScopeFilter"][];
+        };
+        /** ScopeFilter */
+        ScopeFilter: {
+            /** Left */
+            left: string;
+            /** Right */
+            right: string;
+            /**
+             * Operator
+             * @enum {string}
+             */
+            operator: "eq" | "in" | "gte" | "lt" | "is_null" | "is_not_null";
+            /** Value */
+            value?: string | number | boolean | (string | number | boolean)[] | null;
         };
         /** TableOut */
         TableOut: {
@@ -2344,6 +2456,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Page_ProfileOut_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    preview_comparison_v1_comparisons_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComparisonCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComparisonPreviewOut"];
                 };
             };
             /** @description Unauthorized */
