@@ -309,7 +309,9 @@ test("real login → connection → catalog → profile → comparison → resul
       (u) => new URL(u).origin === process.env.DATAQORE_WEB_URL,
     ),
   ).toBe(true);
-  expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([]);
+  const stored = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).map(key => [key, localStorage.getItem(key)])));
+  expect(Object.keys(stored).every(key => ['dataqore.ui.theme', 'dataqore.ui.sidebar'].includes(key))).toBe(true);
+  expect(JSON.stringify(stored)).not.toMatch(/password|access_token|refresh_token|PRIVATE_SECRET|DataQore-test-password/i);
 });
 
 test("equivalent scope, manual pairs and composite business key through the wizard", async ({

@@ -7,18 +7,11 @@ import {
   useNavigate,
 } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Database,
-  GitCompareArrows,
-  LayoutDashboard,
-  Library,
-  History,
-  Settings,
-  LogOut,
-  Menu,
-  UserRound,
-  CalendarClock,
-} from "lucide-react";
+import { Menu, UserRound } from "lucide-react";
+import * as NavigationDialog from "@radix-ui/react-dialog";
+import { SidebarContent } from "./components/Sidebar";
+import { ThemeControl } from "./components/ThemeControl";
+import { useAppearance, BrandLogo } from "./lib/appearance";
 import {
   login,
   logout,
@@ -67,6 +60,13 @@ export function App() {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
   const [menu, setMenu] = useState(false);
+  const { sidebar } = useAppearance();
+  useEffect(() => {
+    const desktop = matchMedia('(min-width: 851px)');
+    const changed = () => { if (desktop.matches) setMenu(false); };
+    desktop.addEventListener('change', changed);
+    return () => desktop.removeEventListener('change', changed);
+  }, []);
   const cache = useQueryClient();
   const navigate = useNavigate();
   function expire() {
@@ -99,61 +99,30 @@ export function App() {
         }}
       />
     );
-  const links = [
-    ["/", "Overview", LayoutDashboard],
-    ["/connections", "Connections", Database],
-    ["/catalog", "Catalog", Library],
-    ["/comparisons", "Comparisons", GitCompareArrows],
-    ["/schedules", "Schedules", CalendarClock],
-    ["/runs", "Runs", History],
-    ["/settings", "Environment settings", Settings],
-    ["/account", "Account", UserRound],
-  ] as const;
+  async function signOut() { setMenu(false); await logout(); expire(); }
   return (
-    <div className={"app-shell " + (menu ? "menu-open" : "")}>
-      <aside className="sidebar">
-        <NavLink className="brand-mark" to="/" aria-label="DataQore overview">
-          <img src="/branding/dataqore-symbol.svg" alt="" width="45" height="45" />
-        </NavLink>
-        <nav aria-label="Main navigation">
-          {links.map(([to, label, Icon]) => (
-            <NavLink
-              end={to === "/"}
-              key={to}
-              to={to}
-              title={label}
-              onClick={() => setMenu(false)}
-              className={({ isActive }) =>
-                "nav-item " + (isActive ? "active" : "")
-              }
-            >
-              <Icon size={23} />
-              <span>{label}</span>
-            </NavLink>
-          ))}
-        </nav>
-        <button
-          className="nav-item logout"
-          onClick={async () => {
-            await logout();
-            expire();
-          }}
-          title="Sign out"
-          aria-label="Sign out"
-        >
-          <LogOut size={22} />
-          <span>Sign out</span>
-        </button>
+    <NavigationDialog.Root open={menu} onOpenChange={setMenu}>
+    <div className="app-shell" data-sidebar={sidebar}>
+      <aside className="sidebar sidebar-desktop" data-compact={sidebar === 'collapsed'} aria-label="Desktop sidebar">
+        <SidebarContent onNavigate={() => {}} onSignOut={() => { void signOut(); }} />
       </aside>
+      <NavigationDialog.Portal>
+        <NavigationDialog.Overlay className="navigation-overlay" />
+        <NavigationDialog.Content className="sidebar navigation-drawer" id="mobile-navigation" onCloseAutoFocus={event => {
+          if (matchMedia('(min-width: 851px)').matches) {
+            event.preventDefault(); document.querySelector<HTMLButtonElement>('.sidebar-desktop .sidebar-toggle')?.focus();
+          }
+        }}>
+          <NavigationDialog.Title className="sr-only">Main navigation</NavigationDialog.Title>
+          <NavigationDialog.Description className="sr-only">Choose a page, appearance or sign out.</NavigationDialog.Description>
+          <SidebarContent mobile onNavigate={() => setMenu(false)} onSignOut={() => { void signOut(); }} />
+        </NavigationDialog.Content>
+      </NavigationDialog.Portal>
       <div className="app-main">
         <header className="topbar">
-          <button
-            className="icon-button mobile-menu"
-            aria-label="Toggle navigation"
-            onClick={() => setMenu(!menu)}
-          >
-            <Menu />
-          </button>
+          <NavigationDialog.Trigger asChild>
+            <button type="button" className="icon-button mobile-menu" aria-label="Toggle navigation" aria-controls="mobile-navigation"><Menu /></button>
+          </NavigationDialog.Trigger>
           <div className="product-title">
             <div className="brand-mark">
               <img src="/branding/dataqore-symbol.svg" alt="" width="40" height="40" />
@@ -166,7 +135,7 @@ export function App() {
             <UserRound size={21} />
             <span>{user.display_name}</span>
           </NavLink>
-          <img className="wordmark" src="/branding/dataqore-logo.svg" alt="DataQore" width="138" height="30" />
+          <BrandLogo className="wordmark" />
         </header>
         <main className="page">
           <Suspense fallback={<Loading />}>
@@ -200,6 +169,7 @@ export function App() {
         </footer>
       </div>
     </div>
+    </NavigationDialog.Root>
   );
 }
 function Login({ onLogin }: { onLogin: (u: User) => void }) {
@@ -227,6 +197,7 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
         </div>
       </section>
       <section className="login-panel">
+        <div className="login-theme"><ThemeControl login /></div>
         <form
           className="login-form"
           onSubmit={async (e) => {
@@ -245,7 +216,7 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
             }
           }}
         >
-          <img className="login-mobile-logo" src="/branding/dataqore-logo.svg" alt="DataQore" width="230" height="50" />
+          <BrandLogo className="login-mobile-logo" width={230} />
           <p className="eyebrow">ADVANCED DATA QUALITY</p>
           <h1>Welcome back</h1>
           <p className="muted">Sign in to your local DataQore account.</p>

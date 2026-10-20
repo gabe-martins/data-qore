@@ -5,8 +5,8 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { api, type Model } from "../api";
 import { Card, Empty, ErrorBox, Loading, percent } from "./common";
 
-const colors = ["var(--primitive-green-700)", "var(--primitive-blue-700)",
-  "var(--primitive-amber-700)", "var(--primitive-ink-900)", "var(--primitive-slate-600)"];
+const colors = ["var(--semantic-chart-series-1)", "var(--semantic-chart-series-2)",
+  "var(--semantic-chart-series-3)", "var(--semantic-chart-series-4)", "var(--semantic-chart-series-5)"];
 const zone = "America/Sao_Paulo";
 type Trend = Model<"QualityTrendOut">;
 const timestamp = (value: string) => new Intl.DateTimeFormat("en-US", {
@@ -59,11 +59,11 @@ export function QualityTrend({ target }: { target?: string }) {
               <div>Linear trend: {percent(d.linear_trend.find(p => p.day === String(label))?.percentage)}</div>
               <div>Target: {percent(target)}</div>
             </div> : null} />
-          {target !== undefined && <ReferenceLine y={Number(target)} stroke="var(--primitive-amber-700)" strokeDasharray="8 4" label={{ value: `Target ${percent(target)}`, position: "insideBottomRight" }} />}
+          {target !== undefined && <ReferenceLine y={Number(target)} stroke="var(--semantic-chart-series-3)" strokeDasharray="8 4" label={{ value: `Target ${percent(target)}`, position: "insideBottomRight", fill: "var(--semantic-action-warning)", className: "quality-target-label" }} />}
           {d.series.map((s, i) => <Line key={s.comparison_id} type="linear" dataKey={s.comparison_id} name={s.name}
             stroke={colors[i % colors.length]} strokeDasharray={i >= colors.length ? "5 3" : undefined}
             dot={{ r: 3 }} connectNulls={false} isAnimationActive={false} />)}
-          <Line dataKey="linear_trend" name="Overall linear trend" stroke="var(--primitive-ink-900)" strokeWidth={2} strokeDasharray="3 4" dot={false} connectNulls={false} isAnimationActive={false} />
+          <Line dataKey="linear_trend" name="Overall linear trend" stroke="var(--semantic-chart-series-4)" strokeWidth={2} strokeDasharray="3 4" dot={false} connectNulls={false} isAnimationActive={false} />
         </LineChart></ResponsiveContainer>
       </div> : <Empty title="No agreement evaluations in this period">Completed comparisons with safe key alignment and evaluated positions will appear here.</Empty>}
       {!!d.series.length && <ul className="quality-legend" aria-label="Comparison legend">{d.series.map((s, i) =>
@@ -72,8 +72,8 @@ export function QualityTrend({ target }: { target?: string }) {
           {!s.points.some(p => p.percentage !== null) && <span className="muted"> — no agreement evaluations</span>}
         </li>)}</ul>}
       <ul className="quality-legend" aria-label="Trend and target legend">
-        <li><span className="quality-swatch" style={{ background: "transparent", height: 0, borderTop: "2px dashed var(--primitive-ink-900)" }} />Overall linear trend</li>
-        <li><span className="quality-swatch" style={{ background: "transparent", height: 0, borderTop: "2px dashed var(--primitive-amber-700)" }} />Target {percent(target)}</li>
+        <li><span className="quality-swatch" style={{ background: "transparent", height: 0, borderTop: "2px dashed var(--semantic-chart-series-4)" }} />Overall linear trend</li>
+        <li><span className="quality-swatch" style={{ background: "transparent", height: 0, borderTop: "2px dashed var(--semantic-chart-series-3)" }} />Target {percent(target)}</li>
       </ul>
       {!!d.series.length && <details className="quality-details"><summary>Daily run details</summary>
         <div className="quality-daily-details">{d.series[0].points.map(p => <section key={p.day}>

@@ -344,7 +344,7 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
                                   <Bar
                                     dataKey="count"
                                     name="Different values"
-                                    fill="var(--primitive-amber-700)"
+                                    fill="var(--semantic-chart-series-3)"
                                     radius={4}
                                   />
                                 </BarChart>

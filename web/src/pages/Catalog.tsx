@@ -538,7 +538,7 @@ export function DatasetProfile() {
                       <Line
                         dataKey="chartValue"
                         name={metric}
-                        stroke="var(--primitive-blue-700)"
+                        stroke="var(--semantic-chart-series-2)"
                         connectNulls={false}
                       />
                     </LineChart>
@@ -650,7 +650,7 @@ function ProfileStatistics({ value }: { value: any }) {
               <Line
                 isAnimationActive={false}
                 dataKey="value"
-                stroke="var(--primitive-blue-700)"
+                stroke="var(--semantic-chart-series-2)"
               />
             </LineChart>
           </ResponsiveContainer>

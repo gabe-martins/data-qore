@@ -116,7 +116,7 @@ class FullStackTests(TemporaryPostgres):
                     for p,log,name in handles:log.flush();log.seek(0);print(name,log.read())
                     self.fail('Service did not start: '+url)
                 time.sleep(.2)
-        commands=[(['node','--import','tsx','--test','tests/controller.test.ts'],ROOT/'controller'),(['node','node_modules/@playwright/test/cli.js','test'],ROOT/'web'),(['node','--import','tsx','--test','tests/schedules.test.ts'],ROOT/'controller')]
+        commands=[(['node','--import','tsx','--test','tests/controller.test.ts'],ROOT/'controller'),(['node','node_modules/@playwright/test/cli.js','test','flow.spec.ts'],ROOT/'web'),(['node','node_modules/@playwright/test/cli.js','test','ui-appearance.spec.ts'],ROOT/'web'),(['node','--import','tsx','--test','tests/schedules.test.ts'],ROOT/'controller')]
         for group,(cmd,cwd) in enumerate(commands):
             if group:
                 # Each suite gets fresh process-local rate limits; database sessions
