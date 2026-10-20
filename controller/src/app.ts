@@ -27,6 +27,7 @@ import type {
 } from "./engine-api.js";
 import { engineSpec, openapi } from "./openapi.js";
 import { z } from "zod";
+import { lockComparisons } from "./comparison-lock.js";
 import { environmentSettingsPatch } from "./environment-settings.js";
 import { Schedules, cronSchema, nextDates, scheduleOut, dispatchOut } from "./schedules.js";
 const COOKIE = "dataqore_refresh";
@@ -58,8 +59,13 @@ const messages: Record<string, string> = {
   not_found: "Resource not found.",
   validation_error: "Invalid payload or parameters.",
   resource_conflict: "Duplicate resource or conflicting references.",
+  connection_in_use: "This connection is in use. Deactivate it instead.",
+  dataset_in_use: "This dataset is used by current or historical comparisons and cannot be deleted.",
+  dataset_busy: "Wait for queued or running profiles to finish before deleting this dataset.",
   connection_inactive: "This connection is inactive.",
   comparison_inactive: "This comparison is inactive.",
+  comparison_busy: "Wait for queued or running comparisons to finish before deleting.",
+  comparison_scheduled: "This comparison has current or historical schedules and cannot be deleted.",
   idempotency_conflict: "This key was used for another request.",
   driver_unavailable: "The driver is not installed on the engine.",
   source_unavailable:
@@ -271,7 +277,7 @@ export async function createApp(config: Config, db: DB) {
   ][]) {
     if (!path.startsWith("/v1/")) continue;
     for (const method of Object.keys(methods)) {
-      if (!["get", "post", "patch"].includes(method)) continue;
+      if (!["get", "post", "patch", "delete"].includes(method)) continue;
       operations.push([
         method,
         "/api" + path.replace(/\{([^}]+)\}/g, ":$1"),
@@ -292,9 +298,18 @@ export async function createApp(config: Config, db: DB) {
             headers["Idempotency-Key"] = key;
           }
           const target = new URL(config.engineUrl + req.raw.url.slice(4));
+          const preview = path === "/v1/comparisons/{identifier}/dependencies" && method === "get";
+          const deletingComparison = path === "/v1/comparisons/{identifier}" && method === "delete";
+          const comparisonId = preview || deletingComparison ? z.uuid().parse(req.params.identifier).toLowerCase() : undefined;
+          const scheduleWhere = comparisonId ? { OR: [{ comparisonId }, { dispatches: { some: { comparisonId } } }] } : undefined;
+          const pagination = preview ? z.object({
+            schedule_limit: z.coerce.number().int().min(1).max(200).default(20),
+            schedule_offset: z.coerce.number().int().min(0).default(0),
+          }).strict().parse(req.query) : undefined;
+          if (preview) { target.searchParams.delete("schedule_limit"); target.searchParams.delete("schedule_offset"); }
           let response: Response;
           try {
-            response = await fetch(target, {
+            const forward = () => fetch(target, {
               method: method.toUpperCase(),
               headers,
               body:
@@ -302,7 +317,13 @@ export async function createApp(config: Config, db: DB) {
               signal: AbortSignal.timeout(45000),
               redirect: "error",
             });
-          } catch {
+            response = deletingComparison ? await db.$transaction(async tx => {
+              await lockComparisons(tx, [comparisonId!]);
+              if (await tx.schedule.count({ where: scheduleWhere }))
+                throw new PublicError(409, "comparison_scheduled", messages.comparison_scheduled);
+              return forward();
+            }, { timeout: 60000 }) : await forward();
+          } catch (error) {
             if (method !== "get")
               await auth.audit(
                 `${method}:${path}`,
@@ -311,6 +332,7 @@ export async function createApp(config: Config, db: DB) {
                 req.id,
                 "engine",
               );
+            if (error instanceof PublicError) throw error;
             throw new PublicError(
               503,
               "engine_unavailable",
@@ -326,6 +348,19 @@ export async function createApp(config: Config, db: DB) {
               "invalid_engine_response",
               "Invalid engine response.",
             );
+          }
+          if (preview && response.ok) {
+            const schedules = await db.$transaction(async tx => {
+              const total = await tx.schedule.count({ where: scheduleWhere });
+              const rows = await tx.schedule.findMany({ where: scheduleWhere,
+                orderBy: [{ name: "asc" }, { id: "asc" }], take: pagination!.schedule_limit, skip: pagination!.schedule_offset,
+                select: { id: true, name: true, isActive: true, comparisonId: true,
+                  dispatches: { where: { comparisonId }, select: { id: true }, take: 1 } } });
+              return { items: rows.map(s => ({ id: s.id, name: s.name, is_active: s.isActive, comparison_id: s.comparisonId,
+                current: s.comparisonId === comparisonId, historical: s.dispatches.length > 0 })),
+                total, limit: pagination!.schedule_limit, offset: pagination!.schedule_offset };
+            }, { isolationLevel: "RepeatableRead" });
+            data = { ...data, schedules, can_delete: data.can_delete && schedules.total === 0 };
           }
           if (method !== "get")
             await auth.audit(
@@ -365,7 +400,7 @@ export async function createApp(config: Config, db: DB) {
     const d = Object.getOwnPropertyDescriptor(Api.prototype, name)!;
     RequestMapping({
       path,
-      method: RequestMethod[method.toUpperCase() as "GET" | "POST" | "PATCH"],
+      method: RequestMethod[method.toUpperCase() as "GET" | "POST" | "PATCH" | "DELETE"],
     })(Api.prototype, name, d);
     Req()(Api.prototype, name, 0);
     Res({ passthrough: true })(Api.prototype, name, 1);

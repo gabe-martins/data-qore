@@ -38,7 +38,10 @@ class Queue:
                         raise DomainError(409,"idempotency_conflict","A chave já foi usada para outra solicitação.")
                     return dict(old)
             def get(table,identifier):
-                row=conn.execute(select(table).where(table.c.id==identifier)).mappings().first()
+                statement=select(table).where(table.c.id==identifier)
+                if table is m.comparison_definitions:
+                    statement=statement.with_for_update(read=True,key_share=True)
+                row=conn.execute(statement).mappings().first()
                 if row is None:
                     raise DomainError(404,"not_found","Recurso não encontrado.")
                 return dict(row)
@@ -51,11 +54,20 @@ class Queue:
             else:
                 identifiers=[target]
                 parameters=dict(options)
+            # Coordinate frozen comparison sources with dataset deletion, even
+            # when the definition changes before the run is inserted.
+            datasets={}
+            for identifier in sorted(set(identifiers),key=str):
+                row=conn.execute(select(m.datasets).where(m.datasets.c.id==identifier)
+                    .with_for_update(read=True,key_share=True)).mappings().first()
+                if row is None:
+                    raise DomainError(404,"not_found","Dataset not found.")
+                datasets[identifier]=dict(row)
             sources=[]
             columns=[]
             has_databricks=False
             for identifier in identifiers:
-                dataset=get(m.datasets,identifier)
+                dataset=datasets[identifier]
                 columns.append(dataset["metadata"].get("columns",{}))
                 connection=get(m.connections,dataset["connection_id"])
                 if not connection["is_active"]:

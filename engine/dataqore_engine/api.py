@@ -17,6 +17,8 @@ from . import models as m
 from . import schemas as s
 from .connectors import SourceManager
 from .jobs import Queue
+from .dataset_deletion import DatasetDeletion
+from .comparison_deletion import ComparisonDeletion
 from .comparison_options import compact_options, metadata_signature, validate_options
 from .settings import load_settings
 from .storage import DomainError,Repository,database_engine,json_safe
@@ -133,6 +135,47 @@ def create_app(settings=None):
     def get_connection(identifier:UUID):
         return out(s.ConnectionOut,repository.get(m.connections,identifier))
 
+    @router.get("/connections/{identifier}/dependencies",response_model=s.ConnectionDependenciesOut,tags=["connections"])
+    def connection_dependencies(identifier:UUID,dataset_limit:Limit=20,dataset_offset:Offset=0,
+                                comparison_limit:Limit=20,comparison_offset:Offset=0):
+        # Only internal references are read; this works even for inactive/unreachable sources.
+        dataset_ids=select(m.datasets.c.id).where(m.datasets.c.connection_id==identifier)
+        comparison_condition=(m.comparison_definitions.c.left_dataset_id.in_(dataset_ids)
+                              | m.comparison_definitions.c.right_dataset_id.in_(dataset_ids))
+        with engine.begin() as conn:
+            # Keep both independently paginated lists and their counts in one snapshot.
+            conn.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"))
+            if conn.scalar(select(m.connections.c.id).where(m.connections.c.id==identifier)) is None:
+                raise DomainError(404,"not_found","Connection not found.")
+            dataset_count=conn.scalar(select(func.count()).select_from(m.datasets).where(m.datasets.c.connection_id==identifier))
+            dataset_rows=conn.execute(select(m.datasets.c.id,m.datasets.c.catalog_name,m.datasets.c.schema_name,
+                m.datasets.c.table_name,m.datasets.c.metadata["table_type"].astext.label("table_type"))
+                .where(m.datasets.c.connection_id==identifier)
+                .order_by(m.datasets.c.catalog_name,m.datasets.c.schema_name,m.datasets.c.table_name,m.datasets.c.id)
+                .limit(dataset_limit).offset(dataset_offset)).mappings().all()
+            comparison_count=conn.scalar(select(func.count()).select_from(m.comparison_definitions).where(comparison_condition))
+            comparison_rows=conn.execute(select(m.comparison_definitions.c.id,m.comparison_definitions.c.name,m.comparison_definitions.c.is_active,
+                m.comparison_definitions.c.left_dataset_id,m.comparison_definitions.c.right_dataset_id)
+                .where(comparison_condition).order_by(m.comparison_definitions.c.name,m.comparison_definitions.c.id)
+                .limit(comparison_limit).offset(comparison_offset)).mappings().all()
+        return {"connection_id":identifier,"can_delete":dataset_count==0 and comparison_count==0,
+            "datasets":{"items":[dict(row) for row in dataset_rows],"total":dataset_count,"limit":dataset_limit,"offset":dataset_offset},
+            "comparisons":{"items":[dict(row) for row in comparison_rows],"total":comparison_count,
+                           "limit":comparison_limit,"offset":comparison_offset}}
+
+    @router.delete("/connections/{identifier}",response_model=s.ConnectionDeletedOut,tags=["connections"])
+    def delete_connection(identifier:UUID):
+        with engine.begin() as conn:
+            # FK key-share locks for concurrent dataset creation conflict with this lock.
+            # Once held, the following check and delete cannot admit a new dependency.
+            row=conn.scalar(select(m.connections.c.id).where(m.connections.c.id==identifier).with_for_update())
+            if row is None:
+                raise DomainError(404,"not_found","Connection not found.")
+            if conn.scalar(select(m.datasets.c.id).where(m.datasets.c.connection_id==identifier).limit(1)) is not None:
+                raise DomainError(409,"connection_in_use","This connection is in use. Deactivate it instead.")
+            conn.execute(m.connections.delete().where(m.connections.c.id==identifier))
+        return {"id":identifier,"status":"deleted"}
+
     @router.patch("/connections/{identifier}",response_model=s.ConnectionOut,tags=["connections"])
     def update_connection(identifier:UUID,payload:s.ConnectionUpdate):
         row=repository.get(m.connections,identifier)
@@ -194,6 +237,14 @@ def create_app(settings=None):
     def get_dataset(identifier:UUID):
         return repository.get(m.datasets,identifier)
 
+    @router.get("/datasets/{identifier}/dependencies",response_model=s.DatasetDependenciesOut,tags=["datasets"])
+    def dataset_dependencies(identifier:UUID,comparison_limit:Limit=20,comparison_offset:Offset=0):
+        return DatasetDeletion(engine).dependencies(identifier,comparison_limit,comparison_offset)
+
+    @router.delete("/datasets/{identifier}",response_model=s.DatasetDeletedOut,tags=["datasets"])
+    def delete_dataset(identifier:UUID):
+        return DatasetDeletion(engine).delete(identifier)
+
     @router.post("/datasets/{identifier}/refresh",response_model=s.DatasetOut,tags=["datasets"])
     def refresh_dataset(identifier:UUID):
         dataset=repository.get(m.datasets,identifier)
@@ -254,6 +305,14 @@ def create_app(settings=None):
     @router.get("/comparisons/{identifier}",response_model=s.ComparisonOut,tags=["comparisons"])
     def get_comparison(identifier:UUID):
         return repository.get(m.comparison_definitions,identifier)
+
+    @router.get("/comparisons/{identifier}/dependencies",response_model=s.ComparisonDependenciesOut,tags=["comparisons"])
+    def comparison_dependencies(identifier:UUID):
+        return ComparisonDeletion(engine).dependencies(identifier)
+
+    @router.delete("/comparisons/{identifier}",response_model=s.ComparisonDeletedOut,tags=["comparisons"])
+    def delete_comparison(identifier:UUID):
+        return ComparisonDeletion(engine).delete(identifier)
 
     @router.patch("/comparisons/{identifier}",response_model=s.ComparisonOut,tags=["comparisons"])
     def update_comparison(identifier:UUID,payload:s.ComparisonUpdate):

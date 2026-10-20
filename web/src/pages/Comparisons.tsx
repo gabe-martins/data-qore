@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -8,6 +8,7 @@ import {
   Play,
   Check,
   ArrowRight,
+  Trash2,
 } from "lucide-react";
 import { api, allPages, patch, post, type Model, type Page } from "../api";
 import {
@@ -16,6 +17,7 @@ import {
   percentToFraction,
 } from "../lib/tolerances";
 import { ToleranceHelp } from "../components/ToleranceHelp";
+import { DeleteComparisonDialog } from "../components/DeleteComparisonDialog";
 import {
   ScopeEditor,
   MappingEditor,
@@ -49,6 +51,8 @@ export function Comparisons() {
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
   const [error, setError] = useState<unknown>(null);
+  const [deleting,setDeleting]=useState<Model<"ComparisonSummaryOut">|null>(null);
+  const searchInput=useRef<HTMLInputElement>(null);
   const cache = useQueryClient();
   const navigate = useNavigate();
   const q = useQuery({
@@ -68,6 +72,7 @@ export function Comparisons() {
         <div className="search">
           <Search size={19} />
           <input
+            ref={searchInput}
             aria-label="Search comparisons"
             placeholder="Search comparisons…"
             value={search}
@@ -109,6 +114,7 @@ export function Comparisons() {
                 <Button asChild variant="outline">
                   <Link to={`/comparisons/${c.id}/edit`}>Edit</Link>
                 </Button>
+                <Button variant="outline" onClick={()=>setDeleting(c)}><Trash2 size={16} aria-hidden="true"/>Delete</Button>
               </div>
             </div>
             <dl className="comparison-facts">
@@ -187,6 +193,8 @@ export function Comparisons() {
           setOffset={setOffset}
         />
       )}
+      {deleting&&<DeleteComparisonDialog comparison={deleting} onClose={()=>setDeleting(null)}
+        returnFocus={()=>searchInput.current} onDeleted={()=>{setDeleting(null);setOffset(0);}}/>}
     </>
   );
 }
@@ -195,6 +203,7 @@ export function ComparisonDetail() {
   const [tab, setTab] = useState("Overview");
   const [offset, setOffset] = useState(0);
   const [error, setError] = useState<unknown>(null);
+  const [deleting,setDeleting]=useState(false);
   const navigate = useNavigate();
   const c = useQuery({
     queryKey: ["comparison", id],
@@ -243,6 +252,7 @@ export function ComparisonDetail() {
             <Button asChild variant="outline">
               <Link to={`/comparisons/${id}/edit`}>Edit</Link>
             </Button>
+            <Button variant="outline" disabled={!c.data} onClick={()=>setDeleting(true)}><Trash2 size={16} aria-hidden="true"/>Delete</Button>
             <Button
               disabled={!c.data?.is_active}
               onClick={async () => {
@@ -440,6 +450,9 @@ export function ComparisonDetail() {
           </>
         )
       )}
+      {deleting&&c.data&&<DeleteComparisonDialog comparison={c.data} onClose={()=>setDeleting(false)}
+        returnFocus={()=>document.querySelector<HTMLInputElement>('input[aria-label="Search comparisons"]')}
+        onDeleted={()=>navigate("/comparisons")}/>}
     </>
   );
 }

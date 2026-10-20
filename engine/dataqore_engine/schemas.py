@@ -241,6 +241,93 @@ class Page(Model,Generic[T]):
     offset: int
 
 
+class ConnectionDatasetReference(Model):
+    id: UUID
+    catalog_name: str
+    schema_name: str
+    table_name: str
+    table_type: str | None = None
+
+
+class ConnectionComparisonReference(Model):
+    id: UUID
+    name: str
+    is_active: bool
+    left_dataset_id: UUID
+    right_dataset_id: UUID
+
+
+class ConnectionDependenciesOut(Model):
+    connection_id: UUID
+    datasets: Page[ConnectionDatasetReference]
+    comparisons: Page[ConnectionComparisonReference]
+    can_delete: bool
+
+
+class ConnectionDeletedOut(Model):
+    id: UUID
+    status: Literal["deleted"] = "deleted"
+
+
+class DatasetDeletionReference(ConnectionDatasetReference):
+    connection_id: UUID
+    connection_name: str
+
+
+class DatasetComparisonReference(Model):
+    id: UUID
+    name: str
+    is_active: bool
+    current: bool
+    historical: bool
+
+
+class ProfileHistoryCounts(Model):
+    runs: int
+    results: int
+    column_profiles: int
+    metrics: int
+
+
+class DatasetDependenciesOut(Model):
+    dataset: DatasetDeletionReference
+    comparisons: Page[DatasetComparisonReference]
+    profile_history: ProfileHistoryCounts
+    active_profile_runs: int
+    block_reasons: list[Literal["dataset_in_use", "dataset_busy"]]
+    can_delete: bool
+
+
+class DatasetDeletedOut(Model):
+    id: UUID
+    status: Literal["deleted"] = "deleted"
+
+
+class ComparisonDeletionReference(Model):
+    id: UUID
+    name: str
+    is_active: bool
+
+
+class ComparisonHistoryCounts(Model):
+    runs: int
+    results: int
+    column_profiles: int
+    metrics: int
+
+
+class ComparisonDependenciesOut(Model):
+    comparison: ComparisonDeletionReference
+    history: ComparisonHistoryCounts
+    active_runs: int
+    can_delete: bool
+
+
+class ComparisonDeletedOut(Model):
+    id: UUID
+    status: Literal["deleted"] = "deleted"
+
+
 class ErrorOut(Model):
     code: str
     message: str

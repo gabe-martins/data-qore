@@ -19,6 +19,9 @@ class FullStackTests(TemporaryPostgres):
         self.command('engine','apply')
         engine_port,controller_port,web_port=free_port(),free_port(),free_port()
         source=self.directory/'sources';source.mkdir()
+        with sqlite3.connect(source/'delete.sqlite') as db:
+            db.execute('CREATE TABLE records(id integer PRIMARY KEY, amount numeric)')
+            for index in range(21):db.execute(f'CREATE TABLE dependency_{index:02}(id integer PRIMARY KEY, amount numeric)')
         for side in ('left','right'):
             with sqlite3.connect(source/f'{side}.sqlite') as db:
                 db.execute('CREATE TABLE records(id integer PRIMARY KEY, amount numeric NOT NULL, status text)')
@@ -116,7 +119,7 @@ class FullStackTests(TemporaryPostgres):
                     for p,log,name in handles:log.flush();log.seek(0);print(name,log.read())
                     self.fail('Service did not start: '+url)
                 time.sleep(.2)
-        commands=[(['node','--import','tsx','--test','tests/controller.test.ts'],ROOT/'controller'),(['node','node_modules/@playwright/test/cli.js','test','flow.spec.ts'],ROOT/'web'),(['node','node_modules/@playwright/test/cli.js','test','ui-appearance.spec.ts'],ROOT/'web'),(['node','--import','tsx','--test','tests/schedules.test.ts'],ROOT/'controller')]
+        commands=[(['node','--import','tsx','--test','tests/controller.test.ts'],ROOT/'controller'),(['node','node_modules/@playwright/test/cli.js','test','flow.spec.ts','--output','test-results/flow-artifacts'],ROOT/'web'),(['node','node_modules/@playwright/test/cli.js','test','ui-appearance.spec.ts','--output','test-results/appearance-artifacts'],ROOT/'web'),(['node','node_modules/@playwright/test/cli.js','test','connection-delete.spec.ts','--output','test-results/deletion-artifacts'],ROOT/'web'),(['node','node_modules/@playwright/test/cli.js','test','dataset-delete.spec.ts','--output','test-results/dataset-deletion-artifacts'],ROOT/'web'),(['node','node_modules/@playwright/test/cli.js','test','comparison-delete.spec.ts','--output','test-results/comparison-deletion-artifacts'],ROOT/'web'),(['node','--import','tsx','--test','tests/comparison-delete.test.ts'],ROOT/'controller'),(['node','--import','tsx','--test','tests/schedules.test.ts'],ROOT/'controller')]
         for group,(cmd,cwd) in enumerate(commands):
             if group:
                 # Each suite gets fresh process-local rate limits; database sessions

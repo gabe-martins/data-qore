@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { Database, Play, RefreshCw } from "lucide-react";
+import { Database, Play, RefreshCw, Trash2 } from "lucide-react";
+import { DeleteDatasetDialog } from "../components/DeleteDatasetDialog";
 import {
   LineChart,
   Line,
@@ -32,6 +33,8 @@ export function Catalog() {
   const [schema, setSchema] = useState("");
   const [offset, setOffset] = useState(0);
   const [datasetOffset, setDatasetOffset] = useState(0);
+  const [deleting, setDeleting] = useState<Model<"DatasetOut"> | null>(null);
+  const connectionSelect = useRef<HTMLSelectElement>(null);
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState("");
   const cache = useQueryClient();
@@ -82,6 +85,7 @@ export function Catalog() {
           <label>
             Connection
             <select
+              ref={connectionSelect}
               aria-label="Connection"
               value={connection}
               onChange={(e) => {
@@ -208,6 +212,7 @@ export function Catalog() {
                     <th>Type</th>
                     <th>Location</th>
                     <th>Metadata</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -221,6 +226,11 @@ export function Catalog() {
                       <td>
                         {Object.keys((d.metadata as any)?.columns ?? {}).length}{" "}
                         columns
+                      </td>
+                      <td>
+                        <Button variant="outline" onClick={() => setDeleting(d)}>
+                          <Trash2 size={16} aria-hidden="true" /> Delete
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -239,6 +249,17 @@ export function Catalog() {
           </Empty>
         )}
       </Card>
+      {deleting && <DeleteDatasetDialog dataset={deleting}
+        onClose={() => setDeleting(null)}
+        returnFocus={() => connectionSelect.current}
+        onDeleted={() => {
+          setDeleting(null);
+          setDatasetOffset(0);
+          for (const key of ["datasets", "wizard-datasets", "connections", "catalog-connections", "connection-dependencies", "runs", "overview"])
+            void cache.invalidateQueries({queryKey:[key]});
+          cache.removeQueries({queryKey:["dataset", deleting.id]});
+          cache.removeQueries({queryKey:["profile-runs", deleting.id]});
+        }} />}
     </>
   );
 }

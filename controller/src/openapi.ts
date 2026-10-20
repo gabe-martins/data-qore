@@ -79,6 +79,22 @@ export function openapi() {
     };
   }
   spec.components.schemas.ScheduleOut = z.toJSONSchema(scheduleOutSchema);
+  spec.components.schemas.ComparisonScheduleReference = {
+    type: "object", additionalProperties: false,
+    required: ["id", "name", "comparison_id", "is_active", "current", "historical"],
+    properties: { id: { type: "string", format: "uuid" }, name: { type: "string" },
+      comparison_id: { type: "string", format: "uuid" }, is_active: { type: "boolean" }, current: { type: "boolean" }, historical: { type: "boolean" } },
+  };
+  const comparisonPreview = structuredClone(spec.components.schemas.ComparisonDependenciesOut);
+  comparisonPreview.required.push("schedules");
+  comparisonPreview.properties.schedules = { type: "object", required: ["items", "total", "limit", "offset"],
+    properties: { items: { type: "array", items: { $ref: "#/components/schemas/ComparisonScheduleReference" } },
+      total: { type: "integer" }, limit: { type: "integer" }, offset: { type: "integer" } } };
+  spec.components.schemas.ComparisonDeletionPreviewOut = comparisonPreview;
+  const previewOperation = spec.paths["/api/v1/comparisons/{identifier}/dependencies"].get;
+  previewOperation.responses["200"].content["application/json"].schema = { $ref: "#/components/schemas/ComparisonDeletionPreviewOut" };
+  previewOperation.parameters.push(...["schedule_limit", "schedule_offset"].map(name => ({ name, in: "query", required: false,
+    schema: { type: "integer", minimum: name === "schedule_limit" ? 1 : 0, ...(name === "schedule_limit" ? { maximum: 200, default: 20 } : { default: 0 }) } })));
   spec.components.schemas.EnvironmentSettingsOut = z.toJSONSchema(environmentSettingsOut);
   spec.paths["/api/v1/environment-settings"] = Object.fromEntries(["get", "patch"].map(method => [method, {
     tags: ["environment"], security: [{ bearerAuth: [] }],
