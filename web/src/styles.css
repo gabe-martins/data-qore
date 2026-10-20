@@ -443,11 +443,17 @@ label:has(input:required)::after {
   grid-template-columns: 1fr 2fr;
   gap: 22px;
 }
-.overview-stats > .stat {
+.overview-indicators {
+  display: grid;
+  gap: 20px;
+  margin-bottom: 22px;
+  min-width: 0;
+}
+.overview-indicators > .stat {
   justify-content: flex-start;
   padding: 25px;
 }
-.overview-stats > .stat > strong {
+.overview-indicators > .stat:first-child > strong {
   font-size: 42px;
   color: var(--primitive-blue-700);
 }

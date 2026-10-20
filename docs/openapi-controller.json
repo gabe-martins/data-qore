@@ -2755,6 +2755,20 @@
               "default": "America/Sao_Paulo",
               "title": "Timezone"
             }
+          },
+          {
+            "name": "metric",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "sample_quality",
+                "agreement"
+              ],
+              "type": "string",
+              "default": "sample_quality",
+              "title": "Metric"
+            }
           }
         ],
         "responses": {
@@ -3281,6 +3295,97 @@
         }
       }
     },
+    "/api/v1/environment-settings": {
+      "get": {
+        "tags": [
+          "environment"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Environment settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvironmentSettingsOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "422": {
+            "description": "Invalid percentage"
+          },
+          "503": {
+            "description": "Settings unavailable"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "environment"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "comparison_target_percentage": {
+                    "type": "string",
+                    "pattern": "^(?:100(?:\\.0{1,4})?|\\d{1,2}(?:\\.\\d{1,4})?)$"
+                  }
+                },
+                "required": [
+                  "comparison_target_percentage"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Environment settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvironmentSettingsOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "422": {
+            "description": "Invalid percentage"
+          },
+          "503": {
+            "description": "Settings unavailable"
+          }
+        }
+      }
+    },
     "/api/v1/schedules/preview": {
       "post": {
         "tags": [
@@ -3787,6 +3892,17 @@
           "state": {
             "type": "string",
             "title": "State"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
           }
         },
         "additionalProperties": false,
@@ -4732,6 +4848,17 @@
               }
             ],
             "title": "Finished At"
+          },
+          "conclusion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conclusion"
           }
         },
         "additionalProperties": false,
@@ -5087,6 +5214,32 @@
         ],
         "title": "LatestRunOut"
       },
+      "LinearTrendPoint": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "title": "Day"
+          },
+          "percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentage"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "day",
+          "percentage"
+        ],
+        "title": "LinearTrendPoint"
+      },
       "MetricOut": {
         "properties": {
           "id": {
@@ -5182,6 +5335,13 @@
           "sample_quality": {
             "$ref": "#/components/schemas/IndicatorOut"
           },
+          "comparison_agreement": {
+            "$ref": "#/components/schemas/IndicatorOut"
+          },
+          "evaluated_comparisons": {
+            "type": "integer",
+            "title": "Evaluated Comparisons"
+          },
           "latest_conclusions": {
             "additionalProperties": {
               "type": "integer"
@@ -5232,6 +5392,8 @@
         "required": [
           "active_comparisons",
           "sample_quality",
+          "comparison_agreement",
+          "evaluated_comparisons",
           "latest_conclusions",
           "run_counts",
           "trend",
@@ -5728,6 +5890,36 @@
             },
             "type": "array",
             "title": "Series"
+          },
+          "metric": {
+            "type": "string",
+            "enum": [
+              "sample_quality",
+              "agreement"
+            ],
+            "title": "Metric",
+            "default": "sample_quality"
+          },
+          "overall": {
+            "items": {
+              "$ref": "#/components/schemas/TrendOut"
+            },
+            "type": "array",
+            "title": "Overall",
+            "default": []
+          },
+          "linear_trend": {
+            "items": {
+              "$ref": "#/components/schemas/LinearTrendPoint"
+            },
+            "type": "array",
+            "title": "Linear Trend",
+            "default": []
+          },
+          "regression_observations": {
+            "type": "integer",
+            "title": "Regression Observations",
+            "default": 0
           }
         },
         "additionalProperties": false,
@@ -6365,6 +6557,25 @@
           "id",
           "next_run_at",
           "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": false
+      },
+      "EnvironmentSettingsOut": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "comparison_target_percentage": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "comparison_target_percentage",
           "updated_at"
         ],
         "additionalProperties": false

@@ -215,3 +215,12 @@ permite o novo conector e inclui catálogo na identidade única do dataset.
 O catálogo esperado `engine_0003_databricks` foi gerado em PostgreSQL descartável.
 Use `engine status`, `verify`, `apply` e `verify` pelo roteiro existente;
 não repita baseline ou migrations iniciais. Veja [Databricks](../docs/DATABRICKS.md).
+
+## Meta global da Overview
+
+A migration do app `2_environment_settings` cria a configuração persistida da
+meta de concordância, inicialmente 95%, com bounds de 0 a 100. A conta runtime
+recebe somente SELECT/UPDATE nessa tabela; o owner é `dataqore_app_owner`.
+O catálogo `app_2_environment_settings` foi gerado em PostgreSQL descartável.
+Use `app status`, `app verify`, `app apply`, `app verify`; não repita baseline.
+Não há mudança nas migrations do motor. Consulte `docs/OVERVIEW_QUALITY.md`.

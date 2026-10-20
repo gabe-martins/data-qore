@@ -283,12 +283,18 @@ class DailyQualityPoint(TrendOut):
     run_id:UUID | None
     status:Literal["succeeded","failed"] | None
     finished_at:datetime | None
+    conclusion:str | None=None
 
 
 class ComparisonQualitySeries(Model):
     comparison_id:UUID
     name:str
     points:list[DailyQualityPoint]
+
+
+class LinearTrendPoint(Model):
+    day:str
+    percentage:str | None
 
 
 class QualityTrendOut(Model):
@@ -298,6 +304,10 @@ class QualityTrendOut(Model):
     end_day:str
     as_of:datetime
     series:list[ComparisonQualitySeries]
+    metric:Literal['sample_quality','agreement']='sample_quality'
+    overall:list[TrendOut]=[]
+    linear_trend:list[LinearTrendPoint]=[]
+    regression_observations:int=0
 
 
 class RecentRunOut(Model):
@@ -318,11 +328,14 @@ class RecentRunOut(Model):
 class AttentionOut(Model):
     comparison_id:UUID
     state:str
+    name:str | None=None
 
 
 class OverviewOut(Model):
     active_comparisons:int
     sample_quality:IndicatorOut
+    comparison_agreement:IndicatorOut
+    evaluated_comparisons:int
     latest_conclusions:dict[str,int]
     run_counts:dict[str,int]
     trend:list[TrendOut]

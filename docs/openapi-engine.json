@@ -2794,6 +2794,20 @@
               "default": "America/Sao_Paulo",
               "title": "Timezone"
             }
+          },
+          {
+            "name": "metric",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "sample_quality",
+                "agreement"
+              ],
+              "type": "string",
+              "default": "sample_quality",
+              "title": "Metric"
+            }
           }
         ],
         "responses": {
@@ -3057,6 +3071,17 @@
           "state": {
             "type": "string",
             "title": "State"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
           }
         },
         "additionalProperties": false,
@@ -4002,6 +4027,17 @@
               }
             ],
             "title": "Finished At"
+          },
+          "conclusion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conclusion"
           }
         },
         "additionalProperties": false,
@@ -4357,6 +4393,32 @@
         ],
         "title": "LatestRunOut"
       },
+      "LinearTrendPoint": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "title": "Day"
+          },
+          "percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentage"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "day",
+          "percentage"
+        ],
+        "title": "LinearTrendPoint"
+      },
       "MetricOut": {
         "properties": {
           "id": {
@@ -4452,6 +4514,13 @@
           "sample_quality": {
             "$ref": "#/components/schemas/IndicatorOut"
           },
+          "comparison_agreement": {
+            "$ref": "#/components/schemas/IndicatorOut"
+          },
+          "evaluated_comparisons": {
+            "type": "integer",
+            "title": "Evaluated Comparisons"
+          },
           "latest_conclusions": {
             "additionalProperties": {
               "type": "integer"
@@ -4502,6 +4571,8 @@
         "required": [
           "active_comparisons",
           "sample_quality",
+          "comparison_agreement",
+          "evaluated_comparisons",
           "latest_conclusions",
           "run_counts",
           "trend",
@@ -4998,6 +5069,36 @@
             },
             "type": "array",
             "title": "Series"
+          },
+          "metric": {
+            "type": "string",
+            "enum": [
+              "sample_quality",
+              "agreement"
+            ],
+            "title": "Metric",
+            "default": "sample_quality"
+          },
+          "overall": {
+            "items": {
+              "$ref": "#/components/schemas/TrendOut"
+            },
+            "type": "array",
+            "title": "Overall",
+            "default": []
+          },
+          "linear_trend": {
+            "items": {
+              "$ref": "#/components/schemas/LinearTrendPoint"
+            },
+            "type": "array",
+            "title": "Linear Trend",
+            "default": []
+          },
+          "regression_observations": {
+            "type": "integer",
+            "title": "Regression Observations",
+            "default": 0
           }
         },
         "additionalProperties": false,

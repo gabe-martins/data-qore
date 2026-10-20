@@ -1,52 +1,107 @@
-# Qualidade diária na Overview
+# Concordância e qualidade na Overview
 
-O bloco **Quality over time** exibe uma série por comparação atualmente ativa.
-O seletor **Period** permite 7, 15 e 30 dias, começando em sete. Os dias seguem
-`America/Sao_Paulo`, incluem o dia atual parcial e são atualizados a cada trinta
-segundos enquanto a página está visível.
+A Overview apresenta dois indicadores distintos:
 
-Cada ponto corresponde à última execução finalizada naquele dia, ordenada por
-`finished_at` e UUID em caso de empate. Uma última execução com falha ou sem
-avaliações deixa uma lacuna: não recupera um sucesso anterior nem exibe zero.
-Execuções em fila/em andamento e perfis individuais não entram na série.
-O gráfico não conecta os intervalos sem observação.
+- **Comparison agreement:** posições amostrais iguais ÷ posições avaliadas × 100.
+  Reflete divergências de valores e posições ausentes após alinhamento seguro.
+- **Sample quality:** checks de validade aprovados ÷ checks avaliados × 100,
+  incluindo tipos, obrigatoriedade, finitude e integridade de chaves.
 
-A qualidade é `passed / evaluated × 100`, usando os checks persistidos daquela
-execução; não é média das execuções do dia nem concordância entre fontes.
-O tooltip informa horário local, estado, qualidade, cobertura e checks.
-A legenda identifica as comparações sem qualidade disponível no período.
-**Daily run details** oferece os mesmos dados para teclado e toque.
+Valores válidos podem divergir entre bancos. Por isso, uma comparação pode ter
+71% de concordância e 100% de qualidade. O indicador principal e **Quality over
+time** agora usam concordância. Diferenças de schema continuam nos achados e
+conclusões; não recebem penalidade numérica inventada. Sem alinhamento seguro,
+a concordância permanece indisponível, sem substituição pela qualidade.
 
-A escolha do período afeta apenas o gráfico. Cards, atenção e histórico da
-Overview mantêm seu cálculo anterior; o contrato `/overview` permanece intacto.
+## Execuções e atualização
 
-## Contrato
+Os cards usam a última execução finalizada de cada comparação ativa, ordenada
+por `finished_at` e UUID. Uma nova execução queued/running não apaga o resultado
+concluído. Se a última finalizou com falha ou sem avaliações, não se recupera
+silenciosamente um resultado anterior. Execuções manuais e agendadas seguem os
+mesmos critérios. O agregado soma as contagens, sem média dos percentuais.
 
-- Motor: `GET /v1/overview/quality-trend?days=7&timezone=America%2FSao_Paulo`.
-- Controller: `GET /api/v1/overview/quality-trend`, autenticado, mesmos filtros.
-- Dias permitidos: 7, 15 ou 30. Fuso IANA válido; padrão `America/Sao_Paulo`.
-- Resposta: período, fuso, instante da consulta e `series` com ID/nome da
-  comparação e pontos diários (run, estado, horário, counts e percentuais).
-- Percentuais são strings decimais; `null` significa ausência de avaliação.
-- A consulta usa somente o banco interno, sem abrir fontes. Não há migration.
+No gráfico, cada comparação tem até um ponto por dia: a última execução
+finalizada daquele dia. Filtros de 7, 15 e 30 dias; fuso America/Sao_Paulo e dia
+atual parcial. Dias sem avaliação são lacunas nas séries observadas. Perfis e
+comparações desativadas não entram. O filtro afeta somente o gráfico.
+
+Overview e gráfico consultam novamente ao abrir/montar a página, voltar à aba e
+a cada 30 segundos com a página visível. A API lê apenas agregados persistidos,
+sem abrir fontes ou iniciar comparações. O tooltip e **Daily run details**
+mostram execução, conclusão, concordância, cobertura e posições iguais/avaliadas.
+
+## Tendência e meta
+
+A linha tracejada **Overall linear trend** é uma regressão linear por mínimos
+quadrados no período selecionado. Para cada dia, primeiro somam-se posições
+iguais e avaliadas da última execução diária de cada comparação ativa; esse
+percentual consolidado é uma observação da regressão. Cada dia avaliado tem o
+mesmo peso no ajuste e usa sua distância real em dias, inclusive lacunas.
+
+São necessários pelo menos dois dias avaliados. Não há extrapolação além da
+primeira/última observação nem alteração dos pontos originais. A linha ajustada
+pode atravessar dias sem execução: é derivada, não uma avaliação nem previsão.
+Percentuais calculados fora de 0–100% são preservados na API e recortados apenas
+pelo eixo do gráfico. Regressão e percentuais são calculados com Decimal;
+a conversão para Number ocorre somente na apresentação.
+
+A linha **Target** é uma referência global, inicialmente 95%. Em **Environment
+settings**, o administrador pode definir 0 a 100%, com até quatro casas
+decimais. A configuração persiste em `app.environment_settings`, é compartilhada
+entre sessões e auditada. Não muda tolerâncias, resultados ou agendamentos.
+
+## Contratos
+
+- `/v1/overview` acrescenta `comparison_agreement` e `evaluated_comparisons`,
+  preservando `sample_quality`. Atenção inclui nome da comparação.
+- `/v1/overview/quality-trend` aceita `metric=agreement|sample_quality`; o padrão
+  continua `sample_quality` para compatibilidade. A web envia `agreement`.
+- A resposta acrescenta `overall`, `linear_trend`, `regression_observations`,
+  `metric` e conclusão nos pontos. Percentuais são strings decimais ou null.
+- O controller expõe os recursos do motor sob `/api/v1`, autenticados.
+- `GET/PATCH /api/v1/environment-settings` pertence somente ao controller.
+  PATCH recebe `{"comparison_target_percentage":"95.0000"}`. Não usa a
+  configuração do navegador nem dá ao controller acesso ao database do motor.
 
 ## Atualização local
 
-Após obter o código atualizado, execute `./dataqore.sh restart` na raiz do
-projeto e atualize o navegador com Ctrl + Shift + R. O inicializador recompila
-os serviços e preserva configurações e credenciais existentes. Antes de uma
-parada, verifique se há comparações em execução.
+Na raiz `/home/biel/analytics-data-quality/data-qore`:
 
-## Validação desta entrega
+```bash
+engine/.venv/bin/python tools/migrations.py app status
+engine/.venv/bin/python tools/migrations.py app verify
+engine/.venv/bin/python tools/migrations.py app apply
+engine/.venv/bin/python tools/migrations.py app verify
+./dataqore.sh restart
+```
 
-Os testes em PostgreSQL descartável verificaram os três períodos, seleção por
-horário de conclusão e UUID, fronteiras de São Paulo e horário de verão,
-falhas após sucessos, ausência de avaliações, perfis e comparações desativadas.
-As fontes SQLite de teste são removidas antes da consulta, confirmando que o
-histórico depende apenas dos agregados persistidos.
+A nova migration é **2_environment_settings**. Não altere as iniciais nem
+registre baseline novamente. O migrator cria a tabela e sua linha inicial;
+a conta de execução recebe somente SELECT/UPDATE nessa tabela, sem DDL,
+INSERT ou DELETE. Não há migration do motor nem nova variável de ambiente.
+Antes do reinício, aguarde execuções em andamento. A configuração pode ser
+alterada depois pela tela, sem reinício.
 
-Foram aprovados os cinco fluxos Playwright (incluindo tooltip, filtros e tela
-estreita), seis testes do controller e quatro de cron no fixture completo.
-Os grupos HTTP do fixture usam instâncias separadas do controller para evitar
-interferência entre seus limites de autenticação, sem relaxar a configuração
-da aplicação. Os builds e testes de conversão percentual também passaram.
+## Evidências em 20/10/2026
+
+A regressão cobriu 143 testes Python: 142 aprovados na execução completa e o
+fluxo de navegador restante reaprovado após selecionar um ponto realmente
+avaliado (séries sem alinhamento agora não têm pontos de concordância). O fluxo
+completo aprovado incluiu sete testes do controller, seis cenários Playwright
+e cinco testes de cron. Foram verificados limites/precisão/persistência/auditoria
+da meta, atualização após reload, tooltip e layouts desktop/390 px, além de
+owners, grants, constraints e segunda aplicação sem alterações. Builds passaram.
+
+No ambiente pessoal, a migration `2_environment_settings` foi aplicada e a
+segunda aplicação não encontrou pendências. Usuários, hashes de senha,
+credenciais de conexão, IDs de datasets, definições e schedules foram
+comparados antes/depois e preservados. A meta foi inicializada em 95%.
+
+A API real confirmou **71% de concordância** (3.550 posições iguais de 5.000
+avaliadas), **100% de validade** e `sales` em Requires attention. O gráfico usa
+três dias avaliados na regressão; a fonte não foi aberta para essas consultas.
+A verificação visual autenticada em navegador e a edição de configurações
+foram realizadas no ambiente descartável. A conferência visual no ambiente
+pessoal depende de login normal/autorização específica; não foi criada sessão
+fora do fluxo de autenticação sem essa autorização.

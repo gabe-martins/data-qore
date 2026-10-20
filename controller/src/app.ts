@@ -27,6 +27,7 @@ import type {
 } from "./engine-api.js";
 import { engineSpec, openapi } from "./openapi.js";
 import { z } from "zod";
+import { environmentSettingsPatch } from "./environment-settings.js";
 import { Schedules, cronSchema, nextDates, scheduleOut, dispatchOut } from "./schedules.js";
 const COOKIE = "dataqore_refresh";
 const messages: Record<string, string> = {
@@ -154,6 +155,22 @@ export async function createApp(config: Config, db: DB) {
     res.clearCookie(COOKIE, { path: "/api/v1/auth" });
   }
   const operations: [string, string, (req: any, res: any) => Promise<any>][] = [
+    ["get", "/api/v1/environment-settings", async req => {
+      await auth.authorize(req.headers.authorization);
+      const row = await db.environmentSettings.findUnique({ where: { id: true } });
+      if (!row) throw new PublicError(503, "settings_unavailable", "Environment settings are unavailable. Check application migrations.");
+      return { comparison_target_percentage: row.comparisonTargetPercentage.toFixed(4), updated_at: row.updatedAt.toISOString() };
+    }],
+    ["patch", "/api/v1/environment-settings", async req => {
+      const session = await auth.authorize(req.headers.authorization);
+      if (session.user.role !== "admin") throw new PublicError(403, "forbidden", "Administrator access required.");
+      const values = environmentSettingsPatch.parse(req.body);
+      const row = await db.environmentSettings.update({ where: { id: true }, data: {
+        comparisonTargetPercentage: values.comparison_target_percentage, updatedAt: new Date(),
+      } });
+      await auth.audit("environment_settings_updated", "success", session.user.id, req.id, "environment_settings");
+      return { comparison_target_percentage: row.comparisonTargetPercentage.toFixed(4), updated_at: row.updatedAt.toISOString() };
+    }],
     ["post", "/api/v1/schedules/preview", async (req, res) => {
       await auth.authorize(req.headers.authorization);
       const v = cronSchema.parse(req.body);

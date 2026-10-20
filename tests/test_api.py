@@ -331,6 +331,8 @@ class APITests(TemporaryPostgres):
         self.assertEqual(overview['active_comparisons'],1)
         self.assertEqual(overview['latest_conclusions']['difference_observed'],1)
         self.assertEqual(overview['sample_quality']['percentage'],'100.0000')
+        self.assertLess(Decimal(overview['comparison_agreement']['percentage']),100)
+        self.assertEqual(overview['evaluated_comparisons'],1)
         self.assertEqual(overview['recent_runs'][0]['id'],run['id'])
         summary=self.request('GET','/comparison-summaries',params={'search':'compare'})
         self.assertEqual(summary['items'][0]['latest_result']['run_id'],run['id'])
@@ -358,7 +360,7 @@ class APITests(TemporaryPostgres):
                 run=c.execute(m.runs.insert().values(**values).returning(m.runs.c.id)).scalar_one()
                 if status=='succeeded':
                     c.execute(m.run_results.insert().values(run_id=run,format_version=4,conclusion='inconclusive',
-                        result={'indicators':{'quality':{'overall':{'passed':passed,'evaluated':evaluated,'total':total,'percentage':'999'}}}}))
+                        result={'indicators':{'agreement':{'passed':passed,'evaluated':evaluated,'total':total,'percentage':'999'},'quality':{'overall':{'passed':passed,'evaluated':evaluated,'total':total,'percentage':'999'}}}}))
                 return str(run)
             # 02:59Z belongs to the previous day in Sao Paulo; 03:00Z starts today.
             old=add(datetime(2026,10,19,2,59,tzinfo=timezone.utc),passed=1,evaluated=2,total=4)
@@ -393,14 +395,39 @@ class APITests(TemporaryPostgres):
                 (old,'50.0000','50.0000'))
             self.assertEqual(points[-3]['run_id'],zero);self.assertIsNone(points[-3]['percentage'])
             self.assertEqual((points[-4]['run_id'],points[-4]['percentage']),(winner,'33.3333'))
+            agreement=self.request('GET','/overview/quality-trend',params={'metric':'agreement'})
+            self.assertEqual(agreement['metric'],'agreement')
+            self.assertEqual(agreement['series'],default['series'])
+            self.assertEqual(agreement['regression_observations'],2)
+            self.assertEqual(agreement['overall'][-2]['percentage'],'50.0000')
+            self.assertIsNone(agreement['overall'][-1]['percentage'])
+            self.assertIsNone(agreement['linear_trend'][-1]['percentage'])
+            self.assertEqual(agreement['linear_trend'][-3]['percentage'],'41.6667')
             self.assertIsNone(points[0]['run_id']);self.assertIsNone(points[0]['percentage'])
             self.assertTrue(all(p['percentage'] is None for s in default['series'] if s['comparison_id']==str(empty) for p in s['points']))
             utc=self.request('GET','/overview/quality-trend',params={'timezone':'UTC'})
             self.assertEqual(next(s for s in utc['series'] if s['comparison_id']==identifier)['points'][-2]['run_id'],None)
-            for invalid in ({'days':8},{'days':0},{'days':'invalid'},{'timezone':'Invalid/Zone'},{'timezone':'../etc/passwd'},{'timezone':''},{'timezone':'x'*101}):
+            for invalid in ({'metric':'unknown'},{'days':8},{'days':0},{'days':'invalid'},{'timezone':'Invalid/Zone'},{'timezone':'../etc/passwd'},{'timezone':''},{'timezone':'x'*101}):
                 self.request('GET','/overview/quality-trend',422,params=invalid)
         self.assertNotIn('PRIVATE_VALUE',json.dumps(default))
         self.assertEqual(self.client.get('/v1/overview/quality-trend').status_code,401)
+
+    def test_overview_uses_latest_completion_and_does_not_hide_failures(self):
+        _,_,identifier=self.fixture()
+        first=self.request('POST',f'/comparisons/{identifier}/runs',202,json={})
+        self.finish(first['id'])
+        # A queued scheduled/manual request keeps the last completed evidence.
+        latest=self.request('POST',f'/comparisons/{identifier}/runs',202,json={})
+        before=self.request('GET','/overview')
+        self.assertEqual(before['evaluated_comparisons'],1)
+        self.assertEqual(before['attention'][0]['name'],'compare')
+        with self.engine.begin() as c:
+            c.execute(m.runs.update().where(m.runs.c.id==UUID(latest['id'])).values(status='failed',finished_at=func.now(),error_code='source_unavailable'))
+        after=self.request('GET','/overview')
+        self.assertIsNone(after['comparison_agreement']['percentage'])
+        self.assertIsNone(after['sample_quality']['percentage'])
+        self.assertEqual(after['evaluated_comparisons'],0)
+        self.assertEqual(after['latest_conclusions']['failed'],1)
 
     def test_daily_quality_trend_dst_and_empty_comparisons(self):
         from dataqore_engine import read_api

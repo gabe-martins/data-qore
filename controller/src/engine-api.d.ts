@@ -464,6 +464,8 @@ export interface components {
             comparison_id: string;
             /** State */
             state: string;
+            /** Name */
+            name?: string | null;
         };
         /** ColumnPair */
         ColumnPair: {
@@ -794,6 +796,8 @@ export interface components {
             status: ("succeeded" | "failed") | null;
             /** Finished At */
             finished_at: string | null;
+            /** Conclusion */
+            conclusion?: string | null;
         };
         /** DatabricksCredentials */
         DatabricksCredentials: {
@@ -931,6 +935,13 @@ export interface components {
             /** Error Code */
             error_code: string | null;
         };
+        /** LinearTrendPoint */
+        LinearTrendPoint: {
+            /** Day */
+            day: string;
+            /** Percentage */
+            percentage: string | null;
+        };
         /** MetricOut */
         MetricOut: {
             /**
@@ -969,6 +980,9 @@ export interface components {
             /** Active Comparisons */
             active_comparisons: number;
             sample_quality: components["schemas"]["IndicatorOut"];
+            comparison_agreement: components["schemas"]["IndicatorOut"];
+            /** Evaluated Comparisons */
+            evaluated_comparisons: number;
             /** Latest Conclusions */
             latest_conclusions: {
                 [key: string]: number;
@@ -1180,6 +1194,27 @@ export interface components {
             as_of: string;
             /** Series */
             series: components["schemas"]["ComparisonQualitySeries"][];
+            /**
+             * Metric
+             * @default sample_quality
+             * @enum {string}
+             */
+            metric: "sample_quality" | "agreement";
+            /**
+             * Overall
+             * @default []
+             */
+            overall: components["schemas"]["TrendOut"][];
+            /**
+             * Linear Trend
+             * @default []
+             */
+            linear_trend: components["schemas"]["LinearTrendPoint"][];
+            /**
+             * Regression Observations
+             * @default 0
+             */
+            regression_observations: number;
         };
         /** RecentRunOut */
         RecentRunOut: {
@@ -3229,6 +3264,7 @@ export interface operations {
             query?: {
                 days?: 7 | 15 | 30;
                 timezone?: string;
+                metric?: "sample_quality" | "agreement";
             };
             header?: never;
             path?: never;

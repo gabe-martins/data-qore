@@ -37,6 +37,7 @@ import {
 const Overview = lazy(() =>
   import("./pages/Overview").then((m) => ({ default: m.Overview })),
 );
+const EnvironmentSettings = lazy(() => import("./pages/EnvironmentSettings").then(m => ({ default: m.EnvironmentSettings })));
 const Connections = lazy(() =>
   import("./pages/Connections").then((m) => ({ default: m.Connections })),
 );
@@ -105,7 +106,8 @@ export function App() {
     ["/comparisons", "Comparisons", GitCompareArrows],
     ["/schedules", "Schedules", CalendarClock],
     ["/runs", "Runs", History],
-    ["/account", "Account", Settings],
+    ["/settings", "Environment settings", Settings],
+    ["/account", "Account", UserRound],
   ] as const;
   return (
     <div className={"app-shell " + (menu ? "menu-open" : "")}>
@@ -179,6 +181,7 @@ export function App() {
               <Route path="/comparisons/:id/edit" element={<Wizard />} />
               <Route path="/comparisons/:id" element={<ComparisonDetail />} />
               <Route path="/runs" element={<Runs />} />
+              <Route path="/settings" element={<EnvironmentSettings />} />
               <Route path="/runs/:id" element={<RunResult />} />
               <Route
                 path="/runs/:id/differences"

@@ -130,8 +130,9 @@ def _verify(connection, service):
         with connection.cursor() as cur:
             cur.execute("SELECT to_regclass('app._prisma_migrations')")
             if cur.fetchone()[0] is not None:
-                cur.execute("SELECT EXISTS(SELECT FROM app._prisma_migrations WHERE migration_name='1_schedules' AND finished_at IS NOT NULL AND rolled_back_at IS NULL)")
-                if cur.fetchone()[0]:version="app_1_schedules"
+                cur.execute("SELECT migration_name FROM app._prisma_migrations WHERE migration_name IN ('1_schedules','2_environment_settings') AND finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY migration_name DESC LIMIT 1")
+                row=cur.fetchone()
+                if row:version='app_'+row[0]
     path = Path(__file__).with_name("baselines") / f"{version}.json"
     if service == "engine":
         exists = connection.execute("SELECT to_regclass('engine.alembic_version')").fetchone()[0]

@@ -593,30 +593,52 @@ test("overview daily comparison quality supports periods, details and mobile", a
   await page.getByLabel("Password", { exact: true }).fill("DataQore-test-password-2026");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   const card = page.locator("section.card").filter({ has: page.getByRole("heading", { name: "Quality over time", exact: true }) });
+  await expect(page.getByText("COMPARISON AGREEMENT", { exact: true })).toBeVisible();
+  await expect(page.getByText("Sample quality", { exact: true })).toBeVisible();
   await expect(card.getByLabel("Quality period")).toHaveValue("7");
   await expect(card.getByRole("list", { name: "Comparison legend" })).toContainText("Sales sample validation");
   for (const days of [15, 30]) {
-    const response = page.waitForResponse(r => r.url().includes(`/api/v1/overview/quality-trend?days=${days}&`) && r.status() === 200);
+    const response = page.waitForResponse(r => new URL(r.url()).pathname === "/api/v1/overview/quality-trend" && new URL(r.url()).searchParams.get('days') === String(days) && r.status() === 200);
     await card.getByLabel("Quality period").selectOption(String(days));
     const body = await (await response).json();
     expect(body.days).toBe(days);
     expect(body.timezone).toBe("America/Sao_Paulo");
+    expect(body.metric).toBe("agreement");
     expect(body.series.every((s: any) => s.points.length === days)).toBe(true);
     await expect(card.getByRole("list", { name: "Comparison legend" })).toBeVisible();
   }
-  const dot = card.locator(".recharts-line-dot").last();
+  const dot = card.locator('.recharts-line-dot[cx][cy]:not([cx="NaN"]):not([cy="NaN"])').filter({ visible: true }).first();
   await dot.hover();
-  await expect(card.locator(".quality-tooltip")).toContainText("Sample quality:");
+  await expect(card.locator(".quality-tooltip")).toContainText("Agreement:");
   await expect(card.locator(".quality-tooltip")).toContainText("Coverage:");
   await page.screenshot({ path: "test-results/quality-trend-desktop.png", fullPage: true });
   await card.getByText("Daily run details", { exact: true }).click();
-  await expect(card.locator(".quality-daily-details")).toContainText("passed /");
+  await expect(card.locator(".quality-daily-details")).toContainText("equal /");
   await expect(card.locator(".quality-daily-details")).toContainText("No completed run");
   await page.setViewportSize({ width: 390, height: 844 });
   await card.getByLabel("Quality period").focus();
   await expect(card.getByLabel("Quality period")).toBeFocused();
   await page.screenshot({ path: "test-results/quality-trend-mobile.png", fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)).toBe(false);
+  await page.getByRole("button", { name: "Toggle navigation", exact: true }).click();
+  await page.getByRole("link", { name: "Environment settings", exact: true }).click();
+  await expect(page.getByLabel("Agreement target (%)")).toHaveValue("95.0000");
+  await page.getByLabel("Agreement target (%)").fill("97,5");
+  await page.getByRole("button", { name: "Save settings", exact: true }).click();
+  await expect(page.getByRole("status")).toHaveText("Environment settings saved.");
+  await page.reload();
+  await expect(page.getByLabel("Agreement target (%)")).toHaveValue("97.5000");
+  await page.screenshot({ path: "test-results/environment-settings-mobile.png", fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole("button", { name: "Toggle navigation", exact: true }).click();
+  await page.getByRole("link", { name: "Overview", exact: true }).click();
+  await expect(page.getByText("Target 97.5%", { exact: false }).first()).toBeVisible();
+  const reloadResponse=page.waitForResponse(r=>new URL(r.url()).pathname==="/api/v1/overview" && r.status()===200);
+  await page.reload();
+  const fresh=await(await reloadResponse).json();
+  expect(Number(fresh.comparison_agreement.percentage)).toBeLessThan(Number(fresh.sample_quality.percentage));
+  const agreementCard=page.locator(".stat").filter({has:page.getByText("COMPARISON AGREEMENT",{exact:true})});
+  await expect(agreementCard).toContainText(Number(fresh.comparison_agreement.percentage).toLocaleString("en-US", { maximumFractionDigits: 2 })+"%");
 });
 
 test("Databricks simulated Unity Catalog → view → profile → comparison → schedule", async ({ page }) => {
