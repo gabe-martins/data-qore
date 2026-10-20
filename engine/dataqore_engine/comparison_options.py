@@ -193,7 +193,7 @@ def _temporal_kind(info):
         return "date"
     if f not in {"datetime", "timestamp"} and not native.startswith(("timestamp", "datetime", "smalldatetime")):
         raise invalid("invalid_scope_type")
-    return "aware" if "with time zone" in native or "timestamptz" in native or "datetimeoffset" in native else "naive"
+    return "aware" if info.get("timestamp_kind")=="aware" or "with time zone" in native or "timestamptz" in native or "datetimeoffset" in native else "naive"
 
 
 def typed_value(value, info, operator):

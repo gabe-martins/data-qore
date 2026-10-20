@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { Database, Play, RefreshCw } from "lucide-react";
@@ -28,6 +28,7 @@ import {
 const running = (r: any) => r?.status === "queued" || r?.status === "running";
 export function Catalog() {
   const [connection, setConnection] = useState("");
+  const [catalog,setCatalog] = useState("");
   const [schema, setSchema] = useState("");
   const [offset, setOffset] = useState(0);
   const [datasetOffset, setDatasetOffset] = useState(0);
@@ -38,18 +39,20 @@ export function Catalog() {
     queryKey: ["catalog-connections"],
     queryFn: () => allPages<Model<"ConnectionOut">>("/connections"),
   });
+  const databricks = connections.data?.items.find(c=>c.id===connection)?.connector === "databricks";
+  const catalogs = useQuery({queryKey:["catalogs",connection],queryFn:()=>allPages<string>(`/connections/${connection}/catalogs`),enabled:!!connection && databricks});
   const schemas = useQuery({
-    queryKey: ["schemas", connection],
-    queryFn: () => allPages<string>(`/connections/${connection}/schemas`),
-    enabled: !!connection,
+    queryKey: ["schemas", connection, catalog],
+    queryFn: () => allPages<string>(`/connections/${connection}/schemas${databricks ? "?catalog="+encodeURIComponent(catalog) : ""}`),
+    enabled: !!connection && (!databricks || !!catalog),
   });
   const tables = useQuery({
-    queryKey: ["tables", connection, schema, offset],
+    queryKey: ["tables", connection, catalog, schema, offset],
     queryFn: () =>
       api<Page<Model<"TableOut">>>(
-        `/connections/${connection}/tables?limit=20&offset=${offset}${schema ? "&schema=" + encodeURIComponent(schema) : ""}`,
+        `/connections/${connection}/tables?limit=20&offset=${offset}${databricks ? "&catalog="+encodeURIComponent(catalog) : ""}${schema ? "&schema=" + encodeURIComponent(schema) : ""}`,
       ),
-    enabled: !!connection,
+    enabled: !!connection && (!databricks || !!catalog && !!schema),
   });
   const datasets = useQuery({
     queryKey: ["datasets", datasetOffset],
@@ -68,6 +71,7 @@ export function Catalog() {
         error={
           error ||
           connections.error ||
+          catalogs.error ||
           schemas.error ||
           tables.error ||
           datasets.error
@@ -82,6 +86,7 @@ export function Catalog() {
               value={connection}
               onChange={(e) => {
                 setConnection(e.target.value);
+                setCatalog("");
                 setSchema("");
                 setOffset(0);
               }}
@@ -96,18 +101,21 @@ export function Catalog() {
                 ))}
             </select>
           </label>
+          {databricks && <label>Catalog<select aria-label="Unity catalog" value={catalog} onChange={e=>{setCatalog(e.target.value);setSchema("");setOffset(0);}}>
+            <option value="">Select a catalog</option>{catalogs.data?.items.map(c=><option key={c}>{c}</option>)}
+          </select></label>}
           <label>
             Schema
             <select
               aria-label="Schema"
               value={schema}
-              disabled={!connection}
+              disabled={!connection || databricks && !catalog}
               onChange={(e) => {
                 setSchema(e.target.value);
                 setOffset(0);
               }}
             >
-              <option value="">All schemas</option>
+              <option value="">{databricks ? "Select a schema" : "All schemas"}</option>
               {schemas.data?.items.filter(Boolean).map((s) => (
                 <option key={s}>{s}</option>
               ))}
@@ -118,7 +126,7 @@ export function Catalog() {
           <Empty title="Choose a source">
             Only table metadata is queried. No rows are displayed.
           </Empty>
-        ) : tables.isPending ? (
+        ) : databricks && (!catalog || !schema) ? <Empty title="Choose a catalog and schema">Select the Unity Catalog location to list tables and views.</Empty> : tables.isPending ? (
           <Loading />
         ) : tables.data?.items.length ? (
           <>
@@ -127,17 +135,19 @@ export function Catalog() {
                 <thead>
                   <tr>
                     <th>Schema</th>
-                    <th>Table</th>
+                    <th>Table / view</th>
+                    {databricks && <th>Type</th>}
                     <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {tables.data.items.map((t) => (
                     <tr key={t.schema_name + "." + t.table_name}>
-                      <td>{t.schema_name || "—"}</td>
+                      <td>{[t.catalog_name,t.schema_name].filter(Boolean).join(".") || "—"}</td>
                       <td>
                         <Database size={15} /> {t.table_name}
                       </td>
+                      {databricks && <td>{t.table_type}</td>}
                       <td>
                         <Button
                           variant="outline"
@@ -148,7 +158,7 @@ export function Catalog() {
                             try {
                               await post("/datasets", {
                                 connection_id: connection,
-                                ...t,
+                                catalog_name:t.catalog_name, schema_name:t.schema_name, table_name:t.table_name,
                               });
                               await cache.invalidateQueries({
                                 queryKey: ["datasets"],
@@ -194,8 +204,9 @@ export function Catalog() {
               <table>
                 <thead>
                   <tr>
-                    <th>Table</th>
-                    <th>Schema</th>
+                    <th>Table / view</th>
+                    <th>Type</th>
+                    <th>Location</th>
                     <th>Metadata</th>
                   </tr>
                 </thead>
@@ -205,7 +216,8 @@ export function Catalog() {
                       <td>
                         <Link to={"/datasets/" + d.id}>{d.table_name}</Link>
                       </td>
-                      <td>{d.schema_name || "—"}</td>
+                      <td>{(d.metadata as any)?.table_type ?? "—"}</td>
+                      <td>{[d.catalog_name,d.schema_name].filter(Boolean).join(".") || "—"}</td>
                       <td>
                         {Object.keys((d.metadata as any)?.columns ?? {}).length}{" "}
                         columns
@@ -252,6 +264,12 @@ export function DatasetProfile() {
   });
   const active = selected || runs.data?.items[0]?.id;
   const current = runs.data?.items.find((r) => r.id === active);
+  useEffect(() => {
+    if (current?.status === "succeeded") {
+      void cache.invalidateQueries({ queryKey: ["dataset", id] });
+      void cache.invalidateQueries({ queryKey: ["metrics", id] });
+    }
+  }, [current?.id, current?.status, cache, id]);
   const result = useQuery({
     queryKey: ["result", active],
     queryFn: () => api<Model<"ResultOut">>(`/runs/${active}/result`),
@@ -275,11 +293,13 @@ export function DatasetProfile() {
   });
   const metadata = (dataset.data?.metadata as any)?.columns ?? {};
   const overall = (result.data?.result as any)?.indicators?.quality?.overall;
+  const observed = (result.data?.result as any)?.sources?.[0];
+  const tableMetadata = dataset.data?.metadata as any;
   return (
     <>
       <PageTitle
         title={dataset.data?.table_name ?? "Dataset profile"}
-        subtitle="Descriptive statistics from observed samples. No record correspondence is asserted."
+        subtitle={[dataset.data?.catalog_name,dataset.data?.schema_name,dataset.data?.table_name].filter(Boolean).join(".")+" · Descriptive statistics from observed samples. No record correspondence is asserted."}
         eyebrow="DATA QUALITY / CATALOG"
         action={
           <>
@@ -351,6 +371,7 @@ export function DatasetProfile() {
                 (dataset.data?.metadata as any)?.estimated_rows ??
                   "Unavailable",
               )}
+              detail="Whole-table catalog estimate; may be stale. Not the number of sampled rows."
             />
             <Stat label="Sample quality" value={percent(overall?.percentage)} />
             <Stat
@@ -358,6 +379,7 @@ export function DatasetProfile() {
               value={percent(overall?.coverage_percentage)}
             />
           </div>
+          {tableMetadata?.table_details && <TableDetails details={tableMetadata.table_details} title="Current table details" />}
           <Card title="Column metadata">
             <div className="table-scroll">
               <table>
@@ -419,6 +441,10 @@ export function DatasetProfile() {
                 <Link to={"/runs/" + current.id}>Open execution</Link>
               </div>
             )}
+            {current?.status === "succeeded" && observed && <>
+              <p className="notice">Selected execution: <strong>{observed.sample_size} sampled rows</strong>. Source row estimate at execution: <strong>{observed.estimated_rows ?? "Unavailable"}</strong>. Statistics below describe this sample.</p>
+              {observed.table_details && <TableDetails details={observed.table_details} title="Table details captured for this execution" />}
+            </>}
             {current?.status === "failed" && (
               <p className="notice warning">
                 {current.error_code}: Unable to complete profiling. Check the
@@ -512,7 +538,7 @@ export function DatasetProfile() {
                       <Line
                         dataKey="chartValue"
                         name={metric}
-                        stroke="var(--primitive-blue-700)"
+                        stroke="var(--semantic-chart-series-2)"
                         connectNulls={false}
                       />
                     </LineChart>
@@ -565,7 +591,22 @@ function ProfileStatistics({ value }: { value: any }) {
     "sample_count",
     "null_count",
     "null_rate",
+    "non_null_count",
+    "blank_count",
+    "blank_rate",
     "distinct_count",
+    "distinct_rate",
+    "duplicate_count",
+    "duplicate_rate",
+    "text_length_min",
+    "text_length_max",
+    "text_length_mean",
+    "temporal_count",
+    "temporal_min",
+    "temporal_max",
+    "temporal_timezone",
+    "unavailable_count",
+    "unsupported_count",
     "min",
     "max",
     "mean",
@@ -590,10 +631,11 @@ function ProfileStatistics({ value }: { value: any }) {
           .map((k) => (
             <div key={k}>
               <dt>{k.replaceAll("_", " ")}</dt>
-              <dd>{String(m[k])}</dd>
+              <dd>{k.endsWith("_rate") ? percent(m[k] == null ? null : Number(m[k]) * 100) : String(m[k])}</dd>
             </div>
           ))}
       </dl>
+      {m.family === "text" && <p className="muted small">Declared as text. Numeric mean, median and numeric distribution do not apply; values are not automatically converted.</p>}
       {numeric && points.length > 1 && (
         <div
           className="column-chart"
@@ -608,7 +650,7 @@ function ProfileStatistics({ value }: { value: any }) {
               <Line
                 isAnimationActive={false}
                 dataKey="value"
-                stroke="var(--primitive-blue-700)"
+                stroke="var(--semantic-chart-series-2)"
               />
             </LineChart>
           </ResponsiveContainer>
@@ -620,4 +662,22 @@ function ProfileStatistics({ value }: { value: any }) {
       </details>
     </>
   );
+}
+
+function TableDetails({ details, title }: { details: any; title: string }) {
+  const unknown = "Unavailable";
+  const fields: [string, string][] = [
+    ["Object type", details.type ?? unknown],
+    ["Format", details.provider ?? unknown],
+    ["Size (bytes, catalog statistics)", details.size_in_bytes == null ? unknown : String(details.size_in_bytes)],
+    ["Created at", details.created_time ? new Date(details.created_time).toLocaleString("en-US") : unknown],
+    ["Partition columns", Array.isArray(details.partition_columns) ? details.partition_columns.join(", ") || "None" : unknown],
+    ["Estimate source", details.estimate_source === "databricks_optimizer_statistics" ? "Databricks optimizer statistics" : unknown],
+    ["Metadata collected at", details.collected_at ? new Date(details.collected_at).toLocaleString("en-US") : unknown],
+  ];
+  return <Card title={title} subtitle="Whole-table metadata. The collection time is not the last update time of the source statistics.">
+    <dl className="profile-statistics">{fields.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+    {details.estimate_status !== "available" && <p className="muted small">Row estimate unavailable ({details.estimate_status}). No full table count is run automatically.</p>}
+    {details.status !== "available" && <p className="notice warning">Extended table metadata is {details.status}. Available column metadata and sample profiling are preserved.</p>}
+  </Card>;
 }

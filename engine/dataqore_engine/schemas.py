@@ -13,7 +13,7 @@ class Model(BaseModel):
 
 
 Name=Annotated[str,Field(min_length=1,max_length=255,pattern=r"\S")]
-Connector=Literal["postgresql","mysql","mssql","oracle","sqlite"]
+Connector=Literal["postgresql","mysql","mssql","oracle","sqlite","databricks"]
 Mode=Literal["auto","matched_keys","independent_random"]
 
 
@@ -27,12 +27,34 @@ class Credentials(Model):
     trust_server_certificate: bool=False
 
 
+class DatabricksCredentials(Model):
+    hostname: Annotated[str,Field(min_length=1,max_length=255,pattern=r"^[A-Za-z0-9][A-Za-z0-9.-]*$")]
+    http_path: Annotated[str,Field(pattern=r"^/sql/1\.0/warehouses/[A-Za-z0-9-]+$",max_length=255)]
+    auth_type: Literal["pat","oauth_m2m"]
+    access_token: SecretStr | None=None
+    client_id: Annotated[str,Field(min_length=1,max_length=255)] | None=None
+    client_secret: SecretStr | None=None
+
+    @model_validator(mode="after")
+    def authentication(self):
+        if self.auth_type=="pat":
+            if not self.access_token or not self.access_token.get_secret_value().strip() or self.client_id is not None or self.client_secret is not None:
+                raise ValueError("PAT requires only access_token")
+        elif not self.client_id or not self.client_secret or not self.client_secret.get_secret_value().strip() or self.access_token is not None:
+            raise ValueError("OAuth M2M requires client_id and client_secret")
+        return self
+
+
 class ConnectionTest(Model):
     connector: Connector
-    credentials: Credentials
+    credentials: Credentials | DatabricksCredentials
 
     @model_validator(mode="after")
     def network_fields(self):
+        if self.connector == "databricks":
+            if not isinstance(self.credentials,DatabricksCredentials):raise ValueError("Invalid Databricks credentials")
+            return self
+        if not isinstance(self.credentials,Credentials):raise ValueError("Invalid database credentials")
         if self.connector != "sqlite" and any(getattr(self.credentials,key) is None for key in ("hostname","username","password")):
             raise ValueError("Fontes de rede exigem hostname, username e password.")
         return self
@@ -44,7 +66,7 @@ class ConnectionCreate(ConnectionTest):
 
 class ConnectionUpdate(Model):
     name: Name | None=None
-    credentials: Credentials | None=None
+    credentials: Credentials | DatabricksCredentials | None=None
     is_active: bool | None=None
 
     @model_validator(mode="after")
@@ -75,11 +97,14 @@ class TestOut(Model):
 
 
 class TableOut(Model):
+    catalog_name: str=""
+    table_type: str="table"
     schema_name: str
     table_name: str
 
 
 class DatasetCreate(Model):
+    catalog_name: Annotated[str,Field(max_length=255)]=""
     connection_id: UUID
     schema_name: str=""
     table_name: Annotated[str,Field(min_length=1,max_length=255)]
@@ -258,12 +283,18 @@ class DailyQualityPoint(TrendOut):
     run_id:UUID | None
     status:Literal["succeeded","failed"] | None
     finished_at:datetime | None
+    conclusion:str | None=None
 
 
 class ComparisonQualitySeries(Model):
     comparison_id:UUID
     name:str
     points:list[DailyQualityPoint]
+
+
+class LinearTrendPoint(Model):
+    day:str
+    percentage:str | None
 
 
 class QualityTrendOut(Model):
@@ -273,6 +304,10 @@ class QualityTrendOut(Model):
     end_day:str
     as_of:datetime
     series:list[ComparisonQualitySeries]
+    metric:Literal['sample_quality','agreement']='sample_quality'
+    overall:list[TrendOut]=[]
+    linear_trend:list[LinearTrendPoint]=[]
+    regression_observations:int=0
 
 
 class RecentRunOut(Model):
@@ -293,11 +328,14 @@ class RecentRunOut(Model):
 class AttentionOut(Model):
     comparison_id:UUID
     state:str
+    name:str | None=None
 
 
 class OverviewOut(Model):
     active_comparisons:int
     sample_quality:IndicatorOut
+    comparison_agreement:IndicatorOut
+    evaluated_comparisons:int
     latest_conclusions:dict[str,int]
     run_counts:dict[str,int]
     trend:list[TrendOut]

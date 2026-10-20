@@ -62,6 +62,21 @@ class ConfigurationTests(unittest.TestCase):
 
 @unittest.skipUnless(os.environ.get('DATAQORE_PG_BIN'), 'Defina DATAQORE_PG_BIN para iniciar um cluster descartável')
 class PostgreSQLMigrationTests(TemporaryPostgres):
+    def test_environment_settings_grants_constraints_and_repeated_apply(self):
+        self.command('app','baseline');self.command('app','apply');self.command('app','verify')
+        with self.connect('app','srv_dataqore_app') as conn:
+            self.assertEqual(str(conn.execute('SELECT comparison_target_percentage FROM app.environment_settings').fetchone()[0]),'95.0000')
+            conn.execute('UPDATE app.environment_settings SET comparison_target_percentage=97.1234')
+            for sql in ['DELETE FROM app.environment_settings','INSERT INTO app.environment_settings(id) VALUES(false)',
+                        'ALTER TABLE app.environment_settings ADD COLUMN forbidden int']:
+                with self.assertRaises(psycopg.errors.InsufficientPrivilege):conn.execute(sql)
+            with self.assertRaises(psycopg.errors.CheckViolation):conn.execute('UPDATE app.environment_settings SET comparison_target_percentage=101')
+            with self.assertRaises(psycopg.errors.CheckViolation):conn.execute('UPDATE app.environment_settings SET id=false')
+        before=self.table_oids('app');self.command('app','apply');self.command('app','verify')
+        self.assertEqual(before,self.table_oids('app'))
+        with self.connect('app','srv_dataqore_app') as conn:
+            self.assertEqual(str(conn.execute('SELECT comparison_target_percentage FROM app.environment_settings').fetchone()[0]),'97.1234')
+
     def test_baseline_preserves_data_objects_and_repeated_apply(self):
         with self.connect('app') as connection:
             identifier=connection.execute("INSERT INTO app.users(email,display_name,password_hash) VALUES ('test@dataqore.local','Sentinela','hash-teste') RETURNING id").fetchone()[0]
@@ -80,10 +95,10 @@ class PostgreSQLMigrationTests(TemporaryPostgres):
             after=self.table_oids(service)
             self.assertEqual(after_first,after)
             self.assertEqual(dict(before),{name:oid for name,oid in after if name in dict(before)})
-            self.assertEqual(set(dict(after))-set(dict(before)),{'schedules','schedule_dispatches'} if service=='app' else set())
+            self.assertEqual(set(dict(after))-set(dict(before)),{'schedules','schedule_dispatches','environment_settings'} if service=='app' else set())
             with self.connect(service) as connection:
                 table='_prisma_migrations' if service=='app' else 'alembic_version'
-                self.assertEqual(connection.execute(f'SELECT count(*) FROM {service}.{table}').fetchone()[0],2 if service=='app' else 1)
+                self.assertEqual(connection.execute(f'SELECT count(*) FROM {service}.{table}').fetchone()[0],3 if service=='app' else 1)
                 for privilege in ('SELECT','INSERT','UPDATE','DELETE'):
                     self.assertFalse(connection.execute('SELECT has_table_privilege(%s,%s,%s)',
                         (f'srv_dataqore_{service}',f'{service}.{table}',privilege)).fetchone()[0])
@@ -194,6 +209,20 @@ class PostgreSQLMigrationTests(TemporaryPostgres):
             rows=connection.execute('SELECT tableoid,value FROM engine.metrics ORDER BY measured_at').fetchall()
             self.assertEqual(len({row[0] for row in rows}),2)
             self.assertEqual([row[1] for row in rows],[expected,expected])
+
+    def test_databricks_upgrade_preserves_legacy_datasets_and_identity(self):
+        with self.connect('engine','srv_dataqore_engine') as c:
+            identifier=c.execute("INSERT INTO engine.connections(name,connector,credentials_ciphertext) VALUES ('legacy','postgresql','encrypted') RETURNING id").fetchone()[0]
+            dataset=c.execute("INSERT INTO engine.datasets(connection_id,schema_name,table_name) VALUES (%s,'public','records') RETURNING id",(identifier,)).fetchone()[0]
+        before=self.table_oids('engine')
+        self.command('engine','baseline');self.command('engine','apply');self.command('engine','verify');self.command('engine','apply')
+        self.assertEqual(before,self.table_oids('engine'))
+        with self.connect('engine','srv_dataqore_engine') as c:
+            self.assertEqual(c.execute('SELECT catalog_name FROM engine.datasets WHERE id=%s',(dataset,)).fetchone()[0],'')
+            c.execute("UPDATE engine.connections SET connector='databricks' WHERE id=%s",(identifier,))
+            c.execute("INSERT INTO engine.datasets(connection_id,catalog_name,schema_name,table_name) VALUES (%s,'main','public','records'),(%s,'other','public','records')",(identifier,identifier))
+            with self.assertRaises(psycopg.errors.UniqueViolation):
+                c.execute("INSERT INTO engine.datasets(connection_id,catalog_name,schema_name,table_name) VALUES (%s,'main','public','records')",(identifier,))
 
     def test_baseline_never_rewinds_existing_engine_history(self):
         self.command('engine','baseline')

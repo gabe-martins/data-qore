@@ -678,6 +678,117 @@
         }
       }
     },
+    "/v1/connections/{identifier}/catalogs": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "List Catalogs",
+        "operationId": "list_catalogs_v1_connections__identifier__catalogs_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_str_"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
     "/v1/connections/{identifier}/schemas": {
       "get": {
         "tags": [
@@ -722,6 +833,16 @@
               "minimum": 0,
               "default": 0,
               "title": "Offset"
+            }
+          },
+          {
+            "name": "catalog",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Catalog"
             }
           }
         ],
@@ -849,6 +970,16 @@
                 }
               ],
               "title": "Schema"
+            }
+          },
+          {
+            "name": "catalog",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Catalog"
             }
           }
         ],
@@ -2663,6 +2794,20 @@
               "default": "America/Sao_Paulo",
               "title": "Timezone"
             }
+          },
+          {
+            "name": "metric",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "sample_quality",
+                "agreement"
+              ],
+              "type": "string",
+              "default": "sample_quality",
+              "title": "Metric"
+            }
           }
         ],
         "responses": {
@@ -2926,6 +3071,17 @@
           "state": {
             "type": "string",
             "title": "State"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
           }
         },
         "additionalProperties": false,
@@ -3507,12 +3663,21 @@
               "mysql",
               "mssql",
               "oracle",
-              "sqlite"
+              "sqlite",
+              "databricks"
             ],
             "title": "Connector"
           },
           "credentials": {
-            "$ref": "#/components/schemas/Credentials"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Credentials"
+              },
+              {
+                "$ref": "#/components/schemas/DatabricksCredentials"
+              }
+            ],
+            "title": "Credentials"
           },
           "name": {
             "type": "string",
@@ -3554,7 +3719,8 @@
               "mysql",
               "mssql",
               "oracle",
-              "sqlite"
+              "sqlite",
+              "databricks"
             ],
             "title": "Connector"
           },
@@ -3594,12 +3760,21 @@
               "mysql",
               "mssql",
               "oracle",
-              "sqlite"
+              "sqlite",
+              "databricks"
             ],
             "title": "Connector"
           },
           "credentials": {
-            "$ref": "#/components/schemas/Credentials"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Credentials"
+              },
+              {
+                "$ref": "#/components/schemas/DatabricksCredentials"
+              }
+            ],
+            "title": "Credentials"
           }
         },
         "additionalProperties": false,
@@ -3632,9 +3807,13 @@
                 "$ref": "#/components/schemas/Credentials"
               },
               {
+                "$ref": "#/components/schemas/DatabricksCredentials"
+              },
+              {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Credentials"
           },
           "is_active": {
             "anyOf": [
@@ -3661,7 +3840,8 @@
               "mysql",
               "mssql",
               "oracle",
-              "sqlite"
+              "sqlite",
+              "databricks"
             ],
             "title": "Connector"
           },
@@ -3847,6 +4027,17 @@
               }
             ],
             "title": "Finished At"
+          },
+          "conclusion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conclusion"
           }
         },
         "additionalProperties": false,
@@ -3864,8 +4055,86 @@
         ],
         "title": "DailyQualityPoint"
       },
+      "DatabricksCredentials": {
+        "properties": {
+          "hostname": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9.-]*$",
+            "title": "Hostname"
+          },
+          "http_path": {
+            "type": "string",
+            "maxLength": 255,
+            "pattern": "^/sql/1\\.0/warehouses/[A-Za-z0-9-]+$",
+            "title": "Http Path"
+          },
+          "auth_type": {
+            "type": "string",
+            "enum": [
+              "pat",
+              "oauth_m2m"
+            ],
+            "title": "Auth Type"
+          },
+          "access_token": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Token"
+          },
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "client_secret": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Secret"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "hostname",
+          "http_path",
+          "auth_type"
+        ],
+        "title": "DatabricksCredentials"
+      },
       "DatasetCreate": {
         "properties": {
+          "catalog_name": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Catalog Name",
+            "default": ""
+          },
           "connection_id": {
             "type": "string",
             "format": "uuid",
@@ -3893,6 +4162,12 @@
       },
       "DatasetOut": {
         "properties": {
+          "catalog_name": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Catalog Name",
+            "default": ""
+          },
           "connection_id": {
             "type": "string",
             "format": "uuid",
@@ -4118,6 +4393,32 @@
         ],
         "title": "LatestRunOut"
       },
+      "LinearTrendPoint": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "title": "Day"
+          },
+          "percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentage"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "day",
+          "percentage"
+        ],
+        "title": "LinearTrendPoint"
+      },
       "MetricOut": {
         "properties": {
           "id": {
@@ -4213,6 +4514,13 @@
           "sample_quality": {
             "$ref": "#/components/schemas/IndicatorOut"
           },
+          "comparison_agreement": {
+            "$ref": "#/components/schemas/IndicatorOut"
+          },
+          "evaluated_comparisons": {
+            "type": "integer",
+            "title": "Evaluated Comparisons"
+          },
           "latest_conclusions": {
             "additionalProperties": {
               "type": "integer"
@@ -4263,6 +4571,8 @@
         "required": [
           "active_comparisons",
           "sample_quality",
+          "comparison_agreement",
+          "evaluated_comparisons",
           "latest_conclusions",
           "run_counts",
           "trend",
@@ -4759,6 +5069,36 @@
             },
             "type": "array",
             "title": "Series"
+          },
+          "metric": {
+            "type": "string",
+            "enum": [
+              "sample_quality",
+              "agreement"
+            ],
+            "title": "Metric",
+            "default": "sample_quality"
+          },
+          "overall": {
+            "items": {
+              "$ref": "#/components/schemas/TrendOut"
+            },
+            "type": "array",
+            "title": "Overall",
+            "default": []
+          },
+          "linear_trend": {
+            "items": {
+              "$ref": "#/components/schemas/LinearTrendPoint"
+            },
+            "type": "array",
+            "title": "Linear Trend",
+            "default": []
+          },
+          "regression_observations": {
+            "type": "integer",
+            "title": "Regression Observations",
+            "default": 0
           }
         },
         "additionalProperties": false,
@@ -5244,6 +5584,16 @@
       },
       "TableOut": {
         "properties": {
+          "catalog_name": {
+            "type": "string",
+            "title": "Catalog Name",
+            "default": ""
+          },
+          "table_type": {
+            "type": "string",
+            "title": "Table Type",
+            "default": "table"
+          },
           "schema_name": {
             "type": "string",
             "title": "Schema Name"

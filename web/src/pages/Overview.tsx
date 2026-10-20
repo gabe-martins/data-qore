@@ -18,14 +18,19 @@ import {
 export function Overview() {
   const q = useQuery({
     queryKey: ["overview"],
-    queryFn: () => api<Model<"OverviewOut">>("/overview"),
+    queryFn: () => api<Model<"OverviewOut">>("/overview", { cache: "no-store" }),
+    refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
   });
+  const settings = useQuery({ queryKey: ["environment-settings"], queryFn: () => api<Model<"EnvironmentSettingsOut">>("/environment-settings"), refetchOnMount: "always" });
   const d = q.data;
   return (
     <>
       <PageTitle
         title="Overview"
-        subtitle="Monitor sample quality, recent runs, and observations that need attention."
+        subtitle="Monitor comparison agreement, sample quality, and the latest completed runs."
         action={
           <Button asChild>
             <Link to="/comparisons/new">
@@ -35,24 +40,27 @@ export function Overview() {
           </Button>
         }
       />
-      <ErrorBox error={q.error} />
+      <ErrorBox error={q.error || settings.error} />
       {q.isPending ? (
         <Loading />
       ) : (
         d && (
           <>
             <div className="overview-stats">
+              <div className="overview-indicators">
               <Stat
-                label="SAMPLE QUALITY"
-                value={percent(d.sample_quality.percentage)}
+                label="COMPARISON AGREEMENT"
+                value={percent(d.comparison_agreement.percentage)}
                 detail={
                   <>
-                    Coverage {percent(d.sample_quality.coverage_percentage)} ·{" "}
-                    {d.sample_quality.evaluated.toLocaleString()} checks
-                    evaluated
+                    Coverage {percent(d.comparison_agreement.coverage_percentage)} ·{" "}
+                    {d.comparison_agreement.evaluated.toLocaleString()} evaluated positions ·{" "}
+                    {d.evaluated_comparisons}/{d.active_comparisons} comparisons evaluated
                   </>
                 }
               />
+              <Stat label="Sample quality" value={percent(d.sample_quality.percentage)} detail={`Source validity checks · coverage ${percent(d.sample_quality.coverage_percentage)} · ${d.sample_quality.evaluated.toLocaleString()} checks evaluated`} />
+              </div>
               <div className="stats-grid">
                 <Stat label="Active comparisons" value={d.active_comparisons} />
                 <Stat
@@ -70,7 +78,7 @@ export function Overview() {
               </div>
             </div>
             <div className="content-columns">
-              <QualityTrend />
+              <QualityTrend target={settings.data?.comparison_target_percentage} />
               <Card
                 title="Requires attention"
                 subtitle="Latest outcomes from active comparisons"
@@ -83,7 +91,7 @@ export function Overview() {
                       to={"/comparisons/" + a.comparison_id}
                     >
                       <Badge value={a.state} />
-                      <span>Comparison {a.comparison_id.slice(0, 8)}</span>
+                      <span>{a.name ?? `Comparison ${a.comparison_id.slice(0, 8)}`}</span>
                       <ArrowUpRight size={17} />
                     </Link>
                   ))

@@ -53,14 +53,16 @@ class Queue:
                 parameters=dict(options)
             sources=[]
             columns=[]
+            has_databricks=False
             for identifier in identifiers:
                 dataset=get(m.datasets,identifier)
                 columns.append(dataset["metadata"].get("columns",{}))
                 connection=get(m.connections,dataset["connection_id"])
                 if not connection["is_active"]:
                     raise DomainError(409,"connection_inactive","Uma conexão está desativada.")
-                sources.append({k:dataset[k] for k in ("connection_id","schema_name","table_name")}|{"dataset_id":identifier})
-            if kind=="comparison" and compact_options(parameters["comparison_options"]):
+                has_databricks |= connection["connector"]=="databricks"
+                sources.append({k:dataset[k] for k in ("connection_id","catalog_name","schema_name","table_name")}|{"dataset_id":identifier})
+            if kind=="comparison" and (compact_options(parameters["comparison_options"]) or has_databricks):
                 at=datetime.now(timezone.utc)
                 parameters["resolved_scope"]=resolve_scope(parameters["comparison_options"],at)
                 validate_options(parameters["comparison_options"],columns,parameters["mode"],parameters["resolved_scope"])
@@ -99,8 +101,8 @@ class Queue:
     def publish(self,identifier,result,source_ids):
         # Todos os inserts e o estado final são confirmados juntos.
         with self.engine.begin() as conn:
-            status=conn.execute(select(m.runs.c.status).where(m.runs.c.id==identifier).with_for_update()).scalar_one()
-            if status!="running":
+            run=conn.execute(select(m.runs.c.status,m.runs.c.kind).where(m.runs.c.id==identifier).with_for_update()).mappings().one()
+            if run['status']!="running":
                 return False
             if str(result["execution_id"])!=str(identifier) or len(result["sources"])!=len(source_ids):
                 raise ValueError("Resultado não corresponde à execução.")
@@ -110,6 +112,15 @@ class Queue:
                 conclusion=result["summary"]["status"],result=public))
             profiles,series=[],[]
             for dataset_id,source in zip(source_ids,result["sources"]):
+                if run['kind']=='profile' and source.get('table_details'):
+                    # Publish the profile's metadata in the same transaction as its
+                    # evidence. Do not replace newer metadata refreshed meanwhile.
+                    current=conn.execute(select(m.datasets.c.metadata).where(m.datasets.c.id==dataset_id).with_for_update()).scalar_one()
+                    details=source['table_details']
+                    if current.get('table_details',{}).get('collected_at','')<=details['collected_at']:
+                        metadata={**current,'columns':source['columns'],'estimated_rows':source['estimated_rows'],'table_details':details}
+                        if details.get('type'):metadata['table_type']=details['type']
+                        conn.execute(m.datasets.update().where(m.datasets.c.id==dataset_id).values(metadata=json_safe(metadata)))
                 for column,metric in source["metrics"].items():
                     profiles.append({"run_id":identifier,"dataset_id":dataset_id,"column_name":column,
                         "profile":json_safe({"metadata":source["columns"][column],"metrics":metric,
@@ -150,13 +161,15 @@ def run_job(settings,identifier):
         parameters=run["parameters"]
         manager=SourceManager(settings)
         selected=[]
+        consistent_comparison=run["kind"]=="comparison" and (bool(compact_options(parameters.get("comparison_options"))) or any(s.get("catalog_name") for s in parameters["sources"]))
         with ExitStack() as stack:
             for frozen in parameters["sources"]:
                 row=queue.repository.get(m.connections,UUID(frozen["connection_id"]))
-                source=stack.enter_context(manager.session(row,comparison=run["kind"]=="comparison" and bool(compact_options(parameters.get("comparison_options")))))
+                source=stack.enter_context(manager.session(row,comparison=consistent_comparison,catalog_name=frozen.get("catalog_name","")))
                 schema=frozen["schema_name"]
                 table=frozen["table_name"]
-                if (schema,table) not in source["adapter"].list_tables(source["conn"]):
+                tables=source["adapter"].list_tables(source["conn"],schema) if row["connector"]=="databricks" else source["adapter"].list_tables(source["conn"])
+                if (schema,table) not in tables:
                     raise DomainError(404,"source_table_not_found","A tabela não está no catálogo atual.")
                 selected.append({**source,"schema":schema,"table":table,
                     **({"expected_columns":frozen["expected_columns"]} if "expected_columns" in frozen else {})})

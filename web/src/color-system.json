@@ -1,6 +1,6 @@
 {
   "name": "DataQore Color System",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "primitive": {
     "ink": {
       "900": "#172C3C"
@@ -39,6 +39,14 @@
       "mint_text": "#A9DDCC",
       "secondary_text": "#D2E0E8",
       "primary_text": "#F0F7F5"
+    },
+    "night": {
+      "950": "#0D1B24",
+      "900": "#122532",
+      "850": "#18303F",
+      "800": "#203B4B",
+      "700": "#345464",
+      "600": "#5E8191"
     }
   },
   "semantic": {
@@ -88,6 +96,13 @@
       "success": "{primitive.green.700}",
       "information": "{primitive.blue.700}",
       "warning": "{primitive.amber.700}"
+    },
+    "chart": {
+      "series_1": "{primitive.green.700}",
+      "series_2": "{primitive.blue.700}",
+      "series_3": "{primitive.amber.700}",
+      "series_4": "{primitive.ink.900}",
+      "series_5": "{primitive.slate.600}"
     }
   },
   "component_guidance": {
@@ -109,6 +124,58 @@
     "purple_family": {
       "replacement": "#172C3C",
       "reason": "Purple tones such as #6750A4 are outside the DataQore brand palette."
+    }
+  },
+  "themes": {
+    "dark": {
+      "semantic": {
+        "background": {
+          "app": "{primitive.night.950}",
+          "surface": "{primitive.night.900}",
+          "subtle": "{primitive.night.850}",
+          "code": "{primitive.night.850}",
+          "table_header": "{primitive.night.800}"
+        },
+        "text": {
+          "primary": "{primitive.inverse.primary_text}",
+          "secondary": "{primitive.inverse.secondary_text}"
+        },
+        "border": {
+          "default": "{primitive.night.700}",
+          "muted": "{primitive.night.600}",
+          "success": "{primitive.green.700}",
+          "info": "{primitive.blue.700}",
+          "warning": "{primitive.amber.700}"
+        },
+        "action": {
+          "primary": "{primitive.green.300}",
+          "primary_text": "{primitive.ink.900}",
+          "success": "{primitive.green.300}",
+          "info": "{primitive.blue.300}",
+          "warning": "{primitive.amber.300}"
+        },
+        "status": {
+          "success": {
+            "foreground": "{primitive.green.300}",
+            "background": "#143D35"
+          },
+          "info": {
+            "foreground": "{primitive.blue.300}",
+            "background": "#19354E"
+          },
+          "warning": {
+            "foreground": "{primitive.amber.300}",
+            "background": "#3C2E18"
+          }
+        },
+        "chart": {
+          "series_1": "{primitive.green.300}",
+          "series_2": "{primitive.blue.300}",
+          "series_3": "{primitive.amber.300}",
+          "series_4": "{primitive.inverse.primary_text}",
+          "series_5": "{primitive.inverse.secondary_text}"
+        }
+      }
     }
   }
 }

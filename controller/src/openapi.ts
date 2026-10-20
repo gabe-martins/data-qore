@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { root } from "./config.js";
 import { z } from "zod";
+import { environmentSettingsPatch, environmentSettingsOut } from "./environment-settings.js";
 import { loginSchema, changeSchema } from "./auth.js";
 import { cronSchema, scheduleSchema, schedulePatchBaseSchema, scheduleOutSchema, dispatchOutSchema } from "./schedules.js";
 export const engineSpec = JSON.parse(
@@ -78,6 +79,13 @@ export function openapi() {
     };
   }
   spec.components.schemas.ScheduleOut = z.toJSONSchema(scheduleOutSchema);
+  spec.components.schemas.EnvironmentSettingsOut = z.toJSONSchema(environmentSettingsOut);
+  spec.paths["/api/v1/environment-settings"] = Object.fromEntries(["get", "patch"].map(method => [method, {
+    tags: ["environment"], security: [{ bearerAuth: [] }],
+    ...(method === "patch" ? { requestBody: { required: true, content: { "application/json": { schema: z.toJSONSchema(environmentSettingsPatch) } } } } : {}),
+    responses: { "200": { description: "Environment settings", content: { "application/json": { schema: { $ref: "#/components/schemas/EnvironmentSettingsOut" } } } },
+      "401": { description: "Unauthorized" }, "403": { description: "Forbidden" }, "422": { description: "Invalid percentage" }, "503": { description: "Settings unavailable" } },
+  }]));
   spec.components.schemas.ScheduleDispatchOut = z.toJSONSchema(dispatchOutSchema);
   const ref = (name: string) => ({ $ref: "#/components/schemas/" + name });
   const page = (name: string) => ({ type: "object", required: ["items", "total", "limit", "offset"], properties: {

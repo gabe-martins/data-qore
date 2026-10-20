@@ -27,9 +27,19 @@ import type {
 } from "./engine-api.js";
 import { engineSpec, openapi } from "./openapi.js";
 import { z } from "zod";
+import { environmentSettingsPatch } from "./environment-settings.js";
 import { Schedules, cronSchema, nextDates, scheduleOut, dispatchOut } from "./schedules.js";
 const COOKIE = "dataqore_refresh";
 const messages: Record<string, string> = {
+  catalog_required: "Select a Databricks catalog and schema.",
+  source_databricks_authentication_failed: "Databricks rejected authentication. Check the token or service principal credentials.",
+  source_databricks_permission_denied: "Databricks denied read access. Check warehouse, catalog, schema and SELECT permissions.",
+  source_databricks_catalog_access_denied: "The connection identity is missing USE CATALOG on the selected Databricks catalog. Ask its owner to grant access; a successful connection test does not verify data permissions.",
+  source_databricks_schema_access_denied: "The connection identity is missing USE SCHEMA on the selected Databricks schema. Ask its owner to grant access, and check SELECT on the required tables or views.",
+  source_databricks_warehouse_unavailable: "Databricks SQL Warehouse is unavailable. Check its HTTP path and availability.",
+  source_databricks_query_timeout: "The Databricks operation timed out. Check warehouse availability and query cost.",
+  source_databricks_unavailable: "Unable to read Databricks. Check connection settings and permissions.",
+  source_numeric_precision_unsupported: "This Databricks decimal parameter exceeds 38 digits of precision.",
   invalid_comparison_options: "Review the scope, mapping and business key against source metadata.",
   invalid_column_mapping: "Each existing column can be mapped only once. Review both sides.",
   incompatible_column_mapping: "The selected columns have incompatible types. Mapping does not convert values.",
@@ -145,6 +155,22 @@ export async function createApp(config: Config, db: DB) {
     res.clearCookie(COOKIE, { path: "/api/v1/auth" });
   }
   const operations: [string, string, (req: any, res: any) => Promise<any>][] = [
+    ["get", "/api/v1/environment-settings", async req => {
+      await auth.authorize(req.headers.authorization);
+      const row = await db.environmentSettings.findUnique({ where: { id: true } });
+      if (!row) throw new PublicError(503, "settings_unavailable", "Environment settings are unavailable. Check application migrations.");
+      return { comparison_target_percentage: row.comparisonTargetPercentage.toFixed(4), updated_at: row.updatedAt.toISOString() };
+    }],
+    ["patch", "/api/v1/environment-settings", async req => {
+      const session = await auth.authorize(req.headers.authorization);
+      if (session.user.role !== "admin") throw new PublicError(403, "forbidden", "Administrator access required.");
+      const values = environmentSettingsPatch.parse(req.body);
+      const row = await db.environmentSettings.update({ where: { id: true }, data: {
+        comparisonTargetPercentage: values.comparison_target_percentage, updatedAt: new Date(),
+      } });
+      await auth.audit("environment_settings_updated", "success", session.user.id, req.id, "environment_settings");
+      return { comparison_target_percentage: row.comparisonTargetPercentage.toFixed(4), updated_at: row.updatedAt.toISOString() };
+    }],
     ["post", "/api/v1/schedules/preview", async (req, res) => {
       await auth.authorize(req.headers.authorization);
       const v = cronSchema.parse(req.body);

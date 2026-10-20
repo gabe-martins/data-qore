@@ -8,6 +8,7 @@ import "@fontsource/inter/latin-600.css";
 import "@fontsource/inter/latin-700.css";
 import "./styles.css";
 import { App } from "./App";
+import { AppearanceProvider } from "./lib/appearance";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: 1, refetchOnWindowFocus: false },
@@ -16,10 +17,10 @@ const queryClient = new QueryClient({
 });
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
+    <AppearanceProvider><QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <App />
       </BrowserRouter>
-    </QueryClientProvider>
+    </QueryClientProvider></AppearanceProvider>
   </React.StrictMode>,
 );
