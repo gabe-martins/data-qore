@@ -91,6 +91,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connections/{identifier}/catalogs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Catalogs */
+        get: operations["list_catalogs_v1_connections__identifier__catalogs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/connections/{identifier}/schemas": {
         parameters: {
             query?: never;
@@ -1326,8 +1343,9 @@ export interface components {
              * Connector
              * @enum {string}
              */
-            connector: "postgresql" | "mysql" | "mssql" | "oracle" | "sqlite";
-            credentials: components["schemas"]["Credentials"];
+            connector: "postgresql" | "mysql" | "mssql" | "oracle" | "sqlite" | "databricks";
+            /** Credentials */
+            credentials: components["schemas"]["Credentials"] | components["schemas"]["DatabricksCredentials"];
             /** Name */
             name: string;
         };
@@ -1349,7 +1367,7 @@ export interface components {
              * Connector
              * @enum {string}
              */
-            connector: "postgresql" | "mysql" | "mssql" | "oracle" | "sqlite";
+            connector: "postgresql" | "mysql" | "mssql" | "oracle" | "sqlite" | "databricks";
             /** Is Active */
             is_active: boolean;
             /**
@@ -1369,14 +1387,16 @@ export interface components {
              * Connector
              * @enum {string}
              */
-            connector: "postgresql" | "mysql" | "mssql" | "oracle" | "sqlite";
-            credentials: components["schemas"]["Credentials"];
+            connector: "postgresql" | "mysql" | "mssql" | "oracle" | "sqlite" | "databricks";
+            /** Credentials */
+            credentials: components["schemas"]["Credentials"] | components["schemas"]["DatabricksCredentials"];
         };
         /** ConnectionUpdate */
         ConnectionUpdate: {
             /** Name */
             name?: string | null;
-            credentials?: components["schemas"]["Credentials"] | null;
+            /** Credentials */
+            credentials?: components["schemas"]["Credentials"] | components["schemas"]["DatabricksCredentials"] | null;
             /** Is Active */
             is_active?: boolean | null;
         };
@@ -1386,7 +1406,7 @@ export interface components {
              * Connector
              * @enum {string}
              */
-            connector: "postgresql" | "mysql" | "mssql" | "oracle" | "sqlite";
+            connector: "postgresql" | "mysql" | "mssql" | "oracle" | "sqlite" | "databricks";
             /** Driver */
             driver: string;
             /** Available */
@@ -1437,8 +1457,31 @@ export interface components {
             /** Finished At */
             finished_at: string | null;
         };
+        /** DatabricksCredentials */
+        DatabricksCredentials: {
+            /** Hostname */
+            hostname: string;
+            /** Http Path */
+            http_path: string;
+            /**
+             * Auth Type
+             * @enum {string}
+             */
+            auth_type: "pat" | "oauth_m2m";
+            /** Access Token */
+            access_token?: string | null;
+            /** Client Id */
+            client_id?: string | null;
+            /** Client Secret */
+            client_secret?: string | null;
+        };
         /** DatasetCreate */
         DatasetCreate: {
+            /**
+             * Catalog Name
+             * @default
+             */
+            catalog_name: string;
             /**
              * Connection Id
              * Format: uuid
@@ -1454,6 +1497,11 @@ export interface components {
         };
         /** DatasetOut */
         DatasetOut: {
+            /**
+             * Catalog Name
+             * @default
+             */
+            catalog_name: string;
             /**
              * Connection Id
              * Format: uuid
@@ -1952,6 +2000,16 @@ export interface components {
         };
         /** TableOut */
         TableOut: {
+            /**
+             * Catalog Name
+             * @default
+             */
+            catalog_name: string;
+            /**
+             * Table Type
+             * @default table
+             */
+            table_type: string;
             /** Schema Name */
             schema_name: string;
             /** Table Name */
@@ -2503,11 +2561,82 @@ export interface operations {
             };
         };
     };
+    list_catalogs_v1_connections__identifier__catalogs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_str_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
     list_schemas_v1_connections__identifier__schemas_get: {
         parameters: {
             query?: {
                 limit?: number;
                 offset?: number;
+                catalog?: string;
             };
             header?: never;
             path: {
@@ -2579,6 +2708,7 @@ export interface operations {
                 limit?: number;
                 offset?: number;
                 schema?: string | null;
+                catalog?: string;
             };
             header?: never;
             path: {

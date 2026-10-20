@@ -108,3 +108,10 @@ PYTHONPATH=engine:tests DATAQORE_PG_BIN=/PATH/TO/POSTGRESQL/bin \
 The suite does not use real environment files or an existing database server.
 External connectors also need validation against their respective database
 systems before use in a new environment.
+
+## Databricks (opcional)
+
+Sexto conector para SQL Warehouses com Unity Catalog, PAT/OAuth M2M e seleção
+por catálogo/schema/tabela ou view. Instale `requirements-databricks.lock`
+e aplique a revisão `0003_databricks` antes de iniciar.
+[Configuração, limites e homologação](../docs/DATABRICKS.md).

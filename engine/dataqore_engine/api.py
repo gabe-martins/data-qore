@@ -150,25 +150,39 @@ def create_app(settings=None):
     def test_connection(identifier:UUID):
         return sources.test(repository.get(m.connections,identifier))
 
-    def catalog_page(identifier,limit,offset,schema=None):
-        tables=sources.catalog(repository.get(m.connections,identifier))
-        items=[{"schema_name":sch,"table_name":table} for sch,table in tables if schema is None or sch==schema]
+    def catalog_response(items,limit,offset):
         return {"items":items[offset:offset+limit],"total":len(items),"limit":limit,"offset":offset}
 
+    @router.get("/connections/{identifier}/catalogs",response_model=s.Page[str],tags=["catalog"])
+    def list_catalogs(identifier:UUID,limit:Limit=50,offset:Offset=0):
+        row=repository.get(m.connections,identifier)
+        if row["connector"]!="databricks":return catalog_response([],limit,offset)
+        with sources.session(row) as source:names=source["adapter"].catalogs(source["conn"])
+        return catalog_response(names,limit,offset)
+
     @router.get("/connections/{identifier}/schemas",response_model=s.Page[str],tags=["catalog"])
-    def list_schemas(identifier:UUID,limit:Limit=50,offset:Offset=0):
-        names=sorted({schema for schema,_ in sources.catalog(repository.get(m.connections,identifier))})
-        return {"items":names[offset:offset+limit],"total":len(names),"limit":limit,"offset":offset}
+    def list_schemas(identifier:UUID,limit:Limit=50,offset:Offset=0,catalog:str=""):
+        row=repository.get(m.connections,identifier)
+        if row["connector"]=="databricks":
+            with sources.session(row,catalog_name=catalog) as source:names=source["adapter"].schemas(source["conn"])
+        else:names=sorted({schema for schema,_ in sources.catalog(row)})
+        return catalog_response(names,limit,offset)
 
     @router.get("/connections/{identifier}/tables",response_model=s.Page[s.TableOut],tags=["catalog"])
-    def list_tables(identifier:UUID,limit:Limit=50,offset:Offset=0,schema:str | None=None):
-        return catalog_page(identifier,limit,offset,schema)
+    def list_tables(identifier:UUID,limit:Limit=50,offset:Offset=0,schema:str | None=None,catalog:str=""):
+        row=repository.get(m.connections,identifier)
+        if row["connector"]=="databricks":
+            with sources.session(row,catalog_name=catalog) as source:
+                items=[{"catalog_name":catalog,"schema_name":sch,"table_name":table,"table_type":kind}
+                    for sch,table,kind in source["adapter"].objects(source["conn"],schema)]
+        else:items=[{"schema_name":sch,"table_name":table} for sch,table in sources.catalog(row) if schema is None or sch==schema]
+        return catalog_response(items,limit,offset)
 
     @router.post("/datasets",response_model=s.DatasetOut,status_code=201,tags=["datasets"])
     def create_dataset(payload:s.DatasetCreate):
         row=repository.get(m.connections,payload.connection_id)
-        schema,metadata=sources.table_metadata(row,payload.schema_name,payload.table_name)
-        return repository.add(m.datasets,{"connection_id":payload.connection_id,"schema_name":schema,
+        schema,metadata=sources.table_metadata(row,payload.schema_name,payload.table_name,payload.catalog_name)
+        return repository.add(m.datasets,{"connection_id":payload.connection_id,"catalog_name":payload.catalog_name,"schema_name":schema,
             "table_name":payload.table_name,"metadata":json_safe(metadata)})
 
     @router.get("/datasets",response_model=s.Page[s.DatasetOut],tags=["datasets"])
@@ -184,7 +198,7 @@ def create_app(settings=None):
     def refresh_dataset(identifier:UUID):
         dataset=repository.get(m.datasets,identifier)
         row=repository.get(m.connections,dataset["connection_id"])
-        _,metadata=sources.table_metadata(row,dataset["schema_name"],dataset["table_name"])
+        _,metadata=sources.table_metadata(row,dataset["schema_name"],dataset["table_name"],dataset["catalog_name"])
         return repository.update(m.datasets,identifier,{"metadata":json_safe(metadata),"discovered_at":datetime.now(timezone.utc)})
 
     @router.post("/datasets/{identifier}/profile-runs",response_model=s.RunOut,status_code=202,tags=["runs"])
@@ -219,7 +233,7 @@ def create_app(settings=None):
         for name in ("left_dataset_id","right_dataset_id"):
             dataset=repository.get(m.datasets,values[name])
             _,metadata=sources.table_metadata(repository.get(m.connections,dataset["connection_id"]),
-                dataset["schema_name"],dataset["table_name"])
+                dataset["schema_name"],dataset["table_name"],dataset["catalog_name"])
             if metadata_signature(metadata["columns"]) != metadata_signature(dataset["metadata"].get("columns",{})):
                 raise DomainError(409,"source_schema_changed","Refresh the dataset metadata before previewing this definition.")
             columns.append(metadata["columns"])

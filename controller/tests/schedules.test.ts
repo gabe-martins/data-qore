@@ -163,3 +163,28 @@ test("authenticated schedule API and real scheduled run use the engine queue", {
     assert.equal(paused.status, 200); assert.equal(((await paused.json()) as any).is_active, false);
   } finally { if (id) await db.schedule.delete({ where: { id } }); await db.$disconnect(); }
 });
+
+test("Unity Catalog simulated source is preserved by a real scheduled dispatch", { skip: process.env.DATAQORE_ISOLATED_TEST !== "1" }, async () => {
+  const config=loadConfig(), db=database(config.databaseUrl), auth=new Auth(db,config);
+  const schedule=await db.schedule.findFirstOrThrow({ where:{name:"Unity browser schedule"} });
+  try {
+    const now=new Date();
+    await db.schedule.update({where:{id:schedule.id},data:{isActive:true,nextRunAt:new Date(now.getTime()-60000)}});
+    await new Scheduler(db,config,auth).tick(now);
+    const dispatch=await db.scheduleDispatch.findFirstOrThrow({where:{scheduleId:schedule.id}});
+    assert.equal(dispatch.status,"dispatched");assert.ok(dispatch.runId);
+    for(let n=0;n<100;n++) {
+      const r=await fetch(config.engineUrl+"/v1/runs/"+dispatch.runId,{headers:{"X-API-Key":config.engineKey}});
+      const run=await r.json() as any;
+      assert.notEqual(run.status,"failed");
+      if(run.status==="succeeded")break;
+      assert.ok(n<99);await new Promise(resolve=>setTimeout(resolve,200));
+    }
+    const response=await fetch(config.engineUrl+"/v1/runs/"+dispatch.runId+"/result",{headers:{"X-API-Key":config.engineKey}});
+    const body=await response.json() as any;
+    assert.equal(body.format_version,5);
+    assert.equal(body.result.sources[0].catalog_name,"main");
+    assert.equal(body.result.sources[0].table,"main.sales.records_view");
+    assert.ok(body.result.key_validation.every((v:any)=>v.valid));
+  } finally {await db.schedule.delete({where:{id:schedule.id}});await db.$disconnect();}
+});

@@ -296,6 +296,10 @@ class DatabaseAdapter:
             if reason:
                 expression = "NULL"
                 unavailable[index] = reason
+            elif self.db_type == "databricks" and kind in {"timestamp","timestamp_ltz","timestamp_ntz"}:
+                expression = f"date_format({quoted}, 'yyyy-MM-dd HH:mm:ss.SSSSSS')"
+                if kind != 'timestamp_ntz':
+                    expression = f"concat({expression}, '+00:00')"
             elif self.db_type == "mssql" and kind in {"datetime2", "datetimeoffset", "datetime", "smalldatetime", "time"}:
                 expression = f"CONVERT(varchar(48), {quoted}, 126)"
             elif self.db_type == "oracle" and (kind == "date" or kind.startswith("timestamp")):
@@ -398,6 +402,8 @@ class DatabaseAdapter:
                         # BIN2 preserves code points; a final sentinel prevents
                         # SQL Server from ignoring trailing spaces at equality.
                         marker = f"((CONVERT(nvarchar(max), {column}) + NCHAR(1)) COLLATE Latin1_General_100_BIN2) = ((CONVERT(nvarchar(max), {marker}) + NCHAR(1)) COLLATE Latin1_General_100_BIN2)"
+                    elif self.db_type == "databricks":
+                        marker = f"encode({column}, 'UTF-8') = encode({marker}, 'UTF-8')"
                     else:
                         marker = f"DBMS_LOB.COMPARE(TO_NCLOB({column}), TO_NCLOB({marker})) = 0"
                     markers.append(marker)
@@ -525,7 +531,7 @@ class DatabaseAdapter:
         where = " WHERE " + scope_sql if scope_sql else ""
         marker = self._placeholder(1 if self.db_type == "mssql" else len(params) + 1)
         order = {"postgresql": "RANDOM()", "mysql": "RAND()", "sqlite": "RANDOM()",
-                 "mssql": "NEWID()", "oracle": "DBMS_RANDOM.VALUE"}[self.db_type]
+                 "mssql": "NEWID()", "oracle": "DBMS_RANDOM.VALUE", "databricks": "RAND()"}[self.db_type]
         if self.db_type == "mssql":
             sql = f"SELECT TOP ({marker}) {projection} FROM {table_sql}{where} ORDER BY {order}"
         elif self.db_type == "oracle":
@@ -613,7 +619,10 @@ class DatabaseAdapter:
 _ADAPTERS = {kind: DatabaseAdapter(kind) for kind in SUPPORTED_DATABASES}
 
 
-def get_adapter(db_type):
+def get_adapter(db_type, catalog_name=""):
+    if db_type == "databricks":
+        from ..databricks import DatabricksAdapter
+        return DatabricksAdapter(catalog_name)
     try:
         return _ADAPTERS[db_type]
     except (KeyError, TypeError):

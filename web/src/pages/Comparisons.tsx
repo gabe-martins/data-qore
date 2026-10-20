@@ -670,7 +670,7 @@ export function Wizard() {
                             <option value="">Choose dataset</option>
                             {datasets.data?.items.map((d) => (
                               <option key={d.id} value={d.id}>
-                                {d.schema_name ? d.schema_name + "." : ""}
+                                {d.catalog_name ? d.catalog_name + "." : ""}{d.schema_name ? d.schema_name + "." : ""}
                                 {d.table_name} · {d.id.slice(0, 8)}
                               </option>
                             ))}
@@ -828,9 +828,9 @@ export function Wizard() {
                 </div>
                 <dl>
                   <dt>Source A</dt>
-                  <dd>{l?.table_name}</dd>
+                  <dd>{[l?.catalog_name,l?.schema_name,l?.table_name].filter(Boolean).join(".")}</dd>
                   <dt>Source B</dt>
-                  <dd>{r?.table_name}</dd>
+                  <dd>{[r?.catalog_name,r?.schema_name,r?.table_name].filter(Boolean).join(".")}</dd>
                   <dt>Strategy</dt>
                   <dd>{mode}</dd>
                   <dt>Tolerances</dt>

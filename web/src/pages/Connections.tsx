@@ -175,6 +175,7 @@ function ConnectionForm({
   const [connector, setConnector] = useState<string>(
     connection?.connector ?? "postgresql",
   );
+  const [authType,setAuthType] = useState("pat");
   const [replace, setReplace] = useState(!connection);
   const [error, setError] = useState<unknown>(null);
   const [message, setMessage] = useState("");
@@ -192,6 +193,8 @@ function ConnectionForm({
   };
   function payload(form: HTMLFormElement) {
     const f = new FormData(form);
+    if(connector === "databricks") return {connector,credentials:{hostname:f.get("hostname"),http_path:f.get("http_path"),auth_type:authType,
+      ...(authType === "pat" ? {access_token:f.get("access_token")} : {client_id:f.get("client_id"),client_secret:f.get("client_secret")})}};
     const credentials: Record<string, unknown> = {
       database: f.get("database"),
     };
@@ -254,7 +257,7 @@ function ConnectionForm({
               disabled={!!connection}
               onChange={(e) => setConnector(e.target.value)}
             >
-              {["postgresql", "mysql", "mssql", "oracle", "sqlite"].map((c) => (
+              {["postgresql", "mysql", "mssql", "oracle", "sqlite", "databricks"].map((c) => (
                 <option key={c} value={c}>
                   {c}
                   {drivers.data?.find((d) => d.connector === c)?.available ===
@@ -279,7 +282,7 @@ function ConnectionForm({
         {replace && (
           <div key={connector}>
             <div className="form-grid">
-              {connector !== "sqlite" && (
+              {connector !== "sqlite" && connector !== "databricks" && (
                 <>
                   <label>
                     Host / address
@@ -315,6 +318,17 @@ function ConnectionForm({
                   </label>
                 </>
               )}
+              {connector === "databricks" && <>
+                <label>Server hostname<input name="hostname" required placeholder="workspace.azuredatabricks.net" autoComplete="off" /></label>
+                <label>HTTP path<input name="http_path" required placeholder="/sql/1.0/warehouses/warehouse-id" autoComplete="off" /></label>
+                <label>Authentication<select aria-label="Databricks authentication" value={authType} onChange={e=>setAuthType(e.target.value)}><option value="pat">Personal access token (PAT)</option><option value="oauth_m2m">OAuth M2M — service principal</option></select></label>
+                {authType === "pat" ? <label>Access token<input name="access_token" type="password" required autoComplete="new-password" /></label> : <>
+                  <label>Client ID<input name="client_id" required autoComplete="off" /></label>
+                  <label>Client secret<input name="client_secret" type="password" required autoComplete="new-password" /></label>
+                </>}
+                <p className="notice">Use a Unity Catalog SQL Warehouse with read-only permissions. Choose catalog and schema in Catalog after saving. OAuth tokens renew automatically.</p>
+              </>}
+              {connector !== "databricks" && <>
               <label>
                 {connector === "sqlite"
                   ? "SQLite file"
@@ -329,6 +343,7 @@ function ConnectionForm({
                   }
                 />
               </label>
+              </>}
               {connector === "postgresql" && (
                 <label>
                   SSL mode

@@ -63,13 +63,38 @@ class Plugin:
     opener: object
 
 
+def driver_available(module):
+    try:return importlib.util.find_spec(module) is not None
+    except (ModuleNotFoundError,ValueError,ImportError):return False
+
+
+def databricks(creds):
+    from .databricks import connect
+    return connect(creds)
+
+
 PLUGINS={"postgresql":Plugin("psycopg",postgres),"mysql":Plugin("pymysql",mysql),
     "oracle":Plugin("oracledb",oracle),"mssql":Plugin("mssql_python",mssql),
-    "sqlite":Plugin("sqlite3",None)}
+    "sqlite":Plugin("sqlite3",None),"databricks":Plugin("databricks.sql",databricks)}
 
 
 def source_failure(kind,error,connected=True):
     """Classify source failures without returning/logging driver messages."""
+    if kind=="databricks":
+        code=getattr(error,'sqlstate',None) or getattr(error,'sql_state',None)
+        status=getattr(error,'status_code',None)
+        message=str(error).lower()
+        # Inspect locally; never return source identifiers or the driver's text.
+        permission_failure=status==403 or code=='42501' or any(x in message for x in ('insufficient_permissions','permission_denied','permission denied','insufficient_privileges'))
+        if permission_failure:
+            for privilege,reason,description in (
+                ('use catalog','catalog_access_denied','Databricks denied USE CATALOG. Ask the catalog owner to grant USE CATALOG to the connection identity on the selected catalog.'),
+                ('use schema','schema_access_denied','Databricks denied USE SCHEMA. Ask the schema owner to grant USE SCHEMA to the connection identity on the selected schema.'),
+            ):
+                if privilege in message:
+                    return DomainError(503,'source_databricks_'+reason,description)
+        reason='authentication_failed' if status==401 or code=='28000' or any(x in message for x in ('unauthorized','invalid access token','invalid_client','token expired')) else 'permission_denied' if status==403 or code=='42501' or any(x in message for x in ('permission_denied','permission denied','insufficient_privileges','42501')) else 'query_timeout' if any(x in message for x in ('timed out','timeout','deadline exceeded')) else 'warehouse_unavailable' if status in (404,503) or any(x in message for x in ('warehouse is stopped','warehouse not found','endpoint not found')) else 'unavailable'
+        return DomainError(503,'source_databricks_'+reason,'Unable to read Databricks. Check authentication, permissions, warehouse availability and timeouts.')
     if kind=="sqlite" and "user-defined function raised exception" in str(error).lower():
         return DomainError(503,"source_scope_encoding_invalid",
             "SQLite scope values must match their declared numeric/text types or canonical ISO date/timestamp encoding; timestamp precision is at most six fractional digits.")
@@ -177,13 +202,13 @@ class SourceManager:
 
     def available(self):
         return [{"connector":kind,"driver":plugin.module,
-            "available":importlib.util.find_spec(plugin.module) is not None} for kind,plugin in PLUGINS.items()]
+            "available":driver_available(plugin.module)} for kind,plugin in PLUGINS.items()]
 
     def encrypt(self,kind,credentials):
         checked=ConnectionTest(connector=kind,credentials=credentials)
-        data=checked.credentials.model_dump(exclude={"password"})
-        if checked.credentials.password is not None:
-            data["password"]=checked.credentials.password.get_secret_value()
+        data=checked.credentials.model_dump()
+        from pydantic import SecretStr
+        data={k:(v.get_secret_value() if isinstance(v,SecretStr) else v) for k,v in data.items()}
         if kind=="sqlite":
             data["database"]=str(self.sqlite_path(data["database"]))
         return self.fernet.encrypt(json.dumps(data).encode()).decode()
@@ -209,7 +234,7 @@ class SourceManager:
         return path
 
     @contextmanager
-    def session(self,row,comparison=False):
+    def session(self,row,comparison=False,catalog_name=""):
         if not row["is_active"]:
             raise DomainError(409,"connection_inactive","A conexão está desativada.")
         kind=row["connector"]
@@ -221,11 +246,15 @@ class SourceManager:
                 conn=sqlite3.connect(path.as_uri()+"?mode=ro",uri=True,timeout=30,factory=ReadOnlySQLiteConnection)
             else:
                 plugin=PLUGINS[kind]
-                if importlib.util.find_spec(plugin.module) is None:
+                if not driver_available(plugin.module):
                     raise DomainError(503,"driver_unavailable","O driver desta fonte não está instalado.")
                 conn=plugin.opener(creds)
             consistency=prepare_read_session(conn,kind,comparison=comparison)
-            yield {"connection":row["name"],"creds":{"type":kind},"conn":conn,"adapter":get_adapter(kind),
+            if kind=='databricks':
+                from .databricks import DatabricksAdapter
+                adapter=DatabricksAdapter(catalog_name)
+            else:adapter=get_adapter(kind)
+            yield {"catalog_name":catalog_name,"connection":row["name"],"creds":{"type":kind},"conn":conn,"adapter":adapter,
                 "read_consistency":consistency}
         except DomainError:
             raise
@@ -252,12 +281,24 @@ class SourceManager:
         with self.session(row) as source:
             return source["adapter"].list_tables(source["conn"])
 
-    def table_metadata(self,row,schema,table):
+    def table_metadata(self,row,schema,table,catalog_name=""):
+        if row["connector"]=="databricks" and (not catalog_name or not schema):
+            raise DomainError(422,"catalog_required","Select a catalog and schema.")
+        if row["connector"]!="databricks" and catalog_name:
+            raise DomainError(422,"validation_error","This connector does not accept a catalog.")
         if row["connector"]=="sqlite" and schema=="main":
             schema=""
-        with self.session(row) as source:
-            if (schema,table) not in source["adapter"].list_tables(source["conn"]):
+        with self.session(row,catalog_name=catalog_name) as source:
+            object_type=None
+            if row["connector"]=="databricks":
+                objects=source["adapter"].objects(source["conn"],schema)
+                tables=[(sch,name) for sch,name,_ in objects]
+                object_type=next((kind for sch,name,kind in objects if (sch,name)==(schema,table)),None)
+            else:tables=source["adapter"].list_tables(source["conn"])
+            if (schema,table) not in tables:
                 raise DomainError(404,"source_table_not_found","Tabela não encontrada no catálogo atual.")
             columns=source["adapter"].metadata(source["conn"],schema,table)
             estimate=source["adapter"].estimate_rows(source["conn"],schema,table)
-        return schema,{"columns":columns,"estimated_rows":estimate}
+            details=source["adapter"].table_details(source["conn"],schema,table) if row["connector"]=='databricks' else None
+        return schema,{"columns":columns,"estimated_rows":estimate,**({"table_type":object_type} if object_type else {}),
+            **({"table_details":details} if details is not None else {})}

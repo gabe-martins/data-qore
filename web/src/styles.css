@@ -1182,6 +1182,7 @@ select:focus-visible {
   font-size: 13px;
   font-weight: 600;
   margin-top: 4px;
+  overflow-wrap: anywhere;
 }
 .column-chart {
   height: 150px;

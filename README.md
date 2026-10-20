@@ -96,6 +96,7 @@ for setup details and troubleshooting.
 | [Web app](web/README.md) | Frontend development and builds |
 | [Controller](controller/README.md) | Application configuration and account management |
 | [Engine](engine/README.md) | Service setup and optional connectors |
+| [Databricks](docs/DATABRICKS.md) | Unity Catalog, authentication and validation |
 | [Overview quality](docs/OVERVIEW_QUALITY.md) | Daily comparison quality and period filters |
 | [Database](database/README.md) | Initial provisioning and database maintenance |
 | [Launcher](scripts/README.md) | Starting, stopping, and troubleshooting local services |

@@ -34,8 +34,10 @@ def execute_profile(selected,options=None,sample_size=None,execution_id=None):
     plan["strategy_reason"]=plan["strategy_reason"].replace("both pilot reads exhausted their tables","pilot read exhausted the table")
     public={k:v for k,v in profile.items() if k not in {"sample_rows","sample_columns"}}
     public.update(connection=source["connection"],database_type=source["creds"]["type"],
-        schema=source["schema"],table_name=source["table"],
-        table=".".join(p for p in (source["schema"],source["table"]) if p),estimated_rows=source["estimated_rows"])
+        catalog_name=source.get("catalog_name",""),schema=source["schema"],table_name=source["table"],
+        table=".".join(p for p in (source.get("catalog_name",""),source["schema"],source["table"]) if p),estimated_rows=source["estimated_rows"])
+    if source["creds"]["type"]=='databricks':
+        public['table_details']=source['adapter'].table_details(source['conn'],source['schema'],source['table'])
     finished=datetime.now(timezone.utc).isoformat()
     return {"format_version":4,"engine_version":"4.0","execution_id":str(execution_id or uuid4()),
         "started_at":started,"finished_at":finished,"created_at":finished,
@@ -46,4 +48,4 @@ def execute_profile(selected,options=None,sample_size=None,execution_id=None):
         "row_comparisons":[],"metric_comparisons":[],"value_distributions":[],
         "query_log":[{"source":1,**event} for event in events],
         "warnings":["Perfil amostral descritivo; não representa toda a população.",
-            "A ordenação aleatória pode percorrer a tabela inteira; o limite de linhas não limita esse custo."]}
+            "A ordenação aleatória pode percorrer a tabela inteira; o limite de linhas não limita esse custo."] + (["Databricks uses best-effort reads; separate statements do not share a guaranteed snapshot."] if source["creds"]["type"]=="databricks" else [])}

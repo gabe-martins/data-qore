@@ -639,6 +639,117 @@
         }
       }
     },
+    "/api/v1/connections/{identifier}/catalogs": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "List Catalogs",
+        "operationId": "list_catalogs_v1_connections__identifier__catalogs_get",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_str_"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
     "/api/v1/connections/{identifier}/schemas": {
       "get": {
         "tags": [
@@ -683,6 +794,16 @@
               "minimum": 0,
               "default": 0,
               "title": "Offset"
+            }
+          },
+          {
+            "name": "catalog",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Catalog"
             }
           }
         ],
@@ -810,6 +931,16 @@
                 }
               ],
               "title": "Schema"
+            }
+          },
+          {
+            "name": "catalog",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Catalog"
             }
           }
         ],
@@ -4237,12 +4368,21 @@
               "mysql",
               "mssql",
               "oracle",
-              "sqlite"
+              "sqlite",
+              "databricks"
             ],
             "title": "Connector"
           },
           "credentials": {
-            "$ref": "#/components/schemas/Credentials"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Credentials"
+              },
+              {
+                "$ref": "#/components/schemas/DatabricksCredentials"
+              }
+            ],
+            "title": "Credentials"
           },
           "name": {
             "type": "string",
@@ -4284,7 +4424,8 @@
               "mysql",
               "mssql",
               "oracle",
-              "sqlite"
+              "sqlite",
+              "databricks"
             ],
             "title": "Connector"
           },
@@ -4324,12 +4465,21 @@
               "mysql",
               "mssql",
               "oracle",
-              "sqlite"
+              "sqlite",
+              "databricks"
             ],
             "title": "Connector"
           },
           "credentials": {
-            "$ref": "#/components/schemas/Credentials"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Credentials"
+              },
+              {
+                "$ref": "#/components/schemas/DatabricksCredentials"
+              }
+            ],
+            "title": "Credentials"
           }
         },
         "additionalProperties": false,
@@ -4362,9 +4512,13 @@
                 "$ref": "#/components/schemas/Credentials"
               },
               {
+                "$ref": "#/components/schemas/DatabricksCredentials"
+              },
+              {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Credentials"
           },
           "is_active": {
             "anyOf": [
@@ -4391,7 +4545,8 @@
               "mysql",
               "mssql",
               "oracle",
-              "sqlite"
+              "sqlite",
+              "databricks"
             ],
             "title": "Connector"
           },
@@ -4594,8 +4749,86 @@
         ],
         "title": "DailyQualityPoint"
       },
+      "DatabricksCredentials": {
+        "properties": {
+          "hostname": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9.-]*$",
+            "title": "Hostname"
+          },
+          "http_path": {
+            "type": "string",
+            "maxLength": 255,
+            "pattern": "^/sql/1\\.0/warehouses/[A-Za-z0-9-]+$",
+            "title": "Http Path"
+          },
+          "auth_type": {
+            "type": "string",
+            "enum": [
+              "pat",
+              "oauth_m2m"
+            ],
+            "title": "Auth Type"
+          },
+          "access_token": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Token"
+          },
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "client_secret": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Secret"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "hostname",
+          "http_path",
+          "auth_type"
+        ],
+        "title": "DatabricksCredentials"
+      },
       "DatasetCreate": {
         "properties": {
+          "catalog_name": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Catalog Name",
+            "default": ""
+          },
           "connection_id": {
             "type": "string",
             "format": "uuid",
@@ -4623,6 +4856,12 @@
       },
       "DatasetOut": {
         "properties": {
+          "catalog_name": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Catalog Name",
+            "default": ""
+          },
           "connection_id": {
             "type": "string",
             "format": "uuid",
@@ -5974,6 +6213,16 @@
       },
       "TableOut": {
         "properties": {
+          "catalog_name": {
+            "type": "string",
+            "title": "Catalog Name",
+            "default": ""
+          },
+          "table_type": {
+            "type": "string",
+            "title": "Table Type",
+            "default": "table"
+          },
           "schema_name": {
             "type": "string",
             "title": "Schema Name"

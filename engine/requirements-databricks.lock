@@ -1,0 +1,26 @@
+# Optional Databricks SQL + OAuth dependency lock; CloudFetch disabled.
+certifi==2026.7.22
+cffi==2.1.1
+charset-normalizer==3.5.2
+cryptography==50.0.2
+databricks-sdk==0.154.0
+databricks-sql-connector==4.7.0
+et-xmlfile==2.0.0
+google-auth==2.62.0
+idna==3.20
+lz4==4.4.5
+numpy==2.5.4
+oauthlib==4.0.0
+openpyxl==3.1.5
+pandas==3.0.6
+protobuf==7.36.2
+pyasn1==0.6.4
+pyasn1-modules==0.4.2
+pybreaker==1.4.1
+pycparser==3.11
+pyjwt==2.15.1
+python-dateutil==2.9.0.post0
+requests==2.34.2
+six==1.17.0
+thrift==0.25.0
+urllib3==2.8.0

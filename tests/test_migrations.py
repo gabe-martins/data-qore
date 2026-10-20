@@ -195,6 +195,20 @@ class PostgreSQLMigrationTests(TemporaryPostgres):
             self.assertEqual(len({row[0] for row in rows}),2)
             self.assertEqual([row[1] for row in rows],[expected,expected])
 
+    def test_databricks_upgrade_preserves_legacy_datasets_and_identity(self):
+        with self.connect('engine','srv_dataqore_engine') as c:
+            identifier=c.execute("INSERT INTO engine.connections(name,connector,credentials_ciphertext) VALUES ('legacy','postgresql','encrypted') RETURNING id").fetchone()[0]
+            dataset=c.execute("INSERT INTO engine.datasets(connection_id,schema_name,table_name) VALUES (%s,'public','records') RETURNING id",(identifier,)).fetchone()[0]
+        before=self.table_oids('engine')
+        self.command('engine','baseline');self.command('engine','apply');self.command('engine','verify');self.command('engine','apply')
+        self.assertEqual(before,self.table_oids('engine'))
+        with self.connect('engine','srv_dataqore_engine') as c:
+            self.assertEqual(c.execute('SELECT catalog_name FROM engine.datasets WHERE id=%s',(dataset,)).fetchone()[0],'')
+            c.execute("UPDATE engine.connections SET connector='databricks' WHERE id=%s",(identifier,))
+            c.execute("INSERT INTO engine.datasets(connection_id,catalog_name,schema_name,table_name) VALUES (%s,'main','public','records'),(%s,'other','public','records')",(identifier,identifier))
+            with self.assertRaises(psycopg.errors.UniqueViolation):
+                c.execute("INSERT INTO engine.datasets(connection_id,catalog_name,schema_name,table_name) VALUES (%s,'main','public','records')",(identifier,))
+
     def test_baseline_never_rewinds_existing_engine_history(self):
         self.command('engine','baseline')
         with self.connect('engine') as connection:

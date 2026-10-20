@@ -133,7 +133,7 @@ test(
     const t = l.body.access_token;
     const catalog = await call("/connectors", undefined, t);
     assert.equal(catalog.status, 200);
-    assert.equal((await catalog.json()).length, 5);
+    assert.equal((await catalog.json()).length, 6);
     const invalid = await call(
       "/connections",
       {

@@ -26,7 +26,7 @@ def prepare_sources(selected, explicit_options=False):
     for item in selected:
         events = []
         item = {**item, 'conn': RecordingConnection(item['conn'], events)}
-        adapter = get_adapter(item['creds']['type'])
+        adapter = item.get('adapter') or get_adapter(item['creds']['type'])
         columns = adapter.metadata(item['conn'], item['schema'], item['table'])
         if not columns:
             raise ValueError(f"No column metadata for {item['table']}")
@@ -302,11 +302,12 @@ def execute_comparison(selected, mode='auto', sample_size=None, prepared=None, o
     from ..comparison_options import compact_options, metadata_signature, validate_options
     from ..storage import DomainError
     configured = compact_options(comparison_options)
-    sources = prepared if prepared is not None else prepare_sources(selected, explicit_options=bool(configured))
+    has_databricks = any(s["creds"]["type"]=="databricks" for s in (prepared if prepared is not None else selected))
+    sources = prepared if prepared is not None else prepare_sources(selected, explicit_options=bool(configured) or has_databricks)
     if len(sources) != 2:
         raise ValueError('Prepared sources must contain exactly two tables')
     context, key_validation = None, []
-    if configured:
+    if configured or has_databricks:
         for source in sources:
             expected = source.get('expected_columns')
             if expected is not None and metadata_signature(source['columns']) != expected:
@@ -331,6 +332,11 @@ def execute_comparison(selected, mode='auto', sample_size=None, prepared=None, o
             keys, key_kind = common_comparison_key(sources) if mode != 'independent_random' else ([], None)
     else:
         keys, key_kind = common_comparison_key(sources) if mode != 'independent_random' else ([], None)
+    if has_databricks and keys and not key_validation:
+        for source in sources:
+            physical=[source['names'][key] for key in keys]
+            diagnostic=source['adapter'].validate_key(source['conn'],source['schema'],source['table'],physical,source.get('scope'))
+            key_validation.append({**diagnostic,'columns':physical,'read_consistency':source.get('read_consistency','best_effort')})
     invalid_business_key = bool(key_validation) and not all(v['valid'] for v in key_validation)
     if invalid_business_key:
         keys = []  # Keep the selected identity in context; never try another key.
@@ -345,7 +351,7 @@ def execute_comparison(selected, mode='auto', sample_size=None, prepared=None, o
             for source, profile in zip(sources, pilots):
                 _index(profile, source, keys)
         except ValueError:
-            if key_kind == 'business_key':
+            if key_kind == 'business_key' or has_databricks:
                 invalid_business_key = True
                 for validation in key_validation:
                     validation.update(valid=False, reason='key_unavailable_or_changed_after_validation')
@@ -374,7 +380,7 @@ def execute_comparison(selected, mode='auto', sample_size=None, prepared=None, o
         try:
             tokens, key_values = _select_union(sources, pools, keys, target, plan['seed'])
         except ValueError:
-            if key_kind == 'business_key':
+            if key_kind == 'business_key' or has_databricks:
                 invalid_business_key = True
                 for validation in key_validation:
                     validation.update(valid=False, reason='key_unavailable_or_changed_after_validation')
@@ -395,7 +401,7 @@ def execute_comparison(selected, mode='auto', sample_size=None, prepared=None, o
             plan['rounds'].append({'stage': 'common_key_lookup', 'requested_keys_per_source': len(tokens),
                                    'observed_rows': [p['sample_size'] for p in profiles]})
         except ValueError:
-            if key_kind != 'business_key':
+            if key_kind != 'business_key' and not has_databricks:
                 raise
             invalid_business_key = True
             for validation in key_validation:
@@ -468,8 +474,8 @@ def execute_comparison(selected, mode='auto', sample_size=None, prepared=None, o
             absolute_tolerance=abs_tol, relative_tolerance=rel_tol))
     public_sources = [{
         'connection': source['connection'], 'database_type': source['creds']['type'],
-        'schema': source['schema'], 'table_name': source['table'],
-        'table': f"{source['schema']}.{source['table']}" if source['schema'] else source['table'],
+        'catalog_name': source.get('catalog_name',''), 'schema': source['schema'], 'table_name': source['table'],
+        'table': ".".join(p for p in (source.get("catalog_name",""),source["schema"],source["table"]) if p),
         'estimated_rows': source['estimated_rows'],
         **{name: value for name, value in profile.items() if name not in {'sample_rows', 'sample_columns'}},
     } for source, profile in zip(sources, profiles)]
@@ -499,6 +505,6 @@ def execute_comparison(selected, mode='auto', sample_size=None, prepared=None, o
         plan['key_columns'] = [sources[0]['names'][k] for k in keys]
         if invalid_business_key:
             plan.update(mode='key_validation_failed', key_kind='business_key',
-                        key_columns=[p['left'] for p in context['business_key']],
+                        key_columns=[p['left'] for p in context['business_key']] or key_validation[0]['columns'],
                         metric_scope='descriptive profiles only; selected business key is invalid')
     return result

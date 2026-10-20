@@ -35,6 +35,10 @@ class FullStackTests(TemporaryPostgres):
                 db.executemany('INSERT INTO records VALUES(?,?,?,?,?)',[
                     ('A',1,'2026-10-01','B',10),('A',2,'2026-10-01','B',20),
                     ('A',1,'2026-09-30','B',999),(None,9,'2026-10-01','OTHER',999)])
+        with sqlite3.connect(source/'databricks.sqlite') as db:
+            db.execute('CREATE TABLE records(id integer PRIMARY KEY, amount numeric NOT NULL, status text)')
+            db.executemany('INSERT INTO records VALUES(?,?,?)',[(1,10,'paid'),(2,20,'pending')])
+            db.execute('CREATE VIEW records_view AS SELECT * FROM records')
         env=os.environ.copy()
         for name in ('MIGRATION_DATABASE_URL','DATAQORE_ENV_FILE'):
             env.pop(name,None)
@@ -42,7 +46,7 @@ class FullStackTests(TemporaryPostgres):
             'ENGINE_API_URL':f'http://127.0.0.1:{engine_port}','ENGINE_API_KEY':'isolated-api-key-for-tests-only',
             'JWT_SECRET':'isolated-jwt-secret-for-acceptance-tests-only','WEB_ORIGIN':f'http://127.0.0.1:{web_port}',
             'TEST_CONTROLLER_PORT':str(controller_port),'DATAQORE_CONTROLLER_URL':f'http://127.0.0.1:{controller_port}',
-            'DATAQORE_WEB_URL':f'http://127.0.0.1:{web_port}','PYTHONPATH':str(ROOT/'engine'),'WORKER_POLL_SECONDS':'.1'}
+            'DATAQORE_WEB_URL':f'http://127.0.0.1:{web_port}','PYTHONPATH':os.pathsep.join(map(str,[ROOT/'tests/databricks_test_support',ROOT/'tests',ROOT/'engine'])),'DATAQORE_DATABRICKS_STUB_ROOT':str(source),'WORKER_POLL_SECONDS':'.1'}
         env.update(cfg)
         engine_env={**env,'DATABASE_URL':f'postgresql+psycopg://srv_dataqore_engine@127.0.0.1:{self.port}/dataqore_engine',
             'CONNECTIONS_ENCRYPTION_KEY':Fernet.generate_key().decode(),'CONNECTIONS_ENCRYPTION_KEY_VERSION':'v1','SQLITE_ALLOWED_ROOT':str(source)}
@@ -135,6 +139,6 @@ class FullStackTests(TemporaryPostgres):
             self.assertTrue(audit)
         with self.connect('engine') as c:
             rows=c.execute('SELECT result FROM engine.run_results').fetchall()
-            self.assertEqual(len(rows),6)
+            self.assertEqual(len(rows),9)
             self.assertNotIn('sample_rows',json.dumps(rows))
-            self.assertEqual(c.execute('SELECT count(*) FROM engine.runs WHERE status=\'succeeded\'').fetchone()[0],6)
+            self.assertEqual(c.execute('SELECT count(*) FROM engine.runs WHERE status=\'succeeded\'').fetchone()[0],9)
