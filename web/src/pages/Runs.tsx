@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { ComparisonRunAnimation } from "../components/ComparisonRunAnimation";
 import { FrozenComparisonContext } from "../components/ComparisonOptionsEditor";
 import { AnalysisNotice, EvaluationValue, SourceProfiles, evaluationReason } from "../components/Evaluation";
 import { api, type Model, type Page } from "../api";
@@ -220,16 +221,20 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
               </Card>
             ) : run.data.status !== "succeeded" ? (
               <Card>
-                <Empty
-                  title={
-                    run.data.status === "queued"
-                      ? "Waiting for the worker"
-                      : "Analysis in progress"
-                  }
-                >
-                  This page updates every two seconds until execution finishes.
-                  Keep the worker process running.
-                </Empty>
+                {run.data.kind === "comparison" ? (
+                  <ComparisonRunAnimation state={run.data.status} />
+                ) : (
+                  <Empty
+                    title={
+                      run.data.status === "queued"
+                        ? "Waiting for the worker"
+                        : "Analysis in progress"
+                    }
+                  >
+                    This page updates every two seconds until execution finishes.
+                    Keep the worker process running.
+                  </Empty>
+                )}
               </Card>
             ) : result.isPending ? (
               <Loading />

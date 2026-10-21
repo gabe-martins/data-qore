@@ -52,6 +52,8 @@ export function Comparisons() {
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
   const [error, setError] = useState<unknown>(null);
+  const [startingId, setStartingId] = useState<string | null>(null);
+  const starting = useRef(false);
   const [deleting,setDeleting]=useState<Model<"ComparisonSummaryOut">|null>(null);
   const searchInput=useRef<HTMLInputElement>(null);
   const cache = useQueryClient();
@@ -160,8 +162,12 @@ export function Comparisons() {
                   : "No runs yet"}
               </span>
               <Button
-                disabled={!c.is_active}
+                disabled={!c.is_active || startingId !== null}
                 onClick={async () => {
+                  if (starting.current) return;
+                  starting.current = true;
+                  setStartingId(c.id);
+                  setError(null);
                   try {
                     const r = await post<Model<"RunOut">>(
                       `/comparisons/${c.id}/runs`,
@@ -171,11 +177,14 @@ export function Comparisons() {
                     navigate("/runs/" + r.id);
                   } catch (e) {
                     setError(e);
+                  } finally {
+                    starting.current = false;
+                    setStartingId(null);
                   }
                 }}
               >
                 <Play size={16} />
-                Run now
+                {startingId === c.id ? "Starting…" : "Run now"}
               </Button>
             </div>
           </Card>
@@ -205,6 +214,8 @@ export function ComparisonDetail() {
   const [offset, setOffset] = useState(0);
   const [error, setError] = useState<unknown>(null);
   const [deleting,setDeleting]=useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const starting = useRef(false);
   const navigate = useNavigate();
   const c = useQuery({
     queryKey: ["comparison", id],
@@ -255,8 +266,12 @@ export function ComparisonDetail() {
             </Button>
             <Button variant="outline" disabled={!c.data} onClick={()=>setDeleting(true)}><Trash2 size={16} aria-hidden="true"/>Delete</Button>
             <Button
-              disabled={!c.data?.is_active}
+              disabled={!c.data?.is_active || isStarting}
               onClick={async () => {
+                if (starting.current) return;
+                starting.current = true;
+                setIsStarting(true);
+                setError(null);
                 try {
                   const run = await post<Model<"RunOut">>(
                     `/comparisons/${id}/runs`,
@@ -266,11 +281,14 @@ export function ComparisonDetail() {
                   navigate("/runs/" + run.id);
                 } catch (e) {
                   setError(e);
+                } finally {
+                  starting.current = false;
+                  setIsStarting(false);
                 }
               }}
             >
               <Play size={16} />
-              Run now
+              {isStarting ? "Starting…" : "Run now"}
             </Button>
           </>
         }
