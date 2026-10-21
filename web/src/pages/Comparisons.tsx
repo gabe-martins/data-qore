@@ -18,6 +18,7 @@ import {
 } from "../lib/tolerances";
 import { ToleranceHelp } from "../components/ToleranceHelp";
 import { DeleteComparisonDialog } from "../components/DeleteComparisonDialog";
+import { BusinessQualityResult } from "../components/BusinessQuality";
 import { AnalysisNotice, EvaluationValue } from "../components/Evaluation";
 import {
   ScopeEditor,
@@ -316,6 +317,7 @@ export function ComparisonDetail() {
             </div>
             {tab === "Overview" ? (
               <>
+                {result.data && <BusinessQualityResult result={r} />}
                 {result.data && <AnalysisNotice evaluation={result.data.evaluation} />}
                 <div className="stats-grid four">
                   <Stat

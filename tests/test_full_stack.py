@@ -125,6 +125,7 @@ class FullStackTests(TemporaryPostgres):
                 time.sleep(.2)
         commands=[(['node','--import','tsx','--test','tests/controller.test.ts'],ROOT/'controller'),(['node','node_modules/@playwright/test/cli.js','test','flow.spec.ts','--output','test-results/flow-artifacts'],ROOT/'web'),(['node','node_modules/@playwright/test/cli.js','test','ui-appearance.spec.ts','--output','test-results/appearance-artifacts'],ROOT/'web'),(['node','node_modules/@playwright/test/cli.js','test','connection-delete.spec.ts','--output','test-results/deletion-artifacts'],ROOT/'web'),(['node','node_modules/@playwright/test/cli.js','test','dataset-delete.spec.ts','--output','test-results/dataset-deletion-artifacts'],ROOT/'web'),(['node','node_modules/@playwright/test/cli.js','test','comparison-delete.spec.ts','--output','test-results/comparison-deletion-artifacts'],ROOT/'web'),(['node','--import','tsx','--test','tests/comparison-delete.test.ts'],ROOT/'controller'),(['node','--import','tsx','--test','tests/schedules.test.ts'],ROOT/'controller')]
         commands.append((['node','node_modules/@playwright/test/cli.js','test','evaluation.spec.ts','--output','test-results/evaluation-artifacts'],ROOT/'web'))
+        commands.append((['node','node_modules/@playwright/test/cli.js','test','business-rules.spec.ts','--output','test-results/business-rules-artifacts'],ROOT/'web'))
         for group,(cmd,cwd) in enumerate(commands):
             if group:
                 # Each suite gets fresh process-local rate limits; database sessions
@@ -147,7 +148,7 @@ class FullStackTests(TemporaryPostgres):
             self.assertTrue(audit)
         with self.connect('engine') as c:
             rows=c.execute('SELECT result FROM engine.run_results').fetchall()
-            # Original flows plus four completed runs from evaluation.spec.ts.
-            self.assertEqual(len(rows),13)
+            # Original/evaluation flows plus profile and comparison from business-rules.spec.ts.
+            self.assertEqual(len(rows),15)
             self.assertNotIn('sample_rows',json.dumps(rows))
-            self.assertEqual(c.execute('SELECT count(*) FROM engine.runs WHERE status=\'succeeded\'').fetchone()[0],13)
+            self.assertEqual(c.execute('SELECT count(*) FROM engine.runs WHERE status=\'succeeded\'').fetchone()[0],15)

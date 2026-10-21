@@ -1604,6 +1604,190 @@
         }
       }
     },
+    "/api/v1/datasets/{identifier}/quality-rules": {
+      "get": {
+        "tags": [
+          "datasets"
+        ],
+        "summary": "Get Quality Rules",
+        "operationId": "get_quality_rules_v1_datasets__identifier__quality_rules_get",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleSetOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "datasets"
+        ],
+        "summary": "Update Quality Rules",
+        "operationId": "update_quality_rules_v1_datasets__identifier__quality_rules_post",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleSetUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleSetOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
     "/api/v1/datasets/{identifier}/dependencies": {
       "get": {
         "tags": [
@@ -6019,6 +6203,9 @@
             "minLength": 1,
             "title": "Table Name"
           },
+          "quality_rules": {
+            "$ref": "#/components/schemas/RuleConfiguration"
+          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -6045,6 +6232,62 @@
           "discovered_at"
         ],
         "title": "DatasetOut"
+      },
+      "DomainRule": {
+        "properties": {
+          "null_policy": {
+            "type": "string",
+            "enum": [
+              "fail",
+              "skip"
+            ],
+            "title": "Null Policy",
+            "default": "fail"
+          },
+          "kind": {
+            "type": "string",
+            "const": "domain",
+            "title": "Kind"
+          },
+          "values": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "array",
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Values"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "values"
+        ],
+        "title": "DomainRule"
       },
       "ErrorOut": {
         "properties": {
@@ -7148,6 +7391,76 @@
         ],
         "title": "QualityTrendOut"
       },
+      "RangeRule": {
+        "properties": {
+          "null_policy": {
+            "type": "string",
+            "enum": [
+              "fail",
+              "skip"
+            ],
+            "title": "Null Policy",
+            "default": "fail"
+          },
+          "kind": {
+            "type": "string",
+            "const": "range",
+            "title": "Kind"
+          },
+          "minimum": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1024
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimum"
+          },
+          "maximum": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1024
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum"
+          },
+          "include_minimum": {
+            "type": "boolean",
+            "title": "Include Minimum",
+            "default": true
+          },
+          "include_maximum": {
+            "type": "boolean",
+            "title": "Include Maximum",
+            "default": true
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "RangeRule"
+      },
       "RecentRunOut": {
         "properties": {
           "id": {
@@ -7280,6 +7593,31 @@
         ],
         "title": "RecentRunOut"
       },
+      "RequiredRule": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "required",
+            "title": "Kind"
+          },
+          "reject_blank": {
+            "type": "boolean",
+            "title": "Reject Blank",
+            "default": true
+          },
+          "whitespace_blank": {
+            "type": "boolean",
+            "title": "Whitespace Blank",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "RequiredRule"
+      },
       "ResultEvaluationOut": {
         "properties": {
           "analysis_kind": {
@@ -7377,6 +7715,213 @@
           "created_at"
         ],
         "title": "ResultOut"
+      },
+      "RuleConfiguration": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "title": "Revision",
+            "default": 0
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleOut"
+            },
+            "type": "array",
+            "title": "Rules"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RuleConfiguration"
+      },
+      "RuleInput": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Name"
+          },
+          "column": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Column"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          },
+          "definition": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RequiredRule"
+              },
+              {
+                "$ref": "#/components/schemas/DomainRule"
+              },
+              {
+                "$ref": "#/components/schemas/RangeRule"
+              },
+              {
+                "$ref": "#/components/schemas/TemporalOrderRule"
+              }
+            ],
+            "title": "Definition",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "domain": "#/components/schemas/DomainRule",
+                "range": "#/components/schemas/RangeRule",
+                "required": "#/components/schemas/RequiredRule",
+                "temporal_order": "#/components/schemas/TemporalOrderRule"
+              }
+            }
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "column",
+          "definition"
+        ],
+        "title": "RuleInput"
+      },
+      "RuleOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Name"
+          },
+          "column": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Column"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          },
+          "definition": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RequiredRule"
+              },
+              {
+                "$ref": "#/components/schemas/DomainRule"
+              },
+              {
+                "$ref": "#/components/schemas/RangeRule"
+              },
+              {
+                "$ref": "#/components/schemas/TemporalOrderRule"
+              }
+            ],
+            "title": "Definition",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "domain": "#/components/schemas/DomainRule",
+                "range": "#/components/schemas/RangeRule",
+                "required": "#/components/schemas/RequiredRule",
+                "temporal_order": "#/components/schemas/TemporalOrderRule"
+              }
+            }
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "column",
+          "definition",
+          "version"
+        ],
+        "title": "RuleOut"
+      },
+      "RuleSetOut": {
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Dataset Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleOut"
+            },
+            "type": "array",
+            "title": "Rules"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "dataset_id",
+          "revision",
+          "rules"
+        ],
+        "title": "RuleSetOut"
+      },
+      "RuleSetUpdate": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "Expected Revision"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleInput"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Rules"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "rules"
+        ],
+        "title": "RuleSetUpdate"
       },
       "RunOut": {
         "properties": {
@@ -7720,6 +8265,60 @@
           "table_name"
         ],
         "title": "TableOut"
+      },
+      "TemporalOrderRule": {
+        "properties": {
+          "null_policy": {
+            "type": "string",
+            "enum": [
+              "fail",
+              "skip"
+            ],
+            "title": "Null Policy",
+            "default": "fail"
+          },
+          "kind": {
+            "type": "string",
+            "const": "temporal_order",
+            "title": "Kind"
+          },
+          "other_column": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Other Column"
+          },
+          "operator": {
+            "type": "string",
+            "enum": [
+              "lt",
+              "lte",
+              "gt",
+              "gte"
+            ],
+            "title": "Operator",
+            "default": "lte"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "other_column"
+        ],
+        "title": "TemporalOrderRule"
       },
       "TestOut": {
         "properties": {

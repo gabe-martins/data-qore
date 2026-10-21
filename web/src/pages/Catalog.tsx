@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { Database, Play, RefreshCw, Trash2 } from "lucide-react";
+import { QualityRulesEditor, BusinessQualityResult } from "../components/BusinessQuality";
 import { DeleteDatasetDialog } from "../components/DeleteDatasetDialog";
 import { ColumnStatistics, EvaluationValue } from "../components/Evaluation";
 import {
@@ -402,6 +403,8 @@ export function DatasetProfile() {
             />
           </div>
           {tableMetadata?.table_details && <TableDetails details={tableMetadata.table_details} title="Current table details" />}
+          <QualityRulesEditor key={id} datasetId={id!} columns={metadata} />
+          {result.data && <BusinessQualityResult result={result.data.result} />}
           <Card title="Column metadata">
             <div className="table-scroll">
               <table>

@@ -39,7 +39,7 @@ def execute_profile(selected,options=None,sample_size=None,execution_id=None):
     if source["creds"]["type"]=='databricks':
         public['table_details']=source['adapter'].table_details(source['conn'],source['schema'],source['table'])
     finished=datetime.now(timezone.utc).isoformat()
-    return {"format_version":4,"engine_version":"4.0","execution_id":str(execution_id or uuid4()),
+    result = {"format_version":4,"engine_version":"4.0","execution_id":str(execution_id or uuid4()),
         "started_at":started,"finished_at":finished,"created_at":finished,
         "sample_size":target,"sampling_plan":plan,"sources":[public],
         "summary":{"status":"profile_only" if profile["sample_size"] else "inconclusive","scope":"sample"},
@@ -49,3 +49,6 @@ def execute_profile(selected,options=None,sample_size=None,execution_id=None):
         "query_log":[{"source":1,**event} for event in events],
         "warnings":["Perfil amostral descritivo; não representa toda a população.",
             "A ordenação aleatória pode percorrer a tabela inteira; o limite de linhas não limita esse custo."] + (["Databricks uses best-effort reads; separate statements do not share a guaranteed snapshot."] if source["creds"]["type"]=="databricks" else [])}
+
+    from ..business_rules import attach_business_quality
+    return attach_business_quality(result, [source], [profile])

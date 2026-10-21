@@ -507,4 +507,5 @@ def execute_comparison(selected, mode='auto', sample_size=None, prepared=None, o
             plan.update(mode='key_validation_failed', key_kind='business_key',
                         key_columns=[p['left'] for p in context['business_key']] or key_validation[0]['columns'],
                         metric_scope='descriptive profiles only; selected business key is invalid')
-    return result
+    from ..business_rules import attach_business_quality
+    return attach_business_quality(result, sources, profiles)

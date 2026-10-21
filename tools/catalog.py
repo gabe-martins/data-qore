@@ -138,7 +138,9 @@ def _verify(connection, service):
         exists = connection.execute("SELECT to_regclass('engine.alembic_version')").fetchone()[0]
         if exists:
             versions = connection.execute("SELECT version_num FROM engine.alembic_version").fetchall()
-            if versions == [("0003_databricks",)]:
+            if versions == [("0004_quality_rules",)]:
+                path = path.with_name("engine_0004_quality_rules.json")
+            elif versions == [("0003_databricks",)]:
                 path = path.with_name("engine_0003_databricks.json")
             elif versions == [("0002_comparison_options",)]:
                 path = path.with_name("engine_0002_comparison_options.json")

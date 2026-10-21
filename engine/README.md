@@ -115,3 +115,9 @@ Sexto conector para SQL Warehouses com Unity Catalog, PAT/OAuth M2M e seleção
 por catálogo/schema/tabela ou view. Instale `requirements-databricks.lock`
 e aplique a revisão `0003_databricks` antes de iniciar.
 [Configuração, limites e homologação](../docs/DATABRICKS.md).
+
+## Regras de qualidade de negócio
+
+Aplique a revisão `0004_quality_rules` antes de usar o editor de regras por dataset.
+Veja [configuração, contratos e interpretação](../docs/BUSINESS_QUALITY_RULES.md).
+Regras e versões são congeladas no enfileiramento e avaliadas somente na amostra.

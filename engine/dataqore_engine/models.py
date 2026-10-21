@@ -75,11 +75,13 @@ datasets = Table('datasets', metadata,
     Column('schema_name', TEXT(), nullable=False, server_default=text("''::text")),
     Column('table_name', TEXT(), nullable=False),
     Column('metadata', JSONB(astext_type=Text()), nullable=False, server_default=text("'{}'::jsonb")),
+    Column('quality_rules', JSONB(astext_type=Text()), nullable=False, server_default=text("'{\"revision\": 0, \"rules\": []}'::jsonb")),
     Column('discovered_at', TIMESTAMP(timezone=True), nullable=False, server_default=text('now()')),
     PrimaryKeyConstraint('id', name='datasets_pkey'),
     ForeignKeyConstraint(['connection_id'], ['engine.connections.id'], name='datasets_connection_id_fkey', ondelete='RESTRICT'),
     UniqueConstraint('connection_id', 'catalog_name', 'schema_name', 'table_name', name='datasets_source_identity_key'),
     CheckConstraint("jsonb_typeof(metadata) = 'object'::text", name='datasets_metadata_check'),
+    CheckConstraint("quality_rules ?& ARRAY['revision','rules'] AND jsonb_typeof(quality_rules) = 'object' AND jsonb_typeof(quality_rules->'rules') = 'array' AND jsonb_typeof(quality_rules->'revision') = 'number'", name='datasets_quality_rules_check'),
     CheckConstraint("table_name <> ''::text", name='datasets_table_name_check'),
 )
 

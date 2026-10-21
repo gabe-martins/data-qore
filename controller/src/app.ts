@@ -41,6 +41,8 @@ const messages: Record<string, string> = {
   source_databricks_query_timeout: "The Databricks operation timed out. Check warehouse availability and query cost.",
   source_databricks_unavailable: "Unable to read Databricks. Check connection settings and permissions.",
   source_numeric_precision_unsupported: "This Databricks decimal parameter exceeds 38 digits of precision.",
+  invalid_quality_rule: "Review rule columns, typed values, bounds and timezone against dataset metadata.",
+  quality_rules_conflict: "Rules changed in another session. Reload before saving.",
   invalid_comparison_options: "Review the scope, mapping and business key against source metadata.",
   invalid_column_mapping: "Each existing column can be mapped only once. Review both sides.",
   incompatible_column_mapping: "The selected columns have incompatible types. Mapping does not convert values.",
