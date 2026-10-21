@@ -59,7 +59,7 @@ class Queue:
             datasets={}
             for identifier in sorted(set(identifiers),key=str):
                 row=conn.execute(select(m.datasets).where(m.datasets.c.id==identifier)
-                    .with_for_update(read=True,key_share=True)).mappings().first()
+                    .with_for_update(read=True)).mappings().first()
                 if row is None:
                     raise DomainError(404,"not_found","Dataset not found.")
                 datasets[identifier]=dict(row)
@@ -73,7 +73,7 @@ class Queue:
                 if not connection["is_active"]:
                     raise DomainError(409,"connection_inactive","Uma conexão está desativada.")
                 has_databricks |= connection["connector"]=="databricks"
-                sources.append({k:dataset[k] for k in ("connection_id","catalog_name","schema_name","table_name")}|{"dataset_id":identifier})
+                sources.append({k:dataset[k] for k in ("connection_id","catalog_name","schema_name","table_name")}|{"dataset_id":identifier,"quality_rules":dataset["quality_rules"]})
             if kind=="comparison" and (compact_options(parameters["comparison_options"]) or has_databricks):
                 at=datetime.now(timezone.utc)
                 parameters["resolved_scope"]=resolve_scope(parameters["comparison_options"],at)
@@ -183,7 +183,8 @@ def run_job(settings,identifier):
                 tables=source["adapter"].list_tables(source["conn"],schema) if row["connector"]=="databricks" else source["adapter"].list_tables(source["conn"])
                 if (schema,table) not in tables:
                     raise DomainError(404,"source_table_not_found","A tabela não está no catálogo atual.")
-                selected.append({**source,"schema":schema,"table":table,
+                selected.append({**source,"schema":schema,"table":table,"dataset_id":frozen["dataset_id"],
+                    "quality_rules":frozen.get("quality_rules", {"revision":0,"rules":[]}),
                     **({"expected_columns":frozen["expected_columns"]} if "expected_columns" in frozen else {})})
             options=SamplingOptions(**parameters["sampling_options"])
             if run["kind"]=="comparison":

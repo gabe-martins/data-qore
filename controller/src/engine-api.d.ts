@@ -230,6 +230,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/datasets/{identifier}/quality-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Quality Rules */
+        get: operations["get_quality_rules_v1_datasets__identifier__quality_rules_get"];
+        put?: never;
+        /** Update Quality Rules */
+        post: operations["update_quality_rules_v1_datasets__identifier__quality_rules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/datasets/{identifier}/dependencies": {
         parameters: {
             query?: never;
@@ -1094,6 +1112,7 @@ export interface components {
             schema_name: string;
             /** Table Name */
             table_name: string;
+            quality_rules?: components["schemas"]["RuleConfiguration"];
             /**
              * Id
              * Format: uuid
@@ -1108,6 +1127,24 @@ export interface components {
              * Format: date-time
              */
             discovered_at: string;
+        };
+        /** DomainRule */
+        DomainRule: {
+            /**
+             * Null Policy
+             * @default fail
+             * @enum {string}
+             */
+            null_policy: "fail" | "skip";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "domain";
+            /** Values */
+            values: (string | number | boolean)[];
+            /** Timezone */
+            timezone?: string | null;
         };
         /** ErrorOut */
         ErrorOut: {
@@ -1517,6 +1554,36 @@ export interface components {
              */
             regression_observations: number;
         };
+        /** RangeRule */
+        RangeRule: {
+            /**
+             * Null Policy
+             * @default fail
+             * @enum {string}
+             */
+            null_policy: "fail" | "skip";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "range";
+            /** Minimum */
+            minimum?: string | null;
+            /** Maximum */
+            maximum?: string | null;
+            /**
+             * Include Minimum
+             * @default true
+             */
+            include_minimum: boolean;
+            /**
+             * Include Maximum
+             * @default true
+             */
+            include_maximum: boolean;
+            /** Timezone */
+            timezone?: string | null;
+        };
         /** RecentRunOut */
         RecentRunOut: {
             /**
@@ -1551,6 +1618,24 @@ export interface components {
             agreement: {
                 [key: string]: unknown;
             } | null;
+        };
+        /** RequiredRule */
+        RequiredRule: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "required";
+            /**
+             * Reject Blank
+             * @default true
+             */
+            reject_blank: boolean;
+            /**
+             * Whitespace Blank
+             * @default false
+             */
+            whitespace_blank: boolean;
         };
         /** ResultEvaluationOut */
         ResultEvaluationOut: {
@@ -1590,6 +1675,72 @@ export interface components {
              */
             created_at: string;
             evaluation?: components["schemas"]["ResultEvaluationOut"] | null;
+        };
+        /** RuleConfiguration */
+        RuleConfiguration: {
+            /**
+             * Revision
+             * @default 0
+             */
+            revision: number;
+            /** Rules */
+            rules?: components["schemas"]["RuleOut"][];
+        };
+        /** RuleInput */
+        RuleInput: {
+            /** Id */
+            id?: string | null;
+            /** Name */
+            name: string;
+            /** Column */
+            column: string;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+            /** Definition */
+            definition: components["schemas"]["RequiredRule"] | components["schemas"]["DomainRule"] | components["schemas"]["RangeRule"] | components["schemas"]["TemporalOrderRule"];
+        };
+        /** RuleOut */
+        RuleOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Column */
+            column: string;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+            /** Definition */
+            definition: components["schemas"]["RequiredRule"] | components["schemas"]["DomainRule"] | components["schemas"]["RangeRule"] | components["schemas"]["TemporalOrderRule"];
+            /** Version */
+            version: number;
+        };
+        /** RuleSetOut */
+        RuleSetOut: {
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /** Revision */
+            revision: number;
+            /** Rules */
+            rules: components["schemas"]["RuleOut"][];
+        };
+        /** RuleSetUpdate */
+        RuleSetUpdate: {
+            /** Expected Revision */
+            expected_revision: number;
+            /** Rules */
+            rules: components["schemas"]["RuleInput"][];
         };
         /** RunOut */
         RunOut: {
@@ -1712,6 +1863,30 @@ export interface components {
             schema_name: string;
             /** Table Name */
             table_name: string;
+        };
+        /** TemporalOrderRule */
+        TemporalOrderRule: {
+            /**
+             * Null Policy
+             * @default fail
+             * @enum {string}
+             */
+            null_policy: "fail" | "skip";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "temporal_order";
+            /** Other Column */
+            other_column: string;
+            /**
+             * Operator
+             * @default lte
+             * @enum {string}
+             */
+            operator: "lt" | "lte" | "gt" | "gte";
+            /** Timezone */
+            timezone?: string | null;
         };
         /** TestOut */
         TestOut: {
@@ -2838,6 +3013,144 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DatasetDeletedOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    get_quality_rules_v1_datasets__identifier__quality_rules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleSetOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    update_quality_rules_v1_datasets__identifier__quality_rules_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleSetUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleSetOut"];
                 };
             };
             /** @description Unauthorized */

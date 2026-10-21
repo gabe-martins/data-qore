@@ -13,6 +13,7 @@ from sqlalchemy import select,text,func,tuple_
 from sqlalchemy.exc import DBAPIError,IntegrityError
 from pydantic import ValidationError
 
+from .business_rules import BusinessRules, RuleSetOut, RuleSetUpdate
 from . import models as m
 from . import schemas as s
 from .connectors import SourceManager
@@ -237,6 +238,14 @@ def create_app(settings=None):
     @router.get("/datasets/{identifier}",response_model=s.DatasetOut,tags=["datasets"])
     def get_dataset(identifier:UUID):
         return repository.get(m.datasets,identifier)
+
+    @router.get("/datasets/{identifier}/quality-rules", response_model=RuleSetOut, tags=["datasets"])
+    def get_quality_rules(identifier: UUID):
+        return BusinessRules(engine).get(identifier)
+
+    @router.post("/datasets/{identifier}/quality-rules", response_model=RuleSetOut, tags=["datasets"])
+    def update_quality_rules(identifier: UUID, payload: RuleSetUpdate):
+        return BusinessRules(engine).replace(identifier, payload)
 
     @router.get("/datasets/{identifier}/dependencies",response_model=s.DatasetDependenciesOut,tags=["datasets"])
     def dataset_dependencies(identifier:UUID,comparison_limit:Limit=20,comparison_offset:Offset=0):

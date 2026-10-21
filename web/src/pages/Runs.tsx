@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { BusinessQualityResult } from "../components/BusinessQuality";
 import { ComparisonRunAnimation } from "../components/ComparisonRunAnimation";
 import { FrozenComparisonContext } from "../components/ComparisonOptionsEditor";
 import { AnalysisNotice, EvaluationValue, SourceProfiles, evaluationReason } from "../components/Evaluation";
@@ -431,6 +432,7 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
                       <SourceProfiles result={r} evaluation={evaluation} />
                     </>
                   )}
+                  <BusinessQualityResult result={r} />
                   <FrozenComparisonContext result={r} />
                   <Card title="Scope and interpretation">
                     <ul className="warnings">

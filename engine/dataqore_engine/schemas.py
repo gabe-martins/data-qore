@@ -6,6 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from .comparison_options import ComparisonOptions
+from .business_rules import RuleConfiguration
 
 
 class Model(BaseModel):
@@ -111,6 +112,7 @@ class DatasetCreate(Model):
 
 
 class DatasetOut(DatasetCreate):
+    quality_rules: RuleConfiguration = Field(default_factory=RuleConfiguration)
     id: UUID
     metadata: dict[str,Any]
     discovered_at: datetime
