@@ -204,12 +204,41 @@ class RunOut(Model):
     error_message: str | None
 
 
+class EvaluationOut(Model):
+    status: Literal["available", "partial", "not_applicable", "not_evaluated"]
+    reason: Literal["metric_not_applicable_to_type", "empty_sample", "all_values_null",
+        "capture_unavailable", "unsupported_type_or_values", "non_finite_values",
+        "calculation_unavailable", "historical_reason_unavailable", "incomplete_evaluation",
+        "no_applicable_checks", "single_source_profile", "invalid_key", "no_aligned_records",
+        "independent_sampling", "no_safe_key_alignment", "column_missing",
+        "incompatible_type_families", "unavailable_or_invalid_values"] | None = None
+    counts: dict[str, int] = Field(default_factory=dict)
+
+
+class SourceEvaluationOut(Model):
+    columns: dict[str, dict[str, EvaluationOut]]
+
+
+class ComparisonEvaluationOut(Model):
+    column: str
+    metrics: dict[str, EvaluationOut]
+
+
+class ResultEvaluationOut(Model):
+    analysis_kind: Literal["profile", "aligned", "independent", "invalid_key", "unknown"]
+    agreement: EvaluationOut
+    quality: EvaluationOut
+    sources: list[SourceEvaluationOut]
+    comparisons: list[ComparisonEvaluationOut]
+
+
 class ResultOut(Model):
     run_id: UUID
     format_version: int
     conclusion: Literal["compatible_in_sample","difference_observed","profile_only","inconclusive"]
     result: dict[str,Any]
     created_at: datetime
+    evaluation: ResultEvaluationOut | None = None
 
 
 class ProfileOut(Model):
@@ -219,6 +248,7 @@ class ProfileOut(Model):
     column_name: str
     profile: dict[str,Any]
     created_at: datetime
+    evaluation: dict[str, EvaluationOut] = Field(default_factory=dict)
 
 
 class MetricOut(Model):
@@ -231,6 +261,7 @@ class MetricOut(Model):
     value: Decimal | None
     evaluated_count: int | None
     applicable_count: int | None
+    evaluation: EvaluationOut | None = None
 
 
 T=TypeVar("T")

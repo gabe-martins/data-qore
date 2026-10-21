@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { Database, Play, RefreshCw, Trash2 } from "lucide-react";
 import { DeleteDatasetDialog } from "../components/DeleteDatasetDialog";
+import { ColumnStatistics, EvaluationValue } from "../components/Evaluation";
 import {
   LineChart,
   Line,
@@ -394,10 +395,10 @@ export function DatasetProfile() {
               )}
               detail="Whole-table catalog estimate; may be stale. Not the number of sampled rows."
             />
-            <Stat label="Sample quality" value={percent(overall?.percentage)} />
+            <Stat label="Sample quality" value={result.data ? <EvaluationValue value={overall?.percentage == null ? null : percent(overall.percentage)} evaluation={result.data.evaluation?.quality} /> : current ? "Awaiting completed profile" : "No profile execution"} />
             <Stat
               label="Evaluation coverage"
-              value={percent(overall?.coverage_percentage)}
+              value={result.data ? <EvaluationValue value={overall?.coverage_percentage == null ? null : percent(overall.coverage_percentage)} evaluation={result.data.evaluation?.quality} /> : current ? "Awaiting completed profile" : "No profile execution"}
             />
           </div>
           {tableMetadata?.table_details && <TableDetails details={tableMetadata.table_details} title="Current table details" />}
@@ -480,7 +481,7 @@ export function DatasetProfile() {
                   {profiles.data.items.map((p) => (
                     <article className="column-profile" key={p.id}>
                       <h3>{p.column_name}</h3>
-                      <ProfileStatistics value={p.profile} />
+                      <ProfileStatistics value={p.profile} evaluation={p.evaluation} />
                     </article>
                   ))}
                 </div>
@@ -581,7 +582,7 @@ export function DatasetProfile() {
                             {new Date(m.measured_at).toLocaleString("en-US")}
                           </td>
                           <td>{m.metric_name}</td>
-                          <td>{m.value ?? "Not evaluated"}</td>
+                          <td><EvaluationValue value={m.value} evaluation={m.evaluation} /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -606,36 +607,8 @@ export function DatasetProfile() {
   );
 }
 
-function ProfileStatistics({ value }: { value: any }) {
+function ProfileStatistics({ value, evaluation }: { value: any; evaluation?: Record<string, Model<"EvaluationOut">> }) {
   const m = value.metrics ?? {};
-  const fields = [
-    "sample_count",
-    "null_count",
-    "null_rate",
-    "non_null_count",
-    "blank_count",
-    "blank_rate",
-    "distinct_count",
-    "distinct_rate",
-    "duplicate_count",
-    "duplicate_rate",
-    "text_length_min",
-    "text_length_max",
-    "text_length_mean",
-    "temporal_count",
-    "temporal_min",
-    "temporal_max",
-    "temporal_timezone",
-    "unavailable_count",
-    "unsupported_count",
-    "min",
-    "max",
-    "mean",
-    "median",
-    "stddev",
-    "q25",
-    "q75",
-  ];
   const numeric = ["integer", "decimal", "float"].includes(m.family);
   const points = ["min", "q25", "median", "q75", "max"]
     .filter((k) => m[k] !== null && m[k] !== undefined)
@@ -646,17 +619,7 @@ function ProfileStatistics({ value }: { value: any }) {
         <Badge value={m.family ?? m.type} />
         <span className="muted small">Observed sample statistics</span>
       </div>
-      <dl className="profile-statistics">
-        {fields
-          .filter((k) => m[k] !== undefined && m[k] !== null)
-          .map((k) => (
-            <div key={k}>
-              <dt>{k.replaceAll("_", " ")}</dt>
-              <dd>{k.endsWith("_rate") ? percent(m[k] == null ? null : Number(m[k]) * 100) : String(m[k])}</dd>
-            </div>
-          ))}
-      </dl>
-      {m.family === "text" && <p className="muted small">Declared as text. Numeric mean, median and numeric distribution do not apply; values are not automatically converted.</p>}
+      <ColumnStatistics metrics={m} evaluation={evaluation} />
       {numeric && points.length > 1 && (
         <div
           className="column-chart"

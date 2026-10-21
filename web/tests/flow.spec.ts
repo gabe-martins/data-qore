@@ -577,8 +577,10 @@ test("unaligned comparisons and empty profiles remain explicit and inconclusive"
     timeout: 30000,
   });
   await expect(
-    page.getByText("Not evaluated", { exact: true }).first(),
+    page.getByText("Independent source profiles", { exact: true }),
   ).toBeVisible();
+  await expect(page.getByText("No safe comparison key was available.", { exact: false })).toBeVisible();
+  await expect(page.getByText("Different sampled rows", { exact: true })).toHaveCount(0);
   await page.goto("/runs/" + (await empty.json()).id);
   await expect(page.getByText("inconclusive", { exact: true })).toBeVisible({
     timeout: 30000,

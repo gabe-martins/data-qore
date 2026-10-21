@@ -909,7 +909,7 @@ summary {
   padding: 12px 18px;
   margin-bottom: 35px;
   border-radius: 13px;
-  background: var(--semantic-background-surface);
+  background: var(--primitive-neutral-0);
 }
 .login-logo img {
   display: block;

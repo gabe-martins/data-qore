@@ -598,6 +598,15 @@ export interface components {
             /** Can Delete */
             can_delete: boolean;
         };
+        /** ComparisonEvaluationOut */
+        ComparisonEvaluationOut: {
+            /** Column */
+            column: string;
+            /** Metrics */
+            metrics: {
+                [key: string]: components["schemas"]["EvaluationOut"];
+            };
+        };
         /** ComparisonHistoryCounts */
         ComparisonHistoryCounts: {
             /** Runs */
@@ -1109,6 +1118,20 @@ export interface components {
             /** Request Id */
             request_id?: string | null;
         };
+        /** EvaluationOut */
+        EvaluationOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "available" | "partial" | "not_applicable" | "not_evaluated";
+            /** Reason */
+            reason?: ("metric_not_applicable_to_type" | "empty_sample" | "all_values_null" | "capture_unavailable" | "unsupported_type_or_values" | "non_finite_values" | "calculation_unavailable" | "historical_reason_unavailable" | "incomplete_evaluation" | "no_applicable_checks" | "single_source_profile" | "invalid_key" | "no_aligned_records" | "independent_sampling" | "no_safe_key_alignment" | "column_missing" | "incompatible_type_families" | "unavailable_or_invalid_values") | null;
+            /** Counts */
+            counts?: {
+                [key: string]: number;
+            };
+        };
         /** IndicatorOut */
         IndicatorOut: {
             /** Passed */
@@ -1203,6 +1226,7 @@ export interface components {
             evaluated_count: number | null;
             /** Applicable Count */
             applicable_count: number | null;
+            evaluation?: components["schemas"]["EvaluationOut"] | null;
         };
         /** OverviewOut */
         OverviewOut: {
@@ -1440,6 +1464,10 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Evaluation */
+            evaluation?: {
+                [key: string]: components["schemas"]["EvaluationOut"];
+            };
         };
         /** ProfileRequest */
         ProfileRequest: {
@@ -1524,6 +1552,20 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** ResultEvaluationOut */
+        ResultEvaluationOut: {
+            /**
+             * Analysis Kind
+             * @enum {string}
+             */
+            analysis_kind: "profile" | "aligned" | "independent" | "invalid_key" | "unknown";
+            agreement: components["schemas"]["EvaluationOut"];
+            quality: components["schemas"]["EvaluationOut"];
+            /** Sources */
+            sources: components["schemas"]["SourceEvaluationOut"][];
+            /** Comparisons */
+            comparisons: components["schemas"]["ComparisonEvaluationOut"][];
+        };
         /** ResultOut */
         ResultOut: {
             /**
@@ -1547,6 +1589,7 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            evaluation?: components["schemas"]["ResultEvaluationOut"] | null;
         };
         /** RunOut */
         RunOut: {
@@ -1643,6 +1686,15 @@ export interface components {
             operator: "eq" | "in" | "gte" | "lt" | "is_null" | "is_not_null";
             /** Value */
             value?: string | number | boolean | (string | number | boolean)[] | null;
+        };
+        /** SourceEvaluationOut */
+        SourceEvaluationOut: {
+            /** Columns */
+            columns: {
+                [key: string]: {
+                    [key: string]: components["schemas"]["EvaluationOut"];
+                };
+            };
         };
         /** TableOut */
         TableOut: {

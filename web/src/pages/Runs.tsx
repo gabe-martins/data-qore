@@ -12,6 +12,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { FrozenComparisonContext } from "../components/ComparisonOptionsEditor";
+import { AnalysisNotice, EvaluationValue, SourceProfiles, evaluationReason } from "../components/Evaluation";
 import { api, type Model, type Page } from "../api";
 import {
   Badge,
@@ -28,6 +29,10 @@ import {
   RunsTable,
   Stat,
 } from "../components/common";
+const savedProfileWarnings: Record<string, string> = {
+  "Perfil amostral descritivo; não representa toda a população.": "Descriptive sample profile; it does not represent the entire population.",
+  "A ordenação aleatória pode percorrer a tabela inteira; o limite de linhas não limita esse custo.": "Random ordering may scan the entire table; the row limit does not bound this cost.",
+};
 export function Runs() {
   const [status, setStatus] = useState("");
   const [offset, setOffset] = useState(0);
@@ -101,6 +106,7 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
     enabled: run.data?.status === "succeeded",
   });
   const r = result.data?.result as any;
+  const evaluation = result.data?.evaluation;
   const rows = r?.row_comparisons?.[0];
   const a = r?.indicators?.agreement;
   const q = r?.indicators?.quality?.overall;
@@ -290,7 +296,7 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
                         </Card>
                         <Card title="Selected observation">
                           {selected ? (
-                            <Observation value={selected} />
+                            <Observation value={selected} evaluation={evaluation?.comparisons.find(c => c.column === selected.column)?.metrics} />
                           ) : (
                             <Empty title="Select an observation">
                               Evidence contains aggregate counts and statistics.
@@ -301,27 +307,40 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
                     </>
                   ) : (
                     <>
+                      <AnalysisNotice evaluation={evaluation} />
+                      {run.data.kind === "profile" || evaluation?.analysis_kind === "independent" || evaluation?.analysis_kind === "invalid_key" ? (
+                        <div className="stats-grid four">
+                          <Stat label="Rows observed per source" value={r.sources?.map((s: any) => s.sample_size).join(" / ") ?? "Unavailable"} detail="Observed sample only" />
+                          <Stat label="Sample quality" value={<EvaluationValue value={q?.percentage == null ? null : percent(q.percentage)} evaluation={evaluation?.quality} />} />
+                          <Stat label="Evaluation coverage" value={<EvaluationValue value={q?.coverage_percentage == null ? null : percent(q.coverage_percentage)} evaluation={evaluation?.quality} />} />
+                          <Stat label="Sources" value={r.sources?.length ?? "Unavailable"} />
+                        </div>
+                      ) : (
                       <div className="stats-grid four">
                         <Stat
                           label="Cell agreement"
-                          value={percent(a?.percentage)}
+                          value={<EvaluationValue value={a?.percentage == null ? null : percent(a.percentage)} evaluation={evaluation?.agreement} />}
                           detail={"Coverage " + percent(a?.coverage_percentage)}
                         />
                         <Stat
                           label="Different sampled rows"
-                          value={rows?.different_rows ?? "Not evaluated"}
+                          value={<EvaluationValue value={rows?.different_rows} evaluation={evaluation?.agreement} />}
                           detail="Only where keys align"
                         />
                         <Stat
                           label="Missing in source sample"
-                          value={rows?.missing_in_reference ?? "Not evaluated"}
+                          value={<EvaluationValue value={rows?.missing_in_reference} evaluation={evaluation?.agreement} />}
                         />
                         <Stat
                           label="Missing in target sample"
-                          value={rows?.missing_in_target ?? "Not evaluated"}
+                          value={<EvaluationValue value={rows?.missing_in_target} evaluation={evaluation?.agreement} />}
                         />
                       </div>
+                      )}
                       <div className="content-columns">
+                        {run.data.kind === "profile" || evaluation?.analysis_kind !== "aligned" ? (
+                          <Card title="Analysis scope"><p>Statistics below describe the captured sample, using declared column types. No record-level equality is inferred without safe alignment.</p></Card>
+                        ) : (
                         <Card
                           title="Differences by column"
                           subtitle="Different values observed in aligned sample positions."
@@ -357,6 +376,7 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
                             </Empty>
                           )}
                         </Card>
+                        )}
                         <Card title="Run metadata">
                           <dl>
                             <dt>Run ID</dt>
@@ -368,9 +388,9 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
                             <dt>Finished</dt>
                             <dd>{date(run.data.finished_at)}</dd>
                             <dt>Sample quality</dt>
-                            <dd>{percent(q?.percentage)}</dd>
+                            <dd><EvaluationValue value={q?.percentage == null ? null : percent(q.percentage)} evaluation={evaluation?.quality} /></dd>
                             <dt>Quality coverage</dt>
-                            <dd>{percent(q?.coverage_percentage)}</dd>
+                            <dd><EvaluationValue value={q?.coverage_percentage == null ? null : percent(q.coverage_percentage)} evaluation={evaluation?.quality} /></dd>
                           </dl>
                         </Card>
                       </div>
@@ -403,13 +423,14 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
                           population.
                         </p>
                       </Card>
+                      <SourceProfiles result={r} evaluation={evaluation} />
                     </>
                   )}
                   <FrozenComparisonContext result={r} />
                   <Card title="Scope and interpretation">
                     <ul className="warnings">
                       {r.warnings?.map((w: string, i: number) => (
-                        <li key={i}>{w}</li>
+                        <li key={i}>{savedProfileWarnings[w] ?? w}</li>
                       ))}
                     </ul>
                   </Card>
@@ -434,7 +455,7 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
   );
 }
 
-function Observation({ value }: { value: any }) {
+function Observation({ value, evaluation }: { value: any; evaluation?: Record<string, Model<"EvaluationOut">> }) {
   const simple = Object.entries(value).filter(
     ([k, v]) => k !== "category" && v !== null && typeof v !== "object",
   );
@@ -444,7 +465,7 @@ function Observation({ value }: { value: any }) {
         {simple.map(([k, v]) => (
           <div className="observation-field" key={k}>
             <dt>{k.replaceAll("_", " ")}</dt>
-            <dd>{String(v)}</dd>
+            <dd>{k === "reason" ? evaluationReason({ status: "not_evaluated", reason: v as Model<"EvaluationOut">["reason"], counts: {} }) : String(v)}</dd>
           </div>
         ))}
       </dl>
@@ -463,7 +484,7 @@ function Observation({ value }: { value: any }) {
                 {Object.entries(value.deltas).map(([k, v]) => (
                   <tr key={k}>
                     <td>{k.replaceAll("_", " ")}</td>
-                    <td>{v === null ? "Not evaluated" : String(v)}</td>
+                    <td><EvaluationValue value={v} evaluation={evaluation?.[k]} /></td>
                   </tr>
                 ))}
               </tbody>

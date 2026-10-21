@@ -4707,6 +4707,28 @@
         ],
         "title": "ComparisonDependenciesOut"
       },
+      "ComparisonEvaluationOut": {
+        "properties": {
+          "column": {
+            "type": "string",
+            "title": "Column"
+          },
+          "metrics": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/EvaluationOut"
+            },
+            "type": "object",
+            "title": "Metrics"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "column",
+          "metrics"
+        ],
+        "title": "ComparisonEvaluationOut"
+      },
       "ComparisonHistoryCounts": {
         "properties": {
           "runs": {
@@ -6055,6 +6077,64 @@
         ],
         "title": "ErrorOut"
       },
+      "EvaluationOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "partial",
+              "not_applicable",
+              "not_evaluated"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "metric_not_applicable_to_type",
+                  "empty_sample",
+                  "all_values_null",
+                  "capture_unavailable",
+                  "unsupported_type_or_values",
+                  "non_finite_values",
+                  "calculation_unavailable",
+                  "historical_reason_unavailable",
+                  "incomplete_evaluation",
+                  "no_applicable_checks",
+                  "single_source_profile",
+                  "invalid_key",
+                  "no_aligned_records",
+                  "independent_sampling",
+                  "no_safe_key_alignment",
+                  "column_missing",
+                  "incompatible_type_families",
+                  "unavailable_or_invalid_values"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Counts"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "EvaluationOut"
+      },
       "IndicatorOut": {
         "properties": {
           "passed": {
@@ -6301,6 +6381,16 @@
               }
             ],
             "title": "Applicable Count"
+          },
+          "evaluation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvaluationOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -6936,6 +7026,13 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "evaluation": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/EvaluationOut"
+            },
+            "type": "object",
+            "title": "Evaluation"
           }
         },
         "additionalProperties": false,
@@ -7183,6 +7280,51 @@
         ],
         "title": "RecentRunOut"
       },
+      "ResultEvaluationOut": {
+        "properties": {
+          "analysis_kind": {
+            "type": "string",
+            "enum": [
+              "profile",
+              "aligned",
+              "independent",
+              "invalid_key",
+              "unknown"
+            ],
+            "title": "Analysis Kind"
+          },
+          "agreement": {
+            "$ref": "#/components/schemas/EvaluationOut"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/EvaluationOut"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceEvaluationOut"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "comparisons": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonEvaluationOut"
+            },
+            "type": "array",
+            "title": "Comparisons"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "analysis_kind",
+          "agreement",
+          "quality",
+          "sources",
+          "comparisons"
+        ],
+        "title": "ResultEvaluationOut"
+      },
       "ResultOut": {
         "properties": {
           "run_id": {
@@ -7213,6 +7355,16 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "evaluation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResultEvaluationOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -7519,6 +7671,26 @@
           "operator"
         ],
         "title": "ScopeFilter"
+      },
+      "SourceEvaluationOut": {
+        "properties": {
+          "columns": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "$ref": "#/components/schemas/EvaluationOut"
+              },
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Columns"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "columns"
+        ],
+        "title": "SourceEvaluationOut"
       },
       "TableOut": {
         "properties": {

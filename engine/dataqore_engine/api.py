@@ -9,7 +9,7 @@ from fastapi import APIRouter,Depends,FastAPI,Header,Query,Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
-from sqlalchemy import select,text,func
+from sqlalchemy import select,text,func,tuple_
 from sqlalchemy.exc import DBAPIError,IntegrityError
 from pydantic import ValidationError
 
@@ -19,6 +19,7 @@ from .connectors import SourceManager
 from .jobs import Queue
 from .dataset_deletion import DatasetDeletion
 from .comparison_deletion import ComparisonDeletion
+from .evaluation import profile_evaluations, result_evaluation, metric_evaluation
 from .comparison_options import compact_options, metadata_signature, validate_options
 from .settings import load_settings
 from .storage import DomainError,Repository,database_engine,json_safe
@@ -262,8 +263,10 @@ def create_app(settings=None):
         conditions=[m.column_profiles.c.dataset_id==identifier]
         if run_id:
             conditions.append(m.column_profiles.c.run_id==run_id)
-        return page(s.ProfileOut,m.column_profiles,limit,offset,*conditions,
+        result=repository.page(m.column_profiles,limit,offset,*conditions,
             order=[m.column_profiles.c.created_at.desc(),m.column_profiles.c.id])
+        result["items"]=[out(s.ProfileOut,{**row,"evaluation":profile_evaluations(row["profile"])}) for row in result["items"]]
+        return result
 
     def validate_comparison(values,require_active=True):
         columns=[]
@@ -355,7 +358,7 @@ def create_app(settings=None):
             row=conn.execute(select(m.run_results).where(m.run_results.c.run_id==identifier)).mappings().first()
         if row is None:
             raise DomainError(404,"result_not_found","Resultado não encontrado.")
-        return dict(row)
+        return {**row,"evaluation":result_evaluation(row["result"],run["kind"],run["parameters"])}
 
     @router.get("/metrics",response_model=s.Page[s.MetricOut],tags=["metrics"])
     def metrics(dataset_id:UUID,limit:Limit=50,offset:Offset=0,column_name:str | None=None,
@@ -370,7 +373,22 @@ def create_app(settings=None):
             conditions.append(m.metrics.c.column_name==column_name)
         if metric_name is not None:
             conditions.append(m.metrics.c.metric_name==metric_name)
-        return page(s.MetricOut,m.metrics,limit,offset,*conditions,order=[m.metrics.c.measured_at.desc(),m.metrics.c.id])
+        result=repository.page(m.metrics,limit,offset,*conditions,order=[m.metrics.c.measured_at.desc(),m.metrics.c.id])
+        keys={(row["run_id"],row["dataset_id"],row["column_name"]) for row in result["items"] if row["column_name"] is not None}
+        saved={}
+        if keys:
+            with engine.connect() as conn:
+                for row in conn.execute(select(m.column_profiles.c.run_id,m.column_profiles.c.dataset_id,
+                    m.column_profiles.c.column_name,m.column_profiles.c.profile).where(tuple_(m.column_profiles.c.run_id,
+                    m.column_profiles.c.dataset_id,m.column_profiles.c.column_name).in_(keys))).mappings():
+                    saved[(row["run_id"],row["dataset_id"],row["column_name"])]=row["profile"]
+        items=[]
+        for row in result["items"]:
+            profile=saved.get((row["run_id"],row["dataset_id"],row["column_name"]),{})
+            metrics={**profile.get("metrics",{}),row["metric_name"]:row["value"]}
+            items.append(out(s.MetricOut,{**row,"evaluation":metric_evaluation(metrics,row["metric_name"],profile.get("metadata"))}))
+        result["items"]=items
+        return result
 
     from .read_api import register_read_api
     register_read_api(router,engine)

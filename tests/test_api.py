@@ -262,6 +262,37 @@ class APITests(TemporaryPostgres):
         dataset=self.request('POST','/datasets',201,json={'connection_id':connection['id'],'table_name':'records'})
         return connection,dataset
 
+    def test_evaluation_is_read_only_and_metric_reasons_are_batched(self):
+        _,datasets,comparison=self.fixture()
+        run=self.request('POST',f'/comparisons/{comparison}/runs',202)
+        self.assertEqual(self.finish(run['id'])['status'],'succeeded')
+        profile=self.request('POST',f'/datasets/{datasets[0]}/profile-runs',202,json={})
+        self.assertEqual(self.finish(profile['id'])['status'],'succeeded')
+        with self.engine.connect() as conn:
+            before=conn.execute(select(m.run_results).order_by(m.run_results.c.run_id)).mappings().all()
+        statements=[]
+        def record(*args):statements.append(args[2])
+        with patch('dataqore_engine.connectors.SourceManager.session',side_effect=AssertionError('Must not open sources')):
+            result=self.request('GET',f'/runs/{run["id"]}/result')
+            self.assertEqual(result['evaluation']['analysis_kind'],'aligned')
+            result=self.request('GET',f'/runs/{profile["id"]}/result')
+            self.assertEqual(result['evaluation']['analysis_kind'],'profile')
+            self.assertEqual(result['evaluation']['agreement']['status'],'not_applicable')
+            saved=self.request('GET',f'/datasets/{datasets[0]}/profiles',params={'run_id':profile['id']})
+            text_profile=next(p for p in saved['items'] if p['column_name']=='value')
+            self.assertEqual(text_profile['evaluation']['mean']['reason'],'metric_not_applicable_to_type')
+            event.listen(self.engine,'before_cursor_execute',record)
+            try:
+                metrics=self.request('GET','/metrics',params={'dataset_id':datasets[0],'limit':200})
+            finally:event.remove(self.engine,'before_cursor_execute',record)
+            self.assertGreater(len(metrics['items']),10)
+            self.assertLessEqual(len(statements),4,'No per-metric queries')
+            blank=next(item for item in metrics['items'] if item['column_name']=='amount' and item['metric_name']=='blank_rate')
+            self.assertEqual(blank['evaluation']['status'],'not_applicable')
+        with self.engine.connect() as conn:
+            after=conn.execute(select(m.run_results).order_by(m.run_results.c.run_id)).mappings().all()
+        self.assertEqual(before,after)
+
     def test_comparison_delete_auth_missing_and_terminal_history_without_source_access(self):
         from uuid import uuid4
         connections,datasets,comparison=self.fixture()

@@ -18,6 +18,7 @@ import {
 } from "../lib/tolerances";
 import { ToleranceHelp } from "../components/ToleranceHelp";
 import { DeleteComparisonDialog } from "../components/DeleteComparisonDialog";
+import { AnalysisNotice, EvaluationValue } from "../components/Evaluation";
 import {
   ScopeEditor,
   MappingEditor,
@@ -297,26 +298,24 @@ export function ComparisonDetail() {
             </div>
             {tab === "Overview" ? (
               <>
+                {result.data && <AnalysisNotice evaluation={result.data.evaluation} />}
                 <div className="stats-grid four">
                   <Stat
                     label="Rows observed per source"
                     value={
                       r?.sources?.map((s: any) => s.sample_size).join(" / ") ||
-                      "Not evaluated"
+                      "No completed execution"
                     }
                     detail="Observed sample only"
                   />
                   <Stat
                     label="Cell agreement"
-                    value={percent(r?.indicators?.agreement?.percentage)}
-                    detail={
-                      "Coverage " +
-                      percent(r?.indicators?.agreement?.coverage_percentage)
-                    }
+                    value={result.data ? <EvaluationValue value={r?.indicators?.agreement?.percentage == null ? null : percent(r.indicators.agreement.percentage)} evaluation={result.data.evaluation?.agreement} /> : "No completed execution"}
+                    detail={result.data && <>Coverage <EvaluationValue value={r?.indicators?.agreement?.coverage_percentage == null ? null : percent(r.indicators.agreement.coverage_percentage)} evaluation={result.data.evaluation?.agreement} /></>}
                   />
                   <Stat
                     label="Different sampled rows"
-                    value={row?.different_rows ?? "Not evaluated"}
+                    value={result.data ? <EvaluationValue value={row?.different_rows} evaluation={result.data.evaluation?.agreement} /> : "No completed execution"}
                   />
                   <Stat
                     label="Execution"
