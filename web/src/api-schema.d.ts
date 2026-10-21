@@ -67,11 +67,29 @@ export interface paths {
         get: operations["get_connection_v1_connections__identifier__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete Connection */
+        delete: operations["delete_connection_v1_connections__identifier__delete"];
         options?: never;
         head?: never;
         /** Update Connection */
         patch: operations["update_connection_v1_connections__identifier__patch"];
+        trace?: never;
+    };
+    "/api/v1/connections/{identifier}/dependencies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Connection Dependencies */
+        get: operations["connection_dependencies_v1_connections__identifier__dependencies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/connections/{identifier}/test": {
@@ -169,6 +187,24 @@ export interface paths {
         };
         /** Get Dataset */
         get: operations["get_dataset_v1_datasets__identifier__get"];
+        put?: never;
+        post?: never;
+        /** Delete Dataset */
+        delete: operations["delete_dataset_v1_datasets__identifier__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasets/{identifier}/dependencies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dataset Dependencies */
+        get: operations["dataset_dependencies_v1_datasets__identifier__dependencies_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -274,11 +310,29 @@ export interface paths {
         get: operations["get_comparison_v1_comparisons__identifier__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete Comparison */
+        delete: operations["delete_comparison_v1_comparisons__identifier__delete"];
         options?: never;
         head?: never;
         /** Update Comparison */
         patch: operations["update_comparison_v1_comparisons__identifier__patch"];
+        trace?: never;
+    };
+    "/api/v1/comparisons/{identifier}/dependencies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Comparison Dependencies */
+        get: operations["comparison_dependencies_v1_comparisons__identifier__dependencies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/comparisons/{identifier}/runs": {
@@ -1287,6 +1341,61 @@ export interface components {
             relative_tolerance: number | string;
             comparison_options?: components["schemas"]["ComparisonOptions"];
         };
+        /** ComparisonDeletedOut */
+        ComparisonDeletedOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Status
+             * @default deleted
+             * @constant
+             */
+            status: "deleted";
+        };
+        /** ComparisonDeletionReference */
+        ComparisonDeletionReference: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Is Active */
+            is_active: boolean;
+        };
+        /** ComparisonDependenciesOut */
+        ComparisonDependenciesOut: {
+            comparison: components["schemas"]["ComparisonDeletionReference"];
+            history: components["schemas"]["ComparisonHistoryCounts"];
+            /** Active Runs */
+            active_runs: number;
+            /** Can Delete */
+            can_delete: boolean;
+        };
+        /** ComparisonEvaluationOut */
+        ComparisonEvaluationOut: {
+            /** Column */
+            column: string;
+            /** Metrics */
+            metrics: {
+                [key: string]: components["schemas"]["EvaluationOut"];
+            };
+        };
+        /** ComparisonHistoryCounts */
+        ComparisonHistoryCounts: {
+            /** Runs */
+            runs: number;
+            /** Results */
+            results: number;
+            /** Column Profiles */
+            column_profiles: number;
+            /** Metrics */
+            metrics: number;
+        };
         /** ComparisonOptions */
         ComparisonOptions: {
             scope?: components["schemas"]["Scope"] | null;
@@ -1455,6 +1564,28 @@ export interface components {
             is_active?: boolean | null;
             comparison_options?: components["schemas"]["ComparisonOptions"] | null;
         };
+        /** ConnectionComparisonReference */
+        ConnectionComparisonReference: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Is Active */
+            is_active: boolean;
+            /**
+             * Left Dataset Id
+             * Format: uuid
+             */
+            left_dataset_id: string;
+            /**
+             * Right Dataset Id
+             * Format: uuid
+             */
+            right_dataset_id: string;
+        };
         /** ConnectionCreate */
         ConnectionCreate: {
             /**
@@ -1466,6 +1597,48 @@ export interface components {
             credentials: components["schemas"]["Credentials"] | components["schemas"]["DatabricksCredentials"];
             /** Name */
             name: string;
+        };
+        /** ConnectionDatasetReference */
+        ConnectionDatasetReference: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Catalog Name */
+            catalog_name: string;
+            /** Schema Name */
+            schema_name: string;
+            /** Table Name */
+            table_name: string;
+            /** Table Type */
+            table_type?: string | null;
+        };
+        /** ConnectionDeletedOut */
+        ConnectionDeletedOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Status
+             * @default deleted
+             * @constant
+             */
+            status: "deleted";
+        };
+        /** ConnectionDependenciesOut */
+        ConnectionDependenciesOut: {
+            /**
+             * Connection Id
+             * Format: uuid
+             */
+            connection_id: string;
+            datasets: components["schemas"]["Page_ConnectionDatasetReference_"];
+            comparisons: components["schemas"]["Page_ConnectionComparisonReference_"];
+            /** Can Delete */
+            can_delete: boolean;
         };
         /** ConnectionOut */
         ConnectionOut: {
@@ -1595,6 +1768,22 @@ export interface components {
             /** Client Secret */
             client_secret?: string | null;
         };
+        /** DatasetComparisonReference */
+        DatasetComparisonReference: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Current */
+            current: boolean;
+            /** Historical */
+            historical: boolean;
+        };
         /** DatasetCreate */
         DatasetCreate: {
             /**
@@ -1614,6 +1803,55 @@ export interface components {
             schema_name: string;
             /** Table Name */
             table_name: string;
+        };
+        /** DatasetDeletedOut */
+        DatasetDeletedOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Status
+             * @default deleted
+             * @constant
+             */
+            status: "deleted";
+        };
+        /** DatasetDeletionReference */
+        DatasetDeletionReference: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Catalog Name */
+            catalog_name: string;
+            /** Schema Name */
+            schema_name: string;
+            /** Table Name */
+            table_name: string;
+            /** Table Type */
+            table_type?: string | null;
+            /**
+             * Connection Id
+             * Format: uuid
+             */
+            connection_id: string;
+            /** Connection Name */
+            connection_name: string;
+        };
+        /** DatasetDependenciesOut */
+        DatasetDependenciesOut: {
+            dataset: components["schemas"]["DatasetDeletionReference"];
+            comparisons: components["schemas"]["Page_DatasetComparisonReference_"];
+            profile_history: components["schemas"]["ProfileHistoryCounts"];
+            /** Active Profile Runs */
+            active_profile_runs: number;
+            /** Block Reasons */
+            block_reasons: ("dataset_in_use" | "dataset_busy")[];
+            /** Can Delete */
+            can_delete: boolean;
         };
         /** DatasetOut */
         DatasetOut: {
@@ -1657,6 +1895,20 @@ export interface components {
             message: string;
             /** Request Id */
             request_id?: string | null;
+        };
+        /** EvaluationOut */
+        EvaluationOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "available" | "partial" | "not_applicable" | "not_evaluated";
+            /** Reason */
+            reason?: ("metric_not_applicable_to_type" | "empty_sample" | "all_values_null" | "capture_unavailable" | "unsupported_type_or_values" | "non_finite_values" | "calculation_unavailable" | "historical_reason_unavailable" | "incomplete_evaluation" | "no_applicable_checks" | "single_source_profile" | "invalid_key" | "no_aligned_records" | "independent_sampling" | "no_safe_key_alignment" | "column_missing" | "incompatible_type_families" | "unavailable_or_invalid_values") | null;
+            /** Counts */
+            counts?: {
+                [key: string]: number;
+            };
         };
         /** IndicatorOut */
         IndicatorOut: {
@@ -1752,6 +2004,7 @@ export interface components {
             evaluated_count: number | null;
             /** Applicable Count */
             applicable_count: number | null;
+            evaluation?: components["schemas"]["EvaluationOut"] | null;
         };
         /** OverviewOut */
         OverviewOut: {
@@ -1805,10 +2058,43 @@ export interface components {
             /** Offset */
             offset: number;
         };
+        /** Page[ConnectionComparisonReference] */
+        Page_ConnectionComparisonReference_: {
+            /** Items */
+            items: components["schemas"]["ConnectionComparisonReference"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** Page[ConnectionDatasetReference] */
+        Page_ConnectionDatasetReference_: {
+            /** Items */
+            items: components["schemas"]["ConnectionDatasetReference"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
         /** Page[ConnectionOut] */
         Page_ConnectionOut_: {
             /** Items */
             items: components["schemas"]["ConnectionOut"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** Page[DatasetComparisonReference] */
+        Page_DatasetComparisonReference_: {
+            /** Items */
+            items: components["schemas"]["DatasetComparisonReference"][];
             /** Total */
             total: number;
             /** Limit */
@@ -1917,6 +2203,17 @@ export interface components {
             /** Right Naive Timezone */
             right_naive_timezone?: string | null;
         };
+        /** ProfileHistoryCounts */
+        ProfileHistoryCounts: {
+            /** Runs */
+            runs: number;
+            /** Results */
+            results: number;
+            /** Column Profiles */
+            column_profiles: number;
+            /** Metrics */
+            metrics: number;
+        };
         /** ProfileOut */
         ProfileOut: {
             /**
@@ -1945,6 +2242,10 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Evaluation */
+            evaluation?: {
+                [key: string]: components["schemas"]["EvaluationOut"];
+            };
         };
         /** ProfileRequest */
         ProfileRequest: {
@@ -2029,6 +2330,20 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** ResultEvaluationOut */
+        ResultEvaluationOut: {
+            /**
+             * Analysis Kind
+             * @enum {string}
+             */
+            analysis_kind: "profile" | "aligned" | "independent" | "invalid_key" | "unknown";
+            agreement: components["schemas"]["EvaluationOut"];
+            quality: components["schemas"]["EvaluationOut"];
+            /** Sources */
+            sources: components["schemas"]["SourceEvaluationOut"][];
+            /** Comparisons */
+            comparisons: components["schemas"]["ComparisonEvaluationOut"][];
+        };
         /** ResultOut */
         ResultOut: {
             /**
@@ -2052,6 +2367,7 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            evaluation?: components["schemas"]["ResultEvaluationOut"] | null;
         };
         /** RunOut */
         RunOut: {
@@ -2149,6 +2465,15 @@ export interface components {
             /** Value */
             value?: string | number | boolean | (string | number | boolean)[] | null;
         };
+        /** SourceEvaluationOut */
+        SourceEvaluationOut: {
+            /** Columns */
+            columns: {
+                [key: string]: {
+                    [key: string]: components["schemas"]["EvaluationOut"];
+                };
+            };
+        };
         /** TableOut */
         TableOut: {
             /**
@@ -2207,6 +2532,31 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        ComparisonScheduleReference: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: uuid */
+            comparison_id: string;
+            is_active: boolean;
+            current: boolean;
+            historical: boolean;
+        };
+        /** ComparisonDependenciesOut */
+        ComparisonDeletionPreviewOut: {
+            comparison: components["schemas"]["ComparisonDeletionReference"];
+            history: components["schemas"]["ComparisonHistoryCounts"];
+            /** Active Runs */
+            active_runs: number;
+            /** Can Delete */
+            can_delete: boolean;
+            schedules: {
+                items: components["schemas"]["ComparisonScheduleReference"][];
+                total: number;
+                limit: number;
+                offset: number;
+            };
         };
         EnvironmentSettingsOut: {
             comparison_target_percentage: string;
@@ -2579,6 +2929,73 @@ export interface operations {
             };
         };
     };
+    delete_connection_v1_connections__identifier__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionDeletedOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
     update_connection_v1_connections__identifier__patch: {
         parameters: {
             query?: never;
@@ -2601,6 +3018,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConnectionOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    connection_dependencies_v1_connections__identifier__dependencies_get: {
+        parameters: {
+            query?: {
+                dataset_limit?: number;
+                dataset_offset?: number;
+                comparison_limit?: number;
+                comparison_offset?: number;
+            };
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionDependenciesOut"];
                 };
             };
             /** @description Unauthorized */
@@ -3135,6 +3624,143 @@ export interface operations {
             };
         };
     };
+    delete_dataset_v1_datasets__identifier__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetDeletedOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    dataset_dependencies_v1_datasets__identifier__dependencies_get: {
+        parameters: {
+            query?: {
+                comparison_limit?: number;
+                comparison_offset?: number;
+            };
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetDependenciesOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
     refresh_dataset_v1_datasets__identifier__refresh_post: {
         parameters: {
             query?: never;
@@ -3620,6 +4246,73 @@ export interface operations {
             };
         };
     };
+    delete_comparison_v1_comparisons__identifier__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComparisonDeletedOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
     update_comparison_v1_comparisons__identifier__patch: {
         parameters: {
             query?: never;
@@ -3642,6 +4335,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ComparisonOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    comparison_dependencies_v1_comparisons__identifier__dependencies_get: {
+        parameters: {
+            query?: {
+                schedule_limit?: number;
+                schedule_offset?: number;
+            };
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComparisonDeletionPreviewOut"];
                 };
             };
             /** @description Unauthorized */

@@ -169,6 +169,40 @@ test(
     assert.doesNotMatch(await invalid.text(), /PRIVATE_SECRET|Traceback/);
     const missing = await call("/connections/" + randomUUID(), undefined, t);
     assert.equal(missing.status, 404);
+    const unused=await call("/connections",{name:"unused-controller-delete",connector:"sqlite",credentials:{database:"left.sqlite"}},t);
+    assert.equal(unused.status,201);
+    const id=(await unused.json()).id;
+    const deletion=(identifier: string, token?: string)=>fetch(base+"/api/v1/connections/"+identifier,{
+      method:"DELETE",headers:{"Content-Type":"application/json",...(token?{Authorization:"Bearer "+token}:{})},body:"{}",
+    });
+    assert.equal((await deletion(id)).status,401);
+    assert.equal((await call(`/connections/${id}/dependencies`)).status,401);
+    const dependencies=await call(`/connections/${id}/dependencies?dataset_limit=1&comparison_limit=2`,undefined,t);
+    assert.equal(dependencies.status,200);
+    assert.equal((await dependencies.json()).can_delete,true);
+    const registered=await call("/datasets",{connection_id:id,table_name:"records"},t);
+    assert.equal(registered.status,201);
+    const datasetId=(await registered.json()).id;
+    const deleteDataset=(token?:string)=>fetch(base+`/api/v1/datasets/${datasetId}`,{
+      method:"DELETE",headers:{"Content-Type":"application/json",...(token?{Authorization:"Bearer "+token}:{})},body:"{}",
+    });
+    assert.equal((await deleteDataset()).status,401);
+    assert.equal((await call(`/datasets/${datasetId}/dependencies`)).status,401);
+    const datasetDependencies=await call(`/datasets/${datasetId}/dependencies`,undefined,t);
+    assert.equal(datasetDependencies.status,200);
+    assert.equal((await datasetDependencies.json()).can_delete,true);
+    const removedDataset=await deleteDataset(t);
+    assert.equal(removedDataset.status,200);
+    assert.deepEqual(await removedDataset.json(),{id:datasetId,status:"deleted"});
+    assert.equal((await deleteDataset(t)).status,404);
+    assert.equal((await call(`/datasets/${datasetId}/dependencies`,undefined,t)).status,404);
+    assert.ok(await db!.auditLog.count({where:{action:"delete:/v1/datasets/{identifier}",outcome:"success",resourceId:datasetId}}));
+    const deleted=await deletion(id,t);
+    assert.equal(deleted.status,200);
+    assert.deepEqual(await deleted.json(),{id,status:"deleted"});
+    assert.equal((await deletion(id,t)).status,404);
+    assert.equal((await call(`/connections/${id}/dependencies`,undefined,t)).status,404);
+    assert.ok(await db!.auditLog.count({where:{action:"delete:/v1/connections/{identifier}",outcome:"success",resourceId:id}}));
     const audit = await db!.auditLog.findMany();
     assert.ok(audit.length > 0);
     assert.doesNotMatch(

@@ -16,7 +16,8 @@ from uuid import UUID
 from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 import psycopg
-from sqlalchemy import func,select
+from sqlalchemy import event,func,select
+from sqlalchemy.exc import IntegrityError
 
 from postgres_fixture import TemporaryPostgres
 from dataqore_engine.api import create_app
@@ -254,6 +255,453 @@ class APITests(TemporaryPostgres):
         self.assertEqual(self.queue.claim(),UUID(identifier))
         run_job(self.settings,UUID(identifier))
         return self.request('GET',f'/runs/{identifier}')
+
+    def unused_dataset(self,name='unused-dataset'):
+        connection=self.request('POST','/connections',201,json={'name':name,'connector':'sqlite',
+            'credentials':{'database':'left.sqlite'}})
+        dataset=self.request('POST','/datasets',201,json={'connection_id':connection['id'],'table_name':'records'})
+        return connection,dataset
+
+    def test_evaluation_is_read_only_and_metric_reasons_are_batched(self):
+        _,datasets,comparison=self.fixture()
+        run=self.request('POST',f'/comparisons/{comparison}/runs',202)
+        self.assertEqual(self.finish(run['id'])['status'],'succeeded')
+        profile=self.request('POST',f'/datasets/{datasets[0]}/profile-runs',202,json={})
+        self.assertEqual(self.finish(profile['id'])['status'],'succeeded')
+        with self.engine.connect() as conn:
+            before=conn.execute(select(m.run_results).order_by(m.run_results.c.run_id)).mappings().all()
+        statements=[]
+        def record(*args):statements.append(args[2])
+        with patch('dataqore_engine.connectors.SourceManager.session',side_effect=AssertionError('Must not open sources')):
+            result=self.request('GET',f'/runs/{run["id"]}/result')
+            self.assertEqual(result['evaluation']['analysis_kind'],'aligned')
+            result=self.request('GET',f'/runs/{profile["id"]}/result')
+            self.assertEqual(result['evaluation']['analysis_kind'],'profile')
+            self.assertEqual(result['evaluation']['agreement']['status'],'not_applicable')
+            saved=self.request('GET',f'/datasets/{datasets[0]}/profiles',params={'run_id':profile['id']})
+            text_profile=next(p for p in saved['items'] if p['column_name']=='value')
+            self.assertEqual(text_profile['evaluation']['mean']['reason'],'metric_not_applicable_to_type')
+            event.listen(self.engine,'before_cursor_execute',record)
+            try:
+                metrics=self.request('GET','/metrics',params={'dataset_id':datasets[0],'limit':200})
+            finally:event.remove(self.engine,'before_cursor_execute',record)
+            self.assertGreater(len(metrics['items']),10)
+            self.assertLessEqual(len(statements),4,'No per-metric queries')
+            blank=next(item for item in metrics['items'] if item['column_name']=='amount' and item['metric_name']=='blank_rate')
+            self.assertEqual(blank['evaluation']['status'],'not_applicable')
+        with self.engine.connect() as conn:
+            after=conn.execute(select(m.run_results).order_by(m.run_results.c.run_id)).mappings().all()
+        self.assertEqual(before,after)
+
+    def test_comparison_delete_auth_missing_and_terminal_history_without_source_access(self):
+        from uuid import uuid4
+        connections,datasets,comparison=self.fixture()
+        job=self.request('POST',f'/comparisons/{comparison}/runs',202)
+        self.assertEqual(self.finish(job['id'])['status'],'succeeded')
+        failed=self.request('POST',f'/comparisons/{comparison}/runs',202)
+        self.assertEqual(self.queue.claim(),UUID(failed['id']));self.queue.fail(UUID(failed['id']),'test_failure')
+        profile=self.request('POST',f'/datasets/{datasets[0]}/profile-runs',202)
+        self.assertEqual(self.finish(profile['id'])['status'],'succeeded')
+        other=self.request('POST','/comparisons',201,json={'name':'retained-comparison','left_dataset_id':datasets[0],'right_dataset_id':datasets[1]})
+        other_run=self.request('POST',f'/comparisons/{other["id"]}/runs',202)
+        self.assertEqual(self.finish(other_run['id'])['status'],'succeeded')
+        path=f'/comparisons/{comparison}'
+        for method,suffix in [('GET','/dependencies'),('DELETE','')]:
+            self.assertEqual(self.client.request(method,'/v1'+path+suffix).status_code,401)
+            self.request(method,f'/comparisons/{uuid4()}{suffix}',404)
+        self.request('PATCH',path,json={'is_active':False})
+        with patch.object(SourceManager,'session',side_effect=AssertionError('Deletion cannot access sources')):
+            deps=self.request('GET',path+'/dependencies')
+            self.assertEqual(deps['history']['runs'],2)
+            self.assertEqual(deps['history']['results'],1)
+            self.assertEqual(deps['history']['column_profiles'],6)
+            self.assertGreater(deps['history']['metrics'],0)
+            self.assertTrue(deps['can_delete'])
+            self.assertEqual(self.request('DELETE',path),{'id':comparison,'status':'deleted'})
+        self.request('GET',path,404);self.request('DELETE',path,404)
+        for removed in (job['id'],failed['id']):
+            self.request('GET',f'/runs/{removed}',404)
+            with self.engine.connect() as conn:
+                for table in (m.metrics,m.column_profiles,m.run_results):
+                    self.assertEqual(conn.scalar(select(func.count()).select_from(table).where(table.c.run_id==UUID(removed))),0)
+        for retained in (profile['id'],other_run['id']):self.request('GET',f'/runs/{retained}/result')
+        for dataset in datasets:self.request('GET',f'/datasets/{dataset}')
+        for connection in connections:self.request('GET',f'/connections/{connection}')
+
+    def test_comparison_delete_empty_and_busy_runs(self):
+        _,datasets,comparison=self.fixture()
+        path=f'/comparisons/{comparison}'
+        job=self.request('POST',path+'/runs',202)
+        self.assertEqual(self.request('GET',path+'/dependencies')['active_runs'],1)
+        self.assertEqual(self.request('DELETE',path,409)['code'],'comparison_busy')
+        self.assertEqual(self.queue.claim(),UUID(job['id']))
+        self.assertEqual(self.request('DELETE',path,409)['code'],'comparison_busy')
+        self.queue.fail(UUID(job['id']),'test_failure')
+        self.request('DELETE',path)
+        empty=self.request('POST','/comparisons',201,json={'name':'empty','left_dataset_id':datasets[0],'right_dataset_id':datasets[1]})
+        self.assertEqual(self.request('GET',f'/comparisons/{empty["id"]}/dependencies')['history']['runs'],0)
+        self.request('DELETE',f'/comparisons/{empty["id"]}')
+
+    def test_comparison_delete_rolls_back_all_history_on_failure(self):
+        _,_,comparison=self.fixture()
+        path=f'/comparisons/{comparison}'
+        job=self.request('POST',path+'/runs',202)
+        self.assertEqual(self.finish(job['id'])['status'],'succeeded')
+        before=self.request('GET',path+'/dependencies')['history']
+        def controlled_failure(conn,cursor,statement,parameters,context,executemany):
+            if statement.startswith('DELETE FROM engine.column_profiles'):
+                raise DomainError(503,'test_rollback','Controlled failure')
+        event.listen(self.engine,'before_cursor_execute',controlled_failure)
+        try:self.request('DELETE',path,503)
+        finally:event.remove(self.engine,'before_cursor_execute',controlled_failure)
+        self.assertEqual(self.request('GET',path+'/dependencies')['history'],before)
+        self.request('GET',f'/runs/{job["id"]}/result')
+
+    def test_comparison_delete_serializes_concurrent_enqueue_in_both_orders(self):
+        from threading import Event
+        _,datasets,comparison=self.fixture()
+        paused,release=Event(),Event()
+        def pause_before_insert(conn,cursor,statement,parameters,context,executemany):
+            if statement.startswith('INSERT INTO engine.runs'):
+                paused.set()
+                if not release.wait(10):raise RuntimeError('Enqueue not released')
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            event.listen(self.engine,'before_cursor_execute',pause_before_insert)
+            enqueued=pool.submit(self.queue.enqueue,'comparison',UUID(comparison))
+            try:
+                self.assertTrue(paused.wait(5))
+                deleting=pool.submit(self.client.delete,f'/v1/comparisons/{comparison}',headers=self.headers)
+                deadline=time.monotonic()+5
+                with self.connect('engine') as observer:
+                    while time.monotonic()<deadline:
+                        if observer.execute("SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname='dataqore_engine' AND wait_event_type='Lock' AND query LIKE '%FOR UPDATE%')").fetchone()[0]:break
+                        time.sleep(.01)
+                    else:self.fail('Deletion did not wait for enqueue')
+            finally:release.set()
+            try:enqueued.result(timeout=10)
+            finally:event.remove(self.engine,'before_cursor_execute',pause_before_insert)
+            self.assertEqual(deleting.result(timeout=10).status_code,409)
+            # Reverse order: the new enqueue waits, then observes the deleted definition.
+            empty=self.request('POST','/comparisons',201,json={'name':'delete-first','left_dataset_id':datasets[0],'right_dataset_id':datasets[1]})
+            paused.clear();release.clear()
+            def pause_delete(conn,cursor,statement,parameters,context,executemany):
+                if statement.startswith('SELECT engine.comparison_definitions.id') and 'FOR UPDATE' in statement:
+                    paused.set()
+                    if not release.wait(10):raise RuntimeError('Deletion not released')
+            event.listen(self.engine,'after_cursor_execute',pause_delete)
+            deleting=pool.submit(self.client.delete,f'/v1/comparisons/{empty["id"]}',headers=self.headers)
+            try:
+                self.assertTrue(paused.wait(5))
+                enqueued=pool.submit(self.queue.enqueue,'comparison',UUID(empty['id']))
+                deadline=time.monotonic()+5
+                with self.connect('engine') as observer:
+                    while time.monotonic()<deadline:
+                        if observer.execute("SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname='dataqore_engine' AND wait_event_type='Lock' AND query LIKE '%FOR KEY SHARE%')").fetchone()[0]:break
+                        time.sleep(.01)
+                    else:self.fail('Enqueue did not wait for deletion')
+            finally:release.set()
+            try:self.assertEqual(deleting.result(timeout=10).status_code,200)
+            finally:event.remove(self.engine,'after_cursor_execute',pause_delete)
+            with self.assertRaises(DomainError) as missing:enqueued.result(timeout=10)
+            self.assertEqual(missing.exception.code,'not_found')
+
+    def test_dataset_delete_auth_missing_no_source_queries_and_source_preserved(self):
+        from uuid import uuid4
+        connection,dataset=self.unused_dataset()
+        path=f'/datasets/{dataset["id"]}'
+        for method,suffix in [('GET','/dependencies'),('DELETE','')]:
+            self.assertEqual(self.client.request(method,'/v1'+path+suffix).status_code,401)
+            self.request(method,f'/datasets/{uuid4()}{suffix}',404)
+        with patch.object(SourceManager,'session',side_effect=AssertionError('No source access allowed')):
+            deps=self.request('GET',path+'/dependencies')
+            self.assertTrue(deps['can_delete'])
+            self.assertEqual(deps['dataset']['connection_name'],connection['name'])
+            self.assertEqual(deps['profile_history'],{'runs':0,'results':0,'column_profiles':0,'metrics':0})
+            self.assertEqual(self.request('DELETE',path),{'id':dataset['id'],'status':'deleted'})
+        self.request('DELETE',path,404)
+        self.request('GET',path+'/dependencies',404)
+        self.assertTrue(self.request('GET',f'/connections/{connection["id"]}/dependencies')['can_delete'])
+        with sqlite3.connect(Path(self.files.name)/'left.sqlite') as source:
+            self.assertEqual(source.execute('SELECT count(*) FROM records').fetchone()[0],2)
+
+    def test_dataset_delete_removes_only_individual_history_and_preserves_other_datasets(self):
+        connection,dataset=self.unused_dataset()
+        other_connection,other=self.unused_dataset('other-dataset')
+        job=self.request('POST',f'/datasets/{dataset["id"]}/profile-runs',202)
+        self.assertEqual(self.finish(job['id'])['status'],'succeeded')
+        failed=self.request('POST',f'/datasets/{dataset["id"]}/profile-runs',202)
+        self.assertEqual(self.queue.claim(),UUID(failed['id']));self.queue.fail(UUID(failed['id']),'test_failure')
+        retained=self.request('POST',f'/datasets/{other["id"]}/profile-runs',202)
+        self.assertEqual(self.finish(retained['id'])['status'],'succeeded')
+        deps=self.request('GET',f'/datasets/{dataset["id"]}/dependencies')
+        self.assertEqual(deps['profile_history']['runs'],2)
+        self.assertEqual(deps['profile_history']['results'],1)
+        self.assertEqual(deps['profile_history']['column_profiles'],3)
+        self.assertGreater(deps['profile_history']['metrics'],0)
+        self.assertTrue(deps['can_delete'])
+        with patch.object(SourceManager,'session',side_effect=AssertionError('No source access allowed')):
+            self.request('DELETE',f'/datasets/{dataset["id"]}')
+        for identifier in (job['id'],failed['id']):
+            self.request('GET',f'/runs/{identifier}',404)
+            with self.engine.connect() as conn:
+                for table in (m.metrics,m.column_profiles,m.run_results):
+                    self.assertEqual(conn.scalar(select(func.count()).select_from(table).where(table.c.run_id==UUID(identifier))),0)
+        self.request('GET',f'/runs/{retained["id"]}/result')
+        self.assertEqual(self.request('GET',f'/datasets/{other["id"]}/dependencies')['profile_history']['runs'],1)
+        self.request('GET',f'/connections/{connection["id"]}')
+        self.request('GET',f'/connections/{other_connection["id"]}')
+
+    def test_dataset_dependencies_current_inactive_pagination_and_historical_snapshots(self):
+        connections,datasets,comparison=self.fixture()
+        with self.engine.begin() as conn:
+            for index in range(21):
+                conn.execute(m.comparison_definitions.insert().values(name=f'linked_{index:02}',
+                    left_dataset_id=UUID(datasets[0]),right_dataset_id=UUID(datasets[1]),is_active=False))
+        path=f'/datasets/{datasets[0]}'
+        page=self.request('GET',path+'/dependencies?comparison_limit=20')
+        self.assertEqual(page['comparisons']['total'],22)
+        self.assertEqual(len(page['comparisons']['items']),20)
+        self.assertTrue(all(c['current'] and not c['historical'] for c in page['comparisons']['items']))
+        next_page=self.request('GET',path+'/dependencies?comparison_offset=20')
+        self.assertEqual(len(next_page['comparisons']['items']),2)
+        self.assertTrue(set(c['id'] for c in page['comparisons']['items']).isdisjoint(c['id'] for c in next_page['comparisons']['items']))
+        self.assertEqual(self.request('DELETE',path,409)['code'],'dataset_in_use')
+        for query in ('comparison_limit=0','comparison_limit=201','comparison_offset=-1'):
+            self.request('GET',path+'/dependencies?'+query,422)
+        with self.engine.begin() as conn:
+            conn.execute(m.comparison_definitions.delete().where(m.comparison_definitions.c.name.like('linked_%')))
+        job=self.request('POST',f'/comparisons/{comparison}/runs',202)
+        _,replacement=self.unused_dataset('replacement')
+        self.request('PATCH',f'/comparisons/{comparison}',json={'left_dataset_id':replacement['id']})
+        historical=self.request('GET',path+'/dependencies')
+        self.assertEqual(historical['comparisons']['total'],1)
+        self.assertFalse(historical['comparisons']['items'][0]['current'])
+        self.assertTrue(historical['comparisons']['items'][0]['historical'])
+        self.assertEqual(self.request('DELETE',path,409)['code'],'dataset_in_use')
+        self.assertEqual(self.finish(job['id'])['status'],'succeeded')
+        # Relational evidence protects histories without frozen source identifiers too.
+        with self.engine.begin() as conn:
+            parameters=conn.scalar(select(m.runs.c.parameters).where(m.runs.c.id==UUID(job['id'])))
+            parameters.pop('sources')
+            conn.execute(m.runs.update().where(m.runs.c.id==UUID(job['id'])).values(parameters=parameters))
+        self.assertTrue(self.request('GET',path+'/dependencies')['comparisons']['items'][0]['historical'])
+        self.request('DELETE',path,409)
+        self.request('GET',f'/runs/{job["id"]}/result')
+
+    def test_dataset_delete_blocks_queued_running_and_concurrent_profile_completion(self):
+        from threading import Event
+        from dataqore_engine.jobs import execute_profile
+        _,dataset=self.unused_dataset()
+        path=f'/datasets/{dataset["id"]}'
+        job=self.request('POST',path+'/profile-runs',202)
+        self.assertEqual(self.request('GET',path+'/dependencies')['active_profile_runs'],1)
+        self.assertEqual(self.request('DELETE',path,409)['code'],'dataset_busy')
+        self.assertEqual(self.queue.claim(),UUID(job['id']))
+        entered,release=Event(),Event()
+        def delayed(*args,**kwargs):
+            entered.set()
+            if not release.wait(10):raise RuntimeError('Test calculation not released')
+            return execute_profile(*args,**kwargs)
+        with ThreadPoolExecutor(max_workers=1) as pool,patch('dataqore_engine.jobs.execute_profile',side_effect=delayed):
+            future=pool.submit(run_job,self.settings,UUID(job['id']))
+            try:
+                self.assertTrue(entered.wait(5))
+                self.assertEqual(self.request('DELETE',path,409)['code'],'dataset_busy')
+            finally:release.set()
+            future.result(timeout=15)
+        self.assertTrue(self.request('GET',path+'/dependencies')['can_delete'])
+        self.request('DELETE',path)
+
+    def test_dataset_delete_history_rolls_back_on_failure(self):
+        _,dataset=self.unused_dataset()
+        path=f'/datasets/{dataset["id"]}'
+        job=self.request('POST',path+'/profile-runs',202)
+        self.assertEqual(self.finish(job['id'])['status'],'succeeded')
+        before=self.request('GET',path+'/dependencies')['profile_history']
+        def fail_mid_delete(conn,cursor,statement,parameters,context,executemany):
+            if statement.startswith('DELETE FROM engine.column_profiles'):
+                raise DomainError(503,'test_rollback','Controlled failure')
+        event.listen(self.engine,'before_cursor_execute',fail_mid_delete)
+        try:self.request('DELETE',path,503)
+        finally:event.remove(self.engine,'before_cursor_execute',fail_mid_delete)
+        self.assertEqual(self.request('GET',path+'/dependencies')['profile_history'],before)
+        self.request('GET',f'/runs/{job["id"]}/result')
+
+    def test_dataset_delete_serializes_frozen_comparison_enqueue_in_both_orders(self):
+        from threading import Event
+        connections,datasets,comparison=self.fixture()
+        _,replacement=self.unused_dataset('replacement-race')
+        paused,release=Event(),Event()
+        def pause_before_insert(conn,cursor,statement,parameters,context,executemany):
+            if statement.startswith('INSERT INTO engine.runs'):
+                paused.set()
+                if not release.wait(10):raise RuntimeError('Enqueue not released')
+        event.listen(self.engine,'before_cursor_execute',pause_before_insert)
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            enqueued=pool.submit(self.queue.enqueue,'comparison',UUID(comparison))
+            try:
+                self.assertTrue(paused.wait(5))
+                self.request('PATCH',f'/comparisons/{comparison}',json={'left_dataset_id':replacement['id']})
+                deleting=pool.submit(self.client.delete,f'/v1/datasets/{datasets[0]}',headers=self.headers)
+                deadline=time.monotonic()+5
+                with self.connect('engine') as observer:
+                    while time.monotonic()<deadline:
+                        if observer.execute("SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname='dataqore_engine' AND wait_event_type='Lock' AND query LIKE '%FOR UPDATE%')").fetchone()[0]:break
+                        time.sleep(.01)
+                    else:self.fail('Deletion did not wait for enqueue dataset locks')
+            finally:
+                release.set()
+            try:enqueued.result(timeout=10)
+            finally:event.remove(self.engine,'before_cursor_execute',pause_before_insert)
+            self.assertEqual(deleting.result(timeout=10).status_code,409)
+            self.assertTrue(self.request('GET',f'/datasets/{datasets[0]}/dependencies')['comparisons']['items'][0]['historical'])
+            # Reverse order: enqueue captured the definition but has not locked its sources.
+            _,third=self.unused_dataset('delete-before-enqueue')
+            self.request('PATCH',f'/comparisons/{comparison}',json={'left_dataset_id':third['id']})
+            paused.clear();release.clear()
+            def pause_after_definition(conn,cursor,statement,parameters,context,executemany):
+                if statement.startswith('SELECT engine.comparison_definitions.') and not paused.is_set():
+                    paused.set()
+                    if not release.wait(10):raise RuntimeError('Definition read not released')
+            event.listen(self.engine,'after_cursor_execute',pause_after_definition)
+            enqueued=pool.submit(self.queue.enqueue,'comparison',UUID(comparison))
+            try:
+                self.assertTrue(paused.wait(5))
+                self.request('PATCH',f'/comparisons/{comparison}',json={'left_dataset_id':replacement['id']})
+                self.request('DELETE',f'/datasets/{third["id"]}')
+            finally:
+                release.set()
+            try:
+                with self.assertRaises(DomainError) as failure:enqueued.result(timeout=10)
+            finally:event.remove(self.engine,'after_cursor_execute',pause_after_definition)
+            self.assertEqual(failure.exception.code,'not_found')
+
+    def test_dataset_delete_foreign_keys_protect_concurrent_comparison_creation_and_edit(self):
+        from threading import Event
+        _,datasets,comparison=self.fixture()
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            for operation in ('insert','update'):
+                _,target=self.unused_dataset('fk-race-'+operation)
+                started=Event();futures=[]
+                def mutate_comparison():
+                    with self.engine.begin() as conn:
+                        started.set()
+                        if operation=='insert':
+                            conn.execute(m.comparison_definitions.insert().values(name='racing-definition',
+                                left_dataset_id=UUID(target['id']),right_dataset_id=UUID(datasets[1])))
+                        else:
+                            conn.execute(m.comparison_definitions.update().where(m.comparison_definitions.c.id==UUID(comparison))
+                                .values(left_dataset_id=UUID(target['id'])))
+                def while_dataset_locked(conn,cursor,statement,parameters,context,executemany):
+                    if statement.startswith('SELECT engine.datasets.id') and 'FOR UPDATE' in statement:
+                        futures.append(pool.submit(mutate_comparison))
+                        self.assertTrue(started.wait(5))
+                        deadline=time.monotonic()+5
+                        with self.connect('engine') as observer:
+                            while time.monotonic()<deadline:
+                                if observer.execute("SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname='dataqore_engine' AND wait_event_type='Lock' AND query LIKE %s)",
+                                    ('%'+operation.upper()+'%engine.comparison_definitions%',)).fetchone()[0]:break
+                                time.sleep(.01)
+                            else:self.fail('Comparison mutation did not wait for dataset lock')
+                event.listen(self.engine,'after_cursor_execute',while_dataset_locked)
+                try:self.request('DELETE',f'/datasets/{target["id"]}')
+                finally:event.remove(self.engine,'after_cursor_execute',while_dataset_locked)
+                self.assertEqual(len(futures),1)
+                with self.assertRaises(IntegrityError):futures[0].result(timeout=10)
+        self.assertEqual(self.request('GET',f'/comparisons/{comparison}')['left_dataset_id'],datasets[0])
+
+    def test_connection_delete_requires_auth_and_only_removes_unused_connections(self):
+        from uuid import uuid4
+        row=self.request('POST','/connections',201,json={'name':'unused','connector':'sqlite',
+            'credentials':{'database':'left.sqlite'}})
+        identifier=row['id']
+        (Path(self.files.name)/'left.sqlite').unlink()
+        self.request('PATCH',f'/connections/{identifier}',json={'is_active':False})
+        for method,suffix in [('GET','/dependencies'),('DELETE','')]:
+            self.assertEqual(self.client.request(method,f'/v1/connections/{identifier}{suffix}').status_code,401)
+            self.request(method,f'/connections/{uuid4()}{suffix}',404)
+        with patch.object(SourceManager,'session',side_effect=AssertionError('Must not open a source')):
+            preview=self.request('GET',f'/connections/{identifier}/dependencies')
+            self.assertTrue(preview['can_delete'])
+            self.assertEqual(preview['datasets']['total'],0)
+            self.assertEqual(preview['comparisons']['total'],0)
+            self.assertNotIn('credentials',json.dumps(preview))
+            self.assertEqual(self.request('DELETE',f'/connections/{identifier}'),{'id':identifier,'status':'deleted'})
+        self.request('GET',f'/connections/{identifier}',404)
+        self.request('DELETE',f'/connections/{identifier}',404)
+
+    def test_connection_dependencies_pagination_deduplication_and_history_preservation(self):
+        connections,datasets,comparison=self.fixture()
+        job=self.request('POST',f'/comparisons/{comparison}/runs',202)
+        self.assertEqual(self.finish(job['id'])['status'],'succeeded')
+        identifier=UUID(connections[0])
+        with self.engine.begin() as conn:
+            for index in range(21):
+                dataset=conn.execute(m.datasets.insert().values(connection_id=identifier,catalog_name='catalog',
+                    schema_name='schema',table_name=f'view_{index:02}',metadata={'table_type':'VIEW'}).returning(m.datasets.c.id)).scalar_one()
+                conn.execute(m.comparison_definitions.insert().values(name=f'linked_{index:02}',
+                    left_dataset_id=UUID(datasets[0]),right_dataset_id=dataset,is_active=index%2==0))
+        with patch.object(SourceManager,'session',side_effect=AssertionError('Must not open a source')):
+            initial=self.request('GET',f'/connections/{identifier}/dependencies?dataset_limit=1&comparison_limit=2')
+            self.assertFalse(initial['can_delete'])
+            self.assertEqual(initial['datasets']['total'],22)
+            self.assertEqual(initial['comparisons']['total'],22)
+            self.assertEqual(len(initial['comparisons']['items']),2)
+            next_page=self.request('GET',f'/connections/{identifier}/dependencies?dataset_limit=1&dataset_offset=1&comparison_limit=2&comparison_offset=2')
+            self.assertNotEqual(initial['datasets']['items'],next_page['datasets']['items'])
+            self.assertTrue(set(x['id'] for x in initial['comparisons']['items']).isdisjoint(x['id'] for x in next_page['comparisons']['items']))
+            all_refs=self.request('GET',f'/connections/{identifier}/dependencies?dataset_limit=200&comparison_limit=200')
+            self.assertEqual(sum(not c['is_active'] for c in all_refs['comparisons']['items']),10)
+            self.assertEqual(len({c['id'] for c in all_refs['comparisons']['items']}),22)
+            self.assertTrue(any(d['catalog_name']=='catalog' and d['table_type']=='VIEW' for d in all_refs['datasets']['items']))
+            failure=self.request('DELETE',f'/connections/{identifier}',409)
+            self.assertEqual(failure['code'],'connection_in_use')
+            for query in ('dataset_limit=0','comparison_limit=201','dataset_offset=-1','comparison_offset=-1'):
+                self.request('GET',f'/connections/{identifier}/dependencies?{query}',422)
+        self.assertEqual(self.request('GET',f'/runs/{job["id"]}')['status'],'succeeded')
+        self.request('GET',f'/runs/{job["id"]}/result')
+        self.assertEqual(self.request('GET',f'/connections/{identifier}')['id'],str(identifier))
+
+    def test_connection_delete_serializes_concurrent_dependencies_with_foreign_keys(self):
+        from threading import Event
+        def wait_for_lock(fragment):
+            deadline=time.monotonic()+5
+            with self.connect('engine') as observer:
+                while time.monotonic()<deadline:
+                    if observer.execute("SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname='dataqore_engine' AND wait_event_type='Lock' AND query LIKE %s)",
+                                        ('%'+fragment+'%',)).fetchone()[0]:return
+                    time.sleep(.01)
+            self.fail('Expected concurrent operation to wait for the connection row lock')
+        def unused(name):
+            return UUID(self.request('POST','/connections',201,json={'name':name,'connector':'sqlite',
+                'credentials':{'database':'left.sqlite'}})['id'])
+        first=unused('insert-first')
+        self.assertTrue(self.request('GET',f'/connections/{first}/dependencies')['can_delete'])
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            with self.engine.begin() as conn:
+                conn.execute(m.datasets.insert().values(connection_id=first,schema_name='main',table_name='records'))
+                deleting=pool.submit(self.client.delete,f'/v1/connections/{first}',headers=self.headers)
+                wait_for_lock('FOR UPDATE')
+                # A dependency committed after preview must be rechecked by DELETE.
+            self.assertEqual(deleting.result(timeout=10).status_code,409)
+            second=unused('delete-first')
+            started=Event();futures=[]
+            def insert_dependency():
+                with self.engine.begin() as conn:
+                    started.set()
+                    conn.execute(m.datasets.insert().values(connection_id=second,schema_name='main',table_name='records'))
+            def while_locked(conn,cursor,statement,parameters,context,executemany):
+                if 'FOR UPDATE' in statement:
+                    futures.append(pool.submit(insert_dependency))
+                    self.assertTrue(started.wait(timeout=5))
+                    wait_for_lock('INSERT INTO engine.datasets')
+            event.listen(self.engine,'after_cursor_execute',while_locked)
+            try:self.request('DELETE',f'/connections/{second}')
+            finally:event.remove(self.engine,'after_cursor_execute',while_locked)
+            self.assertEqual(len(futures),1)
+            with self.assertRaises(IntegrityError):futures[0].result(timeout=10)
+        self.assertFalse(self.request('GET',f'/connections/{first}/dependencies')['can_delete'])
+        self.request('GET',f'/connections/{second}',404)
 
     def test_scoped_preview_business_key_and_schema_change_without_partial_results(self):
         connections,datasets,identifier=self.fixture()

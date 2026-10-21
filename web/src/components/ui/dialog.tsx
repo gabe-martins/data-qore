@@ -6,7 +6,8 @@ export function DialogContent({
   title,
   description,
   children,
-}: React.PropsWithChildren<{ title: string; description: string }>) {
+  returnFocus,
+}: React.PropsWithChildren<{ title: string; description: string; returnFocus?: () => HTMLElement | null }>) {
   const previous = React.useRef(document.activeElement as HTMLElement | null);
   return (
     <DialogPrimitive.Portal>
@@ -15,7 +16,7 @@ export function DialogContent({
         className="dialog-content"
         onCloseAutoFocus={(e) => {
           e.preventDefault();
-          previous.current?.focus();
+          (returnFocus?.() ?? previous.current)?.focus();
         }}
       >
         <DialogPrimitive.Title className="dialog-title">

@@ -32,7 +32,8 @@ async function readableColors(page: Page) {
 
 test('theme follows the system before React, allows overrides and persists on login', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
-  await page.route('**/src/main.tsx', async route => {
+  // Vite may add a cache-busting query after a source update.
+  await page.route(/\/src\/main\.tsx(?:\?.*)?$/, async route => {
     const response = await route.fetch();
     await route.fulfill({ response, body: 'window.__themeBeforeReact = document.documentElement.dataset.theme;\n' + await response.text() });
   });

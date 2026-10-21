@@ -204,6 +204,20 @@ small {
   align-items: center;
   margin-bottom: 26px;
 }
+.page-title > :first-child {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.page-title .title-actions {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+.resource-title,
+.resource-title > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .title-actions,
 .actions,
 .inline-info {
@@ -766,6 +780,40 @@ dd {
   font-size: 22px;
   font-weight: 700;
 }
+.connection-dependencies {
+  margin-top: 24px;
+  min-width: 0;
+}
+.connection-dependencies li {
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+}
+.connection-dependencies ul {
+  padding-left: 20px;
+}
+.connection-dependencies .pagination {
+  flex-wrap: wrap;
+}
+.dataset-delete-location {
+  overflow-wrap: anywhere;
+}
+.dataset-delete-dialog .form-footer .button,
+.comparison-delete-dialog .form-footer .button {
+  white-space: normal;
+}
+.dataset-delete-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+.dataset-delete-counts dt {
+  color: var(--semantic-text-secondary);
+}
+.dataset-delete-counts dd {
+  margin: 4px 0 0;
+  font-weight: 700;
+}
 .dialog-content > p {
   margin-bottom: 28px;
 }
@@ -861,7 +909,7 @@ summary {
   padding: 12px 18px;
   margin-bottom: 35px;
   border-radius: 13px;
-  background: var(--semantic-background-surface);
+  background: var(--primitive-neutral-0);
 }
 .login-logo img {
   display: block;

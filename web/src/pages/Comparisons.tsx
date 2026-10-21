@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -8,6 +8,7 @@ import {
   Play,
   Check,
   ArrowRight,
+  Trash2,
 } from "lucide-react";
 import { api, allPages, patch, post, type Model, type Page } from "../api";
 import {
@@ -16,6 +17,8 @@ import {
   percentToFraction,
 } from "../lib/tolerances";
 import { ToleranceHelp } from "../components/ToleranceHelp";
+import { DeleteComparisonDialog } from "../components/DeleteComparisonDialog";
+import { AnalysisNotice, EvaluationValue } from "../components/Evaluation";
 import {
   ScopeEditor,
   MappingEditor,
@@ -49,6 +52,8 @@ export function Comparisons() {
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
   const [error, setError] = useState<unknown>(null);
+  const [deleting,setDeleting]=useState<Model<"ComparisonSummaryOut">|null>(null);
+  const searchInput=useRef<HTMLInputElement>(null);
   const cache = useQueryClient();
   const navigate = useNavigate();
   const q = useQuery({
@@ -68,6 +73,7 @@ export function Comparisons() {
         <div className="search">
           <Search size={19} />
           <input
+            ref={searchInput}
             aria-label="Search comparisons"
             placeholder="Search comparisons…"
             value={search}
@@ -109,6 +115,7 @@ export function Comparisons() {
                 <Button asChild variant="outline">
                   <Link to={`/comparisons/${c.id}/edit`}>Edit</Link>
                 </Button>
+                <Button variant="outline" onClick={()=>setDeleting(c)}><Trash2 size={16} aria-hidden="true"/>Delete</Button>
               </div>
             </div>
             <dl className="comparison-facts">
@@ -187,6 +194,8 @@ export function Comparisons() {
           setOffset={setOffset}
         />
       )}
+      {deleting&&<DeleteComparisonDialog comparison={deleting} onClose={()=>setDeleting(null)}
+        returnFocus={()=>searchInput.current} onDeleted={()=>{setDeleting(null);setOffset(0);}}/>}
     </>
   );
 }
@@ -195,6 +204,7 @@ export function ComparisonDetail() {
   const [tab, setTab] = useState("Overview");
   const [offset, setOffset] = useState(0);
   const [error, setError] = useState<unknown>(null);
+  const [deleting,setDeleting]=useState(false);
   const navigate = useNavigate();
   const c = useQuery({
     queryKey: ["comparison", id],
@@ -243,6 +253,7 @@ export function ComparisonDetail() {
             <Button asChild variant="outline">
               <Link to={`/comparisons/${id}/edit`}>Edit</Link>
             </Button>
+            <Button variant="outline" disabled={!c.data} onClick={()=>setDeleting(true)}><Trash2 size={16} aria-hidden="true"/>Delete</Button>
             <Button
               disabled={!c.data?.is_active}
               onClick={async () => {
@@ -287,26 +298,24 @@ export function ComparisonDetail() {
             </div>
             {tab === "Overview" ? (
               <>
+                {result.data && <AnalysisNotice evaluation={result.data.evaluation} />}
                 <div className="stats-grid four">
                   <Stat
                     label="Rows observed per source"
                     value={
                       r?.sources?.map((s: any) => s.sample_size).join(" / ") ||
-                      "Not evaluated"
+                      "No completed execution"
                     }
                     detail="Observed sample only"
                   />
                   <Stat
                     label="Cell agreement"
-                    value={percent(r?.indicators?.agreement?.percentage)}
-                    detail={
-                      "Coverage " +
-                      percent(r?.indicators?.agreement?.coverage_percentage)
-                    }
+                    value={result.data ? <EvaluationValue value={r?.indicators?.agreement?.percentage == null ? null : percent(r.indicators.agreement.percentage)} evaluation={result.data.evaluation?.agreement} /> : "No completed execution"}
+                    detail={result.data && <>Coverage <EvaluationValue value={r?.indicators?.agreement?.coverage_percentage == null ? null : percent(r.indicators.agreement.coverage_percentage)} evaluation={result.data.evaluation?.agreement} /></>}
                   />
                   <Stat
                     label="Different sampled rows"
-                    value={row?.different_rows ?? "Not evaluated"}
+                    value={result.data ? <EvaluationValue value={row?.different_rows} evaluation={result.data.evaluation?.agreement} /> : "No completed execution"}
                   />
                   <Stat
                     label="Execution"
@@ -440,6 +449,9 @@ export function ComparisonDetail() {
           </>
         )
       )}
+      {deleting&&c.data&&<DeleteComparisonDialog comparison={c.data} onClose={()=>setDeleting(false)}
+        returnFocus={()=>document.querySelector<HTMLInputElement>('input[aria-label="Search comparisons"]')}
+        onDeleted={()=>navigate("/comparisons")}/>}
     </>
   );
 }

@@ -9,7 +9,7 @@ from fastapi import APIRouter,Depends,FastAPI,Header,Query,Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
-from sqlalchemy import select,text,func
+from sqlalchemy import select,text,func,tuple_
 from sqlalchemy.exc import DBAPIError,IntegrityError
 from pydantic import ValidationError
 
@@ -17,6 +17,9 @@ from . import models as m
 from . import schemas as s
 from .connectors import SourceManager
 from .jobs import Queue
+from .dataset_deletion import DatasetDeletion
+from .comparison_deletion import ComparisonDeletion
+from .evaluation import profile_evaluations, result_evaluation, metric_evaluation
 from .comparison_options import compact_options, metadata_signature, validate_options
 from .settings import load_settings
 from .storage import DomainError,Repository,database_engine,json_safe
@@ -133,6 +136,47 @@ def create_app(settings=None):
     def get_connection(identifier:UUID):
         return out(s.ConnectionOut,repository.get(m.connections,identifier))
 
+    @router.get("/connections/{identifier}/dependencies",response_model=s.ConnectionDependenciesOut,tags=["connections"])
+    def connection_dependencies(identifier:UUID,dataset_limit:Limit=20,dataset_offset:Offset=0,
+                                comparison_limit:Limit=20,comparison_offset:Offset=0):
+        # Only internal references are read; this works even for inactive/unreachable sources.
+        dataset_ids=select(m.datasets.c.id).where(m.datasets.c.connection_id==identifier)
+        comparison_condition=(m.comparison_definitions.c.left_dataset_id.in_(dataset_ids)
+                              | m.comparison_definitions.c.right_dataset_id.in_(dataset_ids))
+        with engine.begin() as conn:
+            # Keep both independently paginated lists and their counts in one snapshot.
+            conn.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"))
+            if conn.scalar(select(m.connections.c.id).where(m.connections.c.id==identifier)) is None:
+                raise DomainError(404,"not_found","Connection not found.")
+            dataset_count=conn.scalar(select(func.count()).select_from(m.datasets).where(m.datasets.c.connection_id==identifier))
+            dataset_rows=conn.execute(select(m.datasets.c.id,m.datasets.c.catalog_name,m.datasets.c.schema_name,
+                m.datasets.c.table_name,m.datasets.c.metadata["table_type"].astext.label("table_type"))
+                .where(m.datasets.c.connection_id==identifier)
+                .order_by(m.datasets.c.catalog_name,m.datasets.c.schema_name,m.datasets.c.table_name,m.datasets.c.id)
+                .limit(dataset_limit).offset(dataset_offset)).mappings().all()
+            comparison_count=conn.scalar(select(func.count()).select_from(m.comparison_definitions).where(comparison_condition))
+            comparison_rows=conn.execute(select(m.comparison_definitions.c.id,m.comparison_definitions.c.name,m.comparison_definitions.c.is_active,
+                m.comparison_definitions.c.left_dataset_id,m.comparison_definitions.c.right_dataset_id)
+                .where(comparison_condition).order_by(m.comparison_definitions.c.name,m.comparison_definitions.c.id)
+                .limit(comparison_limit).offset(comparison_offset)).mappings().all()
+        return {"connection_id":identifier,"can_delete":dataset_count==0 and comparison_count==0,
+            "datasets":{"items":[dict(row) for row in dataset_rows],"total":dataset_count,"limit":dataset_limit,"offset":dataset_offset},
+            "comparisons":{"items":[dict(row) for row in comparison_rows],"total":comparison_count,
+                           "limit":comparison_limit,"offset":comparison_offset}}
+
+    @router.delete("/connections/{identifier}",response_model=s.ConnectionDeletedOut,tags=["connections"])
+    def delete_connection(identifier:UUID):
+        with engine.begin() as conn:
+            # FK key-share locks for concurrent dataset creation conflict with this lock.
+            # Once held, the following check and delete cannot admit a new dependency.
+            row=conn.scalar(select(m.connections.c.id).where(m.connections.c.id==identifier).with_for_update())
+            if row is None:
+                raise DomainError(404,"not_found","Connection not found.")
+            if conn.scalar(select(m.datasets.c.id).where(m.datasets.c.connection_id==identifier).limit(1)) is not None:
+                raise DomainError(409,"connection_in_use","This connection is in use. Deactivate it instead.")
+            conn.execute(m.connections.delete().where(m.connections.c.id==identifier))
+        return {"id":identifier,"status":"deleted"}
+
     @router.patch("/connections/{identifier}",response_model=s.ConnectionOut,tags=["connections"])
     def update_connection(identifier:UUID,payload:s.ConnectionUpdate):
         row=repository.get(m.connections,identifier)
@@ -194,6 +238,14 @@ def create_app(settings=None):
     def get_dataset(identifier:UUID):
         return repository.get(m.datasets,identifier)
 
+    @router.get("/datasets/{identifier}/dependencies",response_model=s.DatasetDependenciesOut,tags=["datasets"])
+    def dataset_dependencies(identifier:UUID,comparison_limit:Limit=20,comparison_offset:Offset=0):
+        return DatasetDeletion(engine).dependencies(identifier,comparison_limit,comparison_offset)
+
+    @router.delete("/datasets/{identifier}",response_model=s.DatasetDeletedOut,tags=["datasets"])
+    def delete_dataset(identifier:UUID):
+        return DatasetDeletion(engine).delete(identifier)
+
     @router.post("/datasets/{identifier}/refresh",response_model=s.DatasetOut,tags=["datasets"])
     def refresh_dataset(identifier:UUID):
         dataset=repository.get(m.datasets,identifier)
@@ -211,8 +263,10 @@ def create_app(settings=None):
         conditions=[m.column_profiles.c.dataset_id==identifier]
         if run_id:
             conditions.append(m.column_profiles.c.run_id==run_id)
-        return page(s.ProfileOut,m.column_profiles,limit,offset,*conditions,
+        result=repository.page(m.column_profiles,limit,offset,*conditions,
             order=[m.column_profiles.c.created_at.desc(),m.column_profiles.c.id])
+        result["items"]=[out(s.ProfileOut,{**row,"evaluation":profile_evaluations(row["profile"])}) for row in result["items"]]
+        return result
 
     def validate_comparison(values,require_active=True):
         columns=[]
@@ -255,6 +309,14 @@ def create_app(settings=None):
     def get_comparison(identifier:UUID):
         return repository.get(m.comparison_definitions,identifier)
 
+    @router.get("/comparisons/{identifier}/dependencies",response_model=s.ComparisonDependenciesOut,tags=["comparisons"])
+    def comparison_dependencies(identifier:UUID):
+        return ComparisonDeletion(engine).dependencies(identifier)
+
+    @router.delete("/comparisons/{identifier}",response_model=s.ComparisonDeletedOut,tags=["comparisons"])
+    def delete_comparison(identifier:UUID):
+        return ComparisonDeletion(engine).delete(identifier)
+
     @router.patch("/comparisons/{identifier}",response_model=s.ComparisonOut,tags=["comparisons"])
     def update_comparison(identifier:UUID,payload:s.ComparisonUpdate):
         row=repository.get(m.comparison_definitions,identifier)
@@ -296,7 +358,7 @@ def create_app(settings=None):
             row=conn.execute(select(m.run_results).where(m.run_results.c.run_id==identifier)).mappings().first()
         if row is None:
             raise DomainError(404,"result_not_found","Resultado não encontrado.")
-        return dict(row)
+        return {**row,"evaluation":result_evaluation(row["result"],run["kind"],run["parameters"])}
 
     @router.get("/metrics",response_model=s.Page[s.MetricOut],tags=["metrics"])
     def metrics(dataset_id:UUID,limit:Limit=50,offset:Offset=0,column_name:str | None=None,
@@ -311,7 +373,22 @@ def create_app(settings=None):
             conditions.append(m.metrics.c.column_name==column_name)
         if metric_name is not None:
             conditions.append(m.metrics.c.metric_name==metric_name)
-        return page(s.MetricOut,m.metrics,limit,offset,*conditions,order=[m.metrics.c.measured_at.desc(),m.metrics.c.id])
+        result=repository.page(m.metrics,limit,offset,*conditions,order=[m.metrics.c.measured_at.desc(),m.metrics.c.id])
+        keys={(row["run_id"],row["dataset_id"],row["column_name"]) for row in result["items"] if row["column_name"] is not None}
+        saved={}
+        if keys:
+            with engine.connect() as conn:
+                for row in conn.execute(select(m.column_profiles.c.run_id,m.column_profiles.c.dataset_id,
+                    m.column_profiles.c.column_name,m.column_profiles.c.profile).where(tuple_(m.column_profiles.c.run_id,
+                    m.column_profiles.c.dataset_id,m.column_profiles.c.column_name).in_(keys))).mappings():
+                    saved[(row["run_id"],row["dataset_id"],row["column_name"])]=row["profile"]
+        items=[]
+        for row in result["items"]:
+            profile=saved.get((row["run_id"],row["dataset_id"],row["column_name"]),{})
+            metrics={**profile.get("metrics",{}),row["metric_name"]:row["value"]}
+            items.append(out(s.MetricOut,{**row,"evaluation":metric_evaluation(metrics,row["metric_name"],profile.get("metadata"))}))
+        result["items"]=items
+        return result
 
     from .read_api import register_read_api
     register_read_api(router,engine)

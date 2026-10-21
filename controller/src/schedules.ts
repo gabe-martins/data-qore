@@ -4,6 +4,7 @@ import { z } from "zod";
 import { PublicError, type Auth } from "./auth.js";
 import type { DB } from "./db.js";
 import type { Config } from "./config.js";
+import { lockComparisons } from "./comparison-lock.js";
 
 export const cronSchema = z.object({
   cron_expression: z.string().trim().min(1).max(120),
@@ -83,11 +84,14 @@ export class Schedules {
   async create(input: unknown, actor: string, requestId: string) {
     const v = scheduleSchema.parse(input);
     const [next] = nextDates(v.cron_expression, v.timezone);
-    const comparison = await this.target(v.comparison_id);
-    if (v.is_active && !comparison.is_active)
-      throw new PublicError(409, "comparison_inactive", "Activate the comparison before enabling its schedule.");
-    const row = await this.db.schedule.create({ data: { name: v.name, comparisonId: v.comparison_id,
-      cronExpression: v.cron_expression, timezone: v.timezone, isActive: v.is_active, nextRunAt: next, createdBy: actor } });
+    const row = await this.db.$transaction(async tx => {
+      await lockComparisons(tx, [v.comparison_id]);
+      const comparison = await this.target(v.comparison_id);
+      if (v.is_active && !comparison.is_active)
+        throw new PublicError(409, "comparison_inactive", "Activate the comparison before enabling its schedule.");
+      return tx.schedule.create({ data: { name: v.name, comparisonId: v.comparison_id,
+        cronExpression: v.cron_expression, timezone: v.timezone, isActive: v.is_active, nextRunAt: next, createdBy: actor } });
+    }, { timeout: 60000 });
     await this.auth.audit("schedule:create", "success", actor, requestId, "schedule", row.id);
     return scheduleOut(row);
   }
@@ -98,18 +102,19 @@ export class Schedules {
     const cron = v.cron_expression ?? old.cronExpression, tz = v.timezone ?? old.timezone;
     const [next] = nextDates(cron, tz);
     const target = v.comparison_id ?? old.comparisonId;
-    if (v.is_active === true || target !== old.comparisonId) {
-      const comparison = await this.target(target);
-      if ((v.is_active ?? old.isActive) && !comparison.is_active)
-        throw new PublicError(409, "comparison_inactive", "Activate the comparison before enabling its schedule.");
-    }
     const row = await this.db.$transaction(async tx => {
+      await lockComparisons(tx, [old.comparisonId, target]);
       await tx.$queryRaw`SELECT id FROM app.schedules WHERE id=${id}::uuid FOR UPDATE`;
       const current = await tx.schedule.findUnique({ where: { id } });
       if (!current) throw new PublicError(404, "not_found", "Schedule not found.");
       // Avoid overwriting another editor's full definition after remote validation.
       if (current.updatedAt.getTime() !== old.updatedAt.getTime())
         throw new PublicError(409, "resource_conflict", "Schedule changed. Reload before saving.");
+      if (v.is_active === true || target !== old.comparisonId) {
+        const comparison = await this.target(target);
+        if ((v.is_active ?? old.isActive) && !comparison.is_active)
+          throw new PublicError(409, "comparison_inactive", "Activate the comparison before enabling its schedule.");
+      }
       if (v.is_active === false || v.cron_expression !== undefined || v.timezone !== undefined || v.comparison_id !== undefined) {
         await tx.scheduleDispatch.updateMany({ where: { scheduleId: id, status: "pending", enqueueStarted: false },
           data: { status: "skipped", errorCode: "schedule_changed", finishedAt: new Date() } });
@@ -117,7 +122,7 @@ export class Schedules {
       return tx.schedule.update({ where: { id }, data: { name: v.name, comparisonId: target,
         cronExpression: cron, timezone: tz, isActive: v.is_active, updatedAt: new Date(),
         ...(v.cron_expression !== undefined || v.timezone !== undefined || v.comparison_id !== undefined || v.is_active === true ? { nextRunAt: next } : {}) } });
-    });
+    }, { timeout: 60000 });
     await this.auth.audit("schedule:update", "success", actor, requestId, "schedule", id);
     return scheduleOut(row);
   }

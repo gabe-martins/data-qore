@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Database, Plus, Search } from "lucide-react";
+import { Database, Plus, Search, Trash2 } from "lucide-react";
 import { api, patch, post, type Model, type Page } from "../api";
 import {
   Badge,
@@ -13,15 +13,18 @@ import {
   Pagination,
 } from "../components/common";
 import { Dialog, DialogContent } from "../components/ui/dialog";
+import { DeleteConnectionDialog } from "../components/DeleteConnectionDialog";
 type Connection = Model<"ConnectionOut">;
 export function Connections() {
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
   const [editing, setEditing] = useState<Connection | null | undefined>();
+  const [deleting, setDeleting] = useState<Connection | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [tests, setTests] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const cache = useQueryClient();
+  const newConnectionButton = useRef<HTMLButtonElement>(null);
   const q = useQuery({
     queryKey: ["connections", search, offset],
     queryFn: () =>
@@ -60,7 +63,7 @@ export function Connections() {
             }}
           />
         </div>
-        <Button onClick={() => setEditing(null)}>
+        <Button ref={newConnectionButton} onClick={() => setEditing(null)}>
           <Plus size={18} />
           New connection
         </Button>
@@ -127,6 +130,9 @@ export function Connections() {
                 >
                   {c.is_active ? "Deactivate" : "Activate"}
                 </Button>
+                <Button variant="outline" onClick={() => setDeleting(c)}>
+                  <Trash2 size={16} aria-hidden="true" /> Delete
+                </Button>
               </div>
             </div>
           </Card>
@@ -162,6 +168,18 @@ export function Connections() {
           />
         )}
       </Dialog>
+      {deleting && (
+        <DeleteConnectionDialog
+          connection={deleting}
+          returnFocus={() => newConnectionButton.current}
+          onClose={() => setDeleting(null)}
+          onDeleted={() => {
+            setDeleting(null);
+            setOffset(0);
+            void cache.invalidateQueries({ queryKey: ["connections"] });
+          }}
+        />
+      )}
     </>
   );
 }

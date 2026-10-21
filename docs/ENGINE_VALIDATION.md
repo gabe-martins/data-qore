@@ -1,5 +1,46 @@
 # Validação da API do motor ADQ
 
+## Issue #7 — interpretação de avaliações — 21/10/2026
+
+As respostas de resultados, perfis e métricas incluem informações tipadas de
+disponibilidade: `available`, `partial`, `not_applicable` ou `not_evaluated`,
+com código de motivo e contagens existentes. A interpretação é calculada na
+leitura dos agregados; não altera fórmulas, conclusões, amostragem ou históricos.
+
+- Perfis individuais não apresentam indicadores de correspondência entre fontes.
+- Comparações sem chave apresentam estatísticas descritivas por fonte; chave
+  inválida possui diagnóstico distinto da ausência de alinhamento.
+- Estatísticas seguem os tipos declarados. Zero, `false`, texto em branco,
+  NULL, amostra vazia e captura parcial permanecem distintos.
+- Séries obtêm a explicação do perfil da mesma execução/dataset/coluna em uma
+  consulta em lote. O teste HTTP verifica limite de quatro SELECTs por página,
+  ausência de acessos às fontes e preservação integral do JSON persistido.
+- Evidências históricas insuficientes usam `historical_reason_unavailable`;
+  os históricos v4/v5 não são regravados nem reexecutados.
+
+Regressão do motor/API: **147 testes aprovados**, incluindo 12 testes específicos
+de interpretação e o novo fluxo HTTP em PostgreSQL descartável. Databricks usa
+drivers/fontes simulados nesta validação; isto não homologa um workspace real.
+O fixture completo também terminou com sucesso: **21 testes de navegador e 14
+de controller/agendamentos**, incluindo os dois novos cenários de apresentação,
+teclado, capturas desktop/celular, ambos os temas e zero sem substituição.
+
+Reprodução das verificações específicas:
+
+```bash
+PYTHONPATH=engine:tests engine/.venv/bin/python -m unittest test_evaluation
+PYTHONPATH=engine:tests DATAQORE_PG_BIN=/CAMINHO/POSTGRES/bin \
+  engine/.venv/bin/python -m unittest \
+  test_api.APITests.test_evaluation_is_read_only_and_metric_reasons_are_batched
+```
+
+Os cenários de navegador estão em `web/tests/evaluation.spec.ts` e integram o
+fixture `test_full_stack`, com login normal de teste, bancos temporários,
+fontes SQLite controladas e Databricks simulado. O manual operacional externo
+contém o procedimento de interpretação, na seção 33. Não há nova migration.
+
+## Validação inicial — 17/10/2026
+
 Data: 17/10/2026. Ambiente: Python 3.12, PostgreSQL 16.15, FastAPI 0.143.3,
 SQLAlchemy 2.1.5 e psycopg 3.3.6.
 
