@@ -1,5 +1,54 @@
 @import "tailwindcss";
 @import "./tokens.css";
+.comparison-wait {
+  padding: 24px 8px 32px;
+  text-align: center;
+}
+.comparison-wait > p { max-width: 480px; margin: 8px auto 0; }
+.comparison-wait > .small { margin-top: 16px; }
+.comparison-motion { display: block; width: 100%; max-width: 360px; height: auto; margin: 0 auto 16px; }
+.comparison-motion-source { color: var(--semantic-action-success); stroke: currentColor; }
+.comparison-motion-target { color: var(--semantic-action-info); stroke: currentColor; }
+.comparison-motion-surface { fill: var(--semantic-background-surface); stroke: var(--semantic-border-default); stroke-width: 1.5; }
+.comparison-motion-grid { stroke: var(--semantic-border-default); stroke-width: 1; }
+.comparison-motion-shadow { fill: var(--semantic-background-subtle); }
+.comparison-motion-halo { fill: var(--semantic-status-info-background); }
+.comparison-motion-row { opacity: .65; }
+.comparison-motion-scan { opacity: 0; stroke: none; }
+.comparison-motion-packet { opacity: 0; stroke: none; }
+.comparison-motion-core { transform-origin: 180px 100px; }
+.comparison-wait[data-state="queued"] .comparison-motion-table,
+.comparison-wait[data-state="queued"] .comparison-motion-connections,
+.comparison-wait[data-state="queued"] .comparison-motion-core { animation: comparison-breathe 4s ease-in-out infinite; }
+.comparison-wait[data-state="running"] .comparison-motion-scan { animation: comparison-scan 4s ease-in-out infinite; }
+.comparison-wait[data-state="running"] .comparison-motion-row { animation: comparison-row 4s ease-in-out infinite; }
+.comparison-wait[data-state="running"] .comparison-motion-row-1 { animation-delay: .6s; }
+.comparison-wait[data-state="running"] .comparison-motion-row-2 { animation-delay: 1.2s; }
+.comparison-wait[data-state="running"] .comparison-motion-packet-left { animation: comparison-flow-left 4s ease-in-out infinite; }
+.comparison-wait[data-state="running"] .comparison-motion-packet-right { animation: comparison-flow-right 4s ease-in-out infinite; }
+.comparison-wait[data-state="running"] .comparison-motion-core { animation: comparison-core 4s ease-in-out infinite; }
+@keyframes comparison-breathe { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+@keyframes comparison-scan {
+  0%, 100% { opacity: 0; transform: translateY(0); }
+  15% { opacity: .12; }
+  65% { opacity: .12; transform: translateY(59px); }
+  80% { opacity: 0; transform: translateY(59px); }
+}
+@keyframes comparison-row { 0%, 65%, 100% { opacity: .45; } 25%, 40% { opacity: 1; } }
+@keyframes comparison-flow-left {
+  0%, 25%, 75%, 100% { opacity: 0; transform: translateX(0); }
+  35% { opacity: 1; transform: translateX(0); }
+  65% { opacity: 0; transform: translateX(28px); }
+}
+@keyframes comparison-flow-right {
+  0%, 25%, 75%, 100% { opacity: 0; transform: translateX(0); }
+  35% { opacity: 1; transform: translateX(0); }
+  65% { opacity: 0; transform: translateX(-28px); }
+}
+@keyframes comparison-core { 0%, 45%, 100% { transform: scale(1); } 65% { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) {
+  .comparison-wait .comparison-motion * { animation: none !important; }
+}
 :root {
   font-family: Inter, system-ui, sans-serif;
   color: var(--semantic-text-primary);
