@@ -1604,190 +1604,6 @@
         }
       }
     },
-    "/api/v1/datasets/{identifier}/quality-rules": {
-      "get": {
-        "tags": [
-          "datasets"
-        ],
-        "summary": "Get Quality Rules",
-        "operationId": "get_quality_rules_v1_datasets__identifier__quality_rules_get",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "identifier",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Identifier"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RuleSetOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Not Found"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Conflict"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Unprocessable Entity"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "datasets"
-        ],
-        "summary": "Update Quality Rules",
-        "operationId": "update_quality_rules_v1_datasets__identifier__quality_rules_post",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "identifier",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Identifier"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RuleSetUpdate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RuleSetOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Not Found"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Conflict"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Unprocessable Entity"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        }
-      }
-    },
     "/api/v1/datasets/{identifier}/dependencies": {
       "get": {
         "tags": [
@@ -1930,259 +1746,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DatasetOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Not Found"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Conflict"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Unprocessable Entity"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        }
-      }
-    },
-    "/api/v1/datasets/{identifier}/profile-runs": {
-      "post": {
-        "tags": [
-          "runs"
-        ],
-        "summary": "Profile Run",
-        "operationId": "profile_run_v1_datasets__identifier__profile_runs_post",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "identifier",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Identifier"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 200
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Idempotency-Key"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProfileRequest",
-                "default": {
-                  "sampling_options": {
-                    "pilot_rows": 64,
-                    "min_rows": 64,
-                    "max_rows": 1000,
-                    "max_cells": 100000,
-                    "max_sample_bytes": 16777216,
-                    "proportion_margin": 0.05
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "202": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RunOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Not Found"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Conflict"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Unprocessable Entity"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        }
-      }
-    },
-    "/api/v1/datasets/{identifier}/profiles": {
-      "get": {
-        "tags": [
-          "datasets"
-        ],
-        "summary": "Profiles",
-        "operationId": "profiles_v1_datasets__identifier__profiles_get",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "identifier",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Identifier"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 200,
-              "minimum": 1,
-              "default": 50,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "default": 0,
-              "title": "Offset"
-            }
-          },
-          {
-            "name": "run_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Run Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Page_ProfileOut_"
                 }
               }
             }
@@ -3061,23 +2624,6 @@
             }
           },
           {
-            "name": "dataset_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Dataset Id"
-            }
-          },
-          {
             "name": "status",
             "in": "query",
             "required": false,
@@ -3335,190 +2881,13 @@
         }
       }
     },
-    "/api/v1/metrics": {
-      "get": {
-        "tags": [
-          "metrics"
-        ],
-        "summary": "Metrics",
-        "operationId": "metrics_v1_metrics_get",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "dataset_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Dataset Id"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 200,
-              "minimum": 1,
-              "default": 50,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "default": 0,
-              "title": "Offset"
-            }
-          },
-          {
-            "name": "column_name",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Column Name"
-            }
-          },
-          {
-            "name": "metric_name",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Metric Name"
-            }
-          },
-          {
-            "name": "from_time",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "From Time"
-            }
-          },
-          {
-            "name": "to_time",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "To Time"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Page_MetricOut_"
-                }
-              }
-            }
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Not Found"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Conflict"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Unprocessable Entity"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        }
-      }
-    },
-    "/api/v1/overview/quality-trend": {
+    "/api/v1/overview/row-match-trend": {
       "get": {
         "tags": [
           "overview"
         ],
-        "summary": "Quality Trend",
-        "operationId": "quality_trend_v1_overview_quality_trend_get",
+        "summary": "Row Match Trend",
+        "operationId": "row_match_trend_v1_overview_row_match_trend_get",
         "security": [
           {
             "bearerAuth": []
@@ -3551,20 +2920,6 @@
               "default": "America/Sao_Paulo",
               "title": "Timezone"
             }
-          },
-          {
-            "name": "metric",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "enum": [
-                "sample_quality",
-                "agreement"
-              ],
-              "type": "string",
-              "default": "sample_quality",
-              "title": "Metric"
-            }
           }
         ],
         "responses": {
@@ -3573,7 +2928,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/QualityTrendOut"
+                  "$ref": "#/components/schemas/RowMatchTrendOut"
                 }
               }
             }
@@ -4087,97 +3442,6 @@
           },
           "401": {
             "description": "Unauthorized"
-          }
-        }
-      }
-    },
-    "/api/v1/environment-settings": {
-      "get": {
-        "tags": [
-          "environment"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Environment settings",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EnvironmentSettingsOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "422": {
-            "description": "Invalid percentage"
-          },
-          "503": {
-            "description": "Settings unavailable"
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "environment"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "type": "object",
-                "properties": {
-                  "comparison_target_percentage": {
-                    "type": "string",
-                    "pattern": "^(?:100(?:\\.0{1,4})?|\\d{1,2}(?:\\.\\d{1,4})?)$"
-                  }
-                },
-                "required": [
-                  "comparison_target_percentage"
-                ],
-                "additionalProperties": false
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Environment settings",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EnvironmentSettingsOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "422": {
-            "description": "Invalid percentage"
-          },
-          "503": {
-            "description": "Settings unavailable"
           }
         }
       }
@@ -4709,6 +3973,131 @@
         ],
         "title": "AttentionOut"
       },
+      "ColumnMatchRate": {
+        "properties": {
+          "numerator": {
+            "type": "integer",
+            "title": "Numerator"
+          },
+          "denominator": {
+            "type": "integer",
+            "title": "Denominator"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "not_evaluated": {
+            "type": "integer",
+            "title": "Not Evaluated"
+          },
+          "percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentage"
+          },
+          "coverage_percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Percentage"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "partial",
+              "not_evaluated"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "left_column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Column"
+          },
+          "right_column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Right Column"
+          },
+          "different_values": {
+            "type": "integer",
+            "title": "Different Values"
+          },
+          "unknown_values": {
+            "type": "integer",
+            "title": "Unknown Values"
+          },
+          "formula": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Formula"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "numerator",
+          "denominator",
+          "total",
+          "not_evaluated",
+          "percentage",
+          "coverage_percentage",
+          "scope",
+          "status",
+          "reason",
+          "left_column",
+          "right_column",
+          "different_values",
+          "unknown_values"
+        ],
+        "title": "ColumnMatchRate"
+      },
       "ColumnPair": {
         "properties": {
           "left": {
@@ -4736,22 +4125,6 @@
       },
       "ComparisonCreate": {
         "properties": {
-          "sampling_options": {
-            "$ref": "#/components/schemas/Sampling"
-          },
-          "sample_size": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 10000,
-                "minimum": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sample Size"
-          },
           "name": {
             "type": "string",
             "maxLength": 255,
@@ -4769,15 +4142,8 @@
             "format": "uuid",
             "title": "Right Dataset Id"
           },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "auto",
-              "matched_keys",
-              "independent_random"
-            ],
-            "title": "Mode",
-            "default": "auto"
+          "sampling_options": {
+            "$ref": "#/components/schemas/Sampling-Input"
           },
           "absolute_tolerance": {
             "anyOf": [
@@ -4891,28 +4257,6 @@
         ],
         "title": "ComparisonDependenciesOut"
       },
-      "ComparisonEvaluationOut": {
-        "properties": {
-          "column": {
-            "type": "string",
-            "title": "Column"
-          },
-          "metrics": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/EvaluationOut"
-            },
-            "type": "object",
-            "title": "Metrics"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "column",
-          "metrics"
-        ],
-        "title": "ComparisonEvaluationOut"
-      },
       "ComparisonHistoryCounts": {
         "properties": {
           "runs": {
@@ -4922,23 +4266,13 @@
           "results": {
             "type": "integer",
             "title": "Results"
-          },
-          "column_profiles": {
-            "type": "integer",
-            "title": "Column Profiles"
-          },
-          "metrics": {
-            "type": "integer",
-            "title": "Metrics"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "runs",
-          "results",
-          "column_profiles",
-          "metrics"
+          "results"
         ],
         "title": "ComparisonHistoryCounts"
       },
@@ -4977,22 +4311,6 @@
       },
       "ComparisonOut": {
         "properties": {
-          "sampling_options": {
-            "$ref": "#/components/schemas/Sampling"
-          },
-          "sample_size": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 10000,
-                "minimum": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sample Size"
-          },
           "name": {
             "type": "string",
             "maxLength": 255,
@@ -5010,15 +4328,8 @@
             "format": "uuid",
             "title": "Right Dataset Id"
           },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "auto",
-              "matched_keys",
-              "independent_random"
-            ],
-            "title": "Mode",
-            "default": "auto"
+          "sampling_options": {
+            "$ref": "#/components/schemas/Sampling-Output"
           },
           "absolute_tolerance": {
             "type": "string",
@@ -5068,6 +4379,27 @@
       },
       "ComparisonPreviewOut": {
         "properties": {
+          "scope_counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Scope Counts"
+          },
+          "sample_target": {
+            "type": "integer",
+            "title": "Sample Target"
+          },
+          "suggested_business_key": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Suggested Business Key"
+          },
           "mapping": {
             "items": {
               "additionalProperties": {
@@ -5111,6 +4443,9 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "scope_counts",
+          "sample_target",
+          "suggested_business_key",
           "mapping",
           "unmatched_columns",
           "business_key",
@@ -5119,7 +4454,124 @@
         ],
         "title": "ComparisonPreviewOut"
       },
-      "ComparisonQualitySeries": {
+      "ComparisonResult": {
+        "properties": {
+          "format_version": {
+            "type": "integer",
+            "const": 6,
+            "title": "Format Version"
+          },
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version"
+          },
+          "execution_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Execution Id"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "finished_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Finished At"
+          },
+          "sources": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "resolved_scope": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Resolved Scope"
+          },
+          "column_mapping": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Column Mapping"
+          },
+          "unmatched_columns": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Unmatched Columns"
+          },
+          "key_validation": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Key Validation"
+          },
+          "sampling_plan": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Sampling Plan"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/CriticalMetrics"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Summary"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "query_log": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Query Log"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "format_version",
+          "engine_version",
+          "execution_id",
+          "started_at",
+          "finished_at",
+          "sources",
+          "resolved_scope",
+          "column_mapping",
+          "unmatched_columns",
+          "key_validation",
+          "sampling_plan",
+          "metrics",
+          "summary",
+          "warnings",
+          "query_log"
+        ],
+        "title": "ComparisonResult"
+      },
+      "ComparisonRowMatchSeries": {
         "properties": {
           "comparison_id": {
             "type": "string",
@@ -5132,7 +4584,7 @@
           },
           "points": {
             "items": {
-              "$ref": "#/components/schemas/DailyQualityPoint"
+              "$ref": "#/components/schemas/DailyRowMatchPoint"
             },
             "type": "array",
             "title": "Points"
@@ -5145,26 +4597,10 @@
           "name",
           "points"
         ],
-        "title": "ComparisonQualitySeries"
+        "title": "ComparisonRowMatchSeries"
       },
       "ComparisonSummaryOut": {
         "properties": {
-          "sampling_options": {
-            "$ref": "#/components/schemas/Sampling"
-          },
-          "sample_size": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 10000,
-                "minimum": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sample Size"
-          },
           "name": {
             "type": "string",
             "maxLength": 255,
@@ -5182,15 +4618,8 @@
             "format": "uuid",
             "title": "Right Dataset Id"
           },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "auto",
-              "matched_keys",
-              "independent_random"
-            ],
-            "title": "Mode",
-            "default": "auto"
+          "sampling_options": {
+            "$ref": "#/components/schemas/Sampling-Output"
           },
           "absolute_tolerance": {
             "type": "string",
@@ -5300,44 +4729,15 @@
             ],
             "title": "Right Dataset Id"
           },
-          "mode": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "auto",
-                  "matched_keys",
-                  "independent_random"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Mode"
-          },
           "sampling_options": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Sampling"
+                "$ref": "#/components/schemas/Sampling-Input"
               },
               {
                 "type": "null"
               }
             ]
-          },
-          "sample_size": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 10000,
-                "minimum": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sample Size"
           },
           "absolute_tolerance": {
             "anyOf": [
@@ -5817,7 +5217,44 @@
         ],
         "title": "Credentials"
       },
-      "DailyQualityPoint": {
+      "CriticalMetrics": {
+        "properties": {
+          "row_count_match": {
+            "$ref": "#/components/schemas/RowCountMatch"
+          },
+          "key_coverage": {
+            "$ref": "#/components/schemas/KeyCoverage"
+          },
+          "duplicate_key_rate": {
+            "items": {
+              "$ref": "#/components/schemas/DuplicateKeyRate"
+            },
+            "type": "array",
+            "title": "Duplicate Key Rate"
+          },
+          "row_match_rate": {
+            "$ref": "#/components/schemas/RowMatchRate"
+          },
+          "column_match_rate": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnMatchRate"
+            },
+            "type": "array",
+            "title": "Column Match Rate"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "row_count_match",
+          "key_coverage",
+          "duplicate_key_rate",
+          "row_match_rate",
+          "column_match_rate"
+        ],
+        "title": "CriticalMetrics"
+      },
+      "DailyRowMatchPoint": {
         "properties": {
           "passed": {
             "type": "integer",
@@ -5921,7 +5358,7 @@
           "status",
           "finished_at"
         ],
-        "title": "DailyQualityPoint"
+        "title": "DailyRowMatchPoint"
       },
       "DatabricksCredentials": {
         "properties": {
@@ -6144,20 +5581,10 @@
           "comparisons": {
             "$ref": "#/components/schemas/Page_DatasetComparisonReference_"
           },
-          "profile_history": {
-            "$ref": "#/components/schemas/ProfileHistoryCounts"
-          },
-          "active_profile_runs": {
-            "type": "integer",
-            "title": "Active Profile Runs"
-          },
           "block_reasons": {
             "items": {
               "type": "string",
-              "enum": [
-                "dataset_in_use",
-                "dataset_busy"
-              ]
+              "const": "dataset_in_use"
             },
             "type": "array",
             "title": "Block Reasons"
@@ -6172,8 +5599,6 @@
         "required": [
           "dataset",
           "comparisons",
-          "profile_history",
-          "active_profile_runs",
           "block_reasons",
           "can_delete"
         ],
@@ -6203,9 +5628,6 @@
             "minLength": 1,
             "title": "Table Name"
           },
-          "quality_rules": {
-            "$ref": "#/components/schemas/RuleConfiguration"
-          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -6233,61 +5655,127 @@
         ],
         "title": "DatasetOut"
       },
-      "DomainRule": {
+      "DuplicateKeyRate": {
         "properties": {
-          "null_policy": {
-            "type": "string",
-            "enum": [
-              "fail",
-              "skip"
-            ],
-            "title": "Null Policy",
-            "default": "fail"
+          "numerator": {
+            "type": "integer",
+            "title": "Numerator"
           },
-          "kind": {
-            "type": "string",
-            "const": "domain",
-            "title": "Kind"
+          "denominator": {
+            "type": "integer",
+            "title": "Denominator"
           },
-          "values": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "boolean"
-                }
-              ]
-            },
-            "type": "array",
-            "maxItems": 200,
-            "minItems": 1,
-            "title": "Values"
+          "total": {
+            "type": "integer",
+            "title": "Total"
           },
-          "timezone": {
+          "not_evaluated": {
+            "type": "integer",
+            "title": "Not Evaluated"
+          },
+          "percentage": {
             "anyOf": [
               {
-                "type": "string",
-                "maxLength": 100
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Timezone"
+            "title": "Percentage"
+          },
+          "coverage_percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Percentage"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "partial",
+              "not_evaluated"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "source": {
+            "type": "integer",
+            "title": "Source"
+          },
+          "duplicate_groups": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplicate Groups"
+          },
+          "null_key_rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Null Key Rows"
+          },
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "formula": {
+            "type": "string",
+            "title": "Formula"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "kind",
-          "values"
+          "numerator",
+          "denominator",
+          "total",
+          "not_evaluated",
+          "percentage",
+          "coverage_percentage",
+          "scope",
+          "status",
+          "reason",
+          "source",
+          "duplicate_groups",
+          "null_key_rows",
+          "columns",
+          "formula"
         ],
-        "title": "DomainRule"
+        "title": "DuplicateKeyRate"
       },
       "ErrorOut": {
         "properties": {
@@ -6319,64 +5807,6 @@
           "message"
         ],
         "title": "ErrorOut"
-      },
-      "EvaluationOut": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "available",
-              "partial",
-              "not_applicable",
-              "not_evaluated"
-            ],
-            "title": "Status"
-          },
-          "reason": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "metric_not_applicable_to_type",
-                  "empty_sample",
-                  "all_values_null",
-                  "capture_unavailable",
-                  "unsupported_type_or_values",
-                  "non_finite_values",
-                  "calculation_unavailable",
-                  "historical_reason_unavailable",
-                  "incomplete_evaluation",
-                  "no_applicable_checks",
-                  "single_source_profile",
-                  "invalid_key",
-                  "no_aligned_records",
-                  "independent_sampling",
-                  "no_safe_key_alignment",
-                  "column_missing",
-                  "incompatible_type_families",
-                  "unavailable_or_invalid_values"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reason"
-          },
-          "counts": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "type": "object",
-            "title": "Counts"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "status"
-        ],
-        "title": "EvaluationOut"
       },
       "IndicatorOut": {
         "properties": {
@@ -6426,6 +5856,53 @@
         ],
         "title": "IndicatorOut"
       },
+      "KeyCoverage": {
+        "properties": {
+          "reference_to_target": {
+            "$ref": "#/components/schemas/MetricRate"
+          },
+          "target_to_reference": {
+            "$ref": "#/components/schemas/MetricRate"
+          },
+          "selected_keys": {
+            "type": "integer",
+            "title": "Selected Keys"
+          },
+          "common_keys": {
+            "type": "integer",
+            "title": "Common Keys"
+          },
+          "missing_in_reference": {
+            "type": "integer",
+            "title": "Missing In Reference"
+          },
+          "missing_in_target": {
+            "type": "integer",
+            "title": "Missing In Target"
+          },
+          "unavailable_in_both": {
+            "type": "integer",
+            "title": "Unavailable In Both"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reference_to_target",
+          "target_to_reference",
+          "selected_keys",
+          "common_keys",
+          "missing_in_reference",
+          "missing_in_target",
+          "unavailable_in_both",
+          "scope"
+        ],
+        "title": "KeyCoverage"
+      },
       "LatestResultOut": {
         "properties": {
           "run_id": {
@@ -6442,7 +5919,7 @@
             "format": "date-time",
             "title": "Finished At"
           },
-          "agreement": {
+          "row_match_rate": {
             "anyOf": [
               {
                 "additionalProperties": true,
@@ -6452,19 +5929,7 @@
                 "type": "null"
               }
             ],
-            "title": "Agreement"
-          },
-          "quality": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Quality"
+            "title": "Row Match Rate"
           }
         },
         "additionalProperties": false,
@@ -6473,8 +5938,7 @@
           "run_id",
           "conclusion",
           "finished_at",
-          "agreement",
-          "quality"
+          "row_match_rate"
         ],
         "title": "LatestResultOut"
       },
@@ -6529,11 +5993,23 @@
         ],
         "title": "LatestRunOut"
       },
-      "LinearTrendPoint": {
+      "MetricRate": {
         "properties": {
-          "day": {
-            "type": "string",
-            "title": "Day"
+          "numerator": {
+            "type": "integer",
+            "title": "Numerator"
+          },
+          "denominator": {
+            "type": "integer",
+            "title": "Denominator"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "not_evaluated": {
+            "type": "integer",
+            "title": "Not Evaluated"
           },
           "percentage": {
             "anyOf": [
@@ -6545,39 +6021,8 @@
               }
             ],
             "title": "Percentage"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "day",
-          "percentage"
-        ],
-        "title": "LinearTrendPoint"
-      },
-      "MetricOut": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
           },
-          "measured_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Measured At"
-          },
-          "run_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Run Id"
-          },
-          "dataset_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Dataset Id"
-          },
-          "column_name": {
+          "coverage_percentage": {
             "anyOf": [
               {
                 "type": "string"
@@ -6586,13 +6031,22 @@
                 "type": "null"
               }
             ],
-            "title": "Column Name"
+            "title": "Coverage Percentage"
           },
-          "metric_name": {
+          "scope": {
             "type": "string",
-            "title": "Metric Name"
+            "title": "Scope"
           },
-          "value": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "partial",
+              "not_evaluated"
+            ],
+            "title": "Status"
+          },
+          "reason": {
             "anyOf": [
               {
                 "type": "string"
@@ -6601,55 +6055,23 @@
                 "type": "null"
               }
             ],
-            "title": "Value"
-          },
-          "evaluated_count": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Evaluated Count"
-          },
-          "applicable_count": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Applicable Count"
-          },
-          "evaluation": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/EvaluationOut"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "title": "Reason"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "id",
-          "measured_at",
-          "run_id",
-          "dataset_id",
-          "column_name",
-          "metric_name",
-          "value",
-          "evaluated_count",
-          "applicable_count"
+          "numerator",
+          "denominator",
+          "total",
+          "not_evaluated",
+          "percentage",
+          "coverage_percentage",
+          "scope",
+          "status",
+          "reason"
         ],
-        "title": "MetricOut"
+        "title": "MetricRate"
       },
       "OverviewOut": {
         "properties": {
@@ -6657,10 +6079,7 @@
             "type": "integer",
             "title": "Active Comparisons"
           },
-          "sample_quality": {
-            "$ref": "#/components/schemas/IndicatorOut"
-          },
-          "comparison_agreement": {
+          "row_match_rate": {
             "$ref": "#/components/schemas/IndicatorOut"
           },
           "evaluated_comparisons": {
@@ -6716,8 +6135,7 @@
         "type": "object",
         "required": [
           "active_comparisons",
-          "sample_quality",
-          "comparison_agreement",
+          "row_match_rate",
           "evaluated_comparisons",
           "latest_conclusions",
           "run_counts",
@@ -6953,70 +6371,6 @@
         ],
         "title": "Page[DatasetOut]"
       },
-      "Page_MetricOut_": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/MetricOut"
-            },
-            "type": "array",
-            "title": "Items"
-          },
-          "total": {
-            "type": "integer",
-            "title": "Total"
-          },
-          "limit": {
-            "type": "integer",
-            "title": "Limit"
-          },
-          "offset": {
-            "type": "integer",
-            "title": "Offset"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "items",
-          "total",
-          "limit",
-          "offset"
-        ],
-        "title": "Page[MetricOut]"
-      },
-      "Page_ProfileOut_": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/ProfileOut"
-            },
-            "type": "array",
-            "title": "Items"
-          },
-          "total": {
-            "type": "integer",
-            "title": "Total"
-          },
-          "limit": {
-            "type": "integer",
-            "title": "Limit"
-          },
-          "offset": {
-            "type": "integer",
-            "title": "Offset"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "items",
-          "total",
-          "limit",
-          "offset"
-        ],
-        "title": "Page[ProfileOut]"
-      },
       "Page_RunOut_": {
         "properties": {
           "items": {
@@ -7164,11 +6518,21 @@
             ],
             "title": "End"
           },
-          "days": {
+          "unit": {
+            "type": "string",
+            "enum": [
+              "hours",
+              "days",
+              "months"
+            ],
+            "title": "Unit",
+            "default": "days"
+          },
+          "quantity": {
             "type": "integer",
-            "maximum": 3660,
+            "maximum": 100000,
             "minimum": 1,
-            "title": "Days",
+            "title": "Quantity",
             "default": 1
           },
           "safety_delay_minutes": {
@@ -7210,257 +6574,6 @@
         ],
         "title": "Period"
       },
-      "ProfileHistoryCounts": {
-        "properties": {
-          "runs": {
-            "type": "integer",
-            "title": "Runs"
-          },
-          "results": {
-            "type": "integer",
-            "title": "Results"
-          },
-          "column_profiles": {
-            "type": "integer",
-            "title": "Column Profiles"
-          },
-          "metrics": {
-            "type": "integer",
-            "title": "Metrics"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "runs",
-          "results",
-          "column_profiles",
-          "metrics"
-        ],
-        "title": "ProfileHistoryCounts"
-      },
-      "ProfileOut": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "run_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Run Id"
-          },
-          "dataset_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Dataset Id"
-          },
-          "column_name": {
-            "type": "string",
-            "title": "Column Name"
-          },
-          "profile": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Profile"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "evaluation": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/EvaluationOut"
-            },
-            "type": "object",
-            "title": "Evaluation"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "id",
-          "run_id",
-          "dataset_id",
-          "column_name",
-          "profile",
-          "created_at"
-        ],
-        "title": "ProfileOut"
-      },
-      "ProfileRequest": {
-        "properties": {
-          "sampling_options": {
-            "$ref": "#/components/schemas/Sampling"
-          },
-          "sample_size": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 10000,
-                "minimum": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sample Size"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "ProfileRequest"
-      },
-      "QualityTrendOut": {
-        "properties": {
-          "days": {
-            "type": "integer",
-            "enum": [
-              7,
-              15,
-              30
-            ],
-            "title": "Days"
-          },
-          "timezone": {
-            "type": "string",
-            "title": "Timezone"
-          },
-          "start_day": {
-            "type": "string",
-            "title": "Start Day"
-          },
-          "end_day": {
-            "type": "string",
-            "title": "End Day"
-          },
-          "as_of": {
-            "type": "string",
-            "format": "date-time",
-            "title": "As Of"
-          },
-          "series": {
-            "items": {
-              "$ref": "#/components/schemas/ComparisonQualitySeries"
-            },
-            "type": "array",
-            "title": "Series"
-          },
-          "metric": {
-            "type": "string",
-            "enum": [
-              "sample_quality",
-              "agreement"
-            ],
-            "title": "Metric",
-            "default": "sample_quality"
-          },
-          "overall": {
-            "items": {
-              "$ref": "#/components/schemas/TrendOut"
-            },
-            "type": "array",
-            "title": "Overall",
-            "default": []
-          },
-          "linear_trend": {
-            "items": {
-              "$ref": "#/components/schemas/LinearTrendPoint"
-            },
-            "type": "array",
-            "title": "Linear Trend",
-            "default": []
-          },
-          "regression_observations": {
-            "type": "integer",
-            "title": "Regression Observations",
-            "default": 0
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "days",
-          "timezone",
-          "start_day",
-          "end_day",
-          "as_of",
-          "series"
-        ],
-        "title": "QualityTrendOut"
-      },
-      "RangeRule": {
-        "properties": {
-          "null_policy": {
-            "type": "string",
-            "enum": [
-              "fail",
-              "skip"
-            ],
-            "title": "Null Policy",
-            "default": "fail"
-          },
-          "kind": {
-            "type": "string",
-            "const": "range",
-            "title": "Kind"
-          },
-          "minimum": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 1024
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Minimum"
-          },
-          "maximum": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 1024
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Maximum"
-          },
-          "include_minimum": {
-            "type": "boolean",
-            "title": "Include Minimum",
-            "default": true
-          },
-          "include_maximum": {
-            "type": "boolean",
-            "title": "Include Maximum",
-            "default": true
-          },
-          "timezone": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 100
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Timezone"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "kind"
-        ],
-        "title": "RangeRule"
-      },
       "RecentRunOut": {
         "properties": {
           "id": {
@@ -7487,18 +6600,6 @@
               }
             ],
             "title": "Comparison Id"
-          },
-          "dataset_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dataset Id"
           },
           "requested_at": {
             "type": "string",
@@ -7562,7 +6663,7 @@
             ],
             "title": "Conclusion"
           },
-          "agreement": {
+          "row_match_rate": {
             "anyOf": [
               {
                 "additionalProperties": true,
@@ -7572,7 +6673,7 @@
                 "type": "null"
               }
             ],
-            "title": "Agreement"
+            "title": "Row Match Rate"
           }
         },
         "additionalProperties": false,
@@ -7582,86 +6683,15 @@
           "kind",
           "status",
           "comparison_id",
-          "dataset_id",
           "requested_at",
           "started_at",
           "finished_at",
           "error_code",
           "name",
           "conclusion",
-          "agreement"
+          "row_match_rate"
         ],
         "title": "RecentRunOut"
-      },
-      "RequiredRule": {
-        "properties": {
-          "kind": {
-            "type": "string",
-            "const": "required",
-            "title": "Kind"
-          },
-          "reject_blank": {
-            "type": "boolean",
-            "title": "Reject Blank",
-            "default": true
-          },
-          "whitespace_blank": {
-            "type": "boolean",
-            "title": "Whitespace Blank",
-            "default": false
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "kind"
-        ],
-        "title": "RequiredRule"
-      },
-      "ResultEvaluationOut": {
-        "properties": {
-          "analysis_kind": {
-            "type": "string",
-            "enum": [
-              "profile",
-              "aligned",
-              "independent",
-              "invalid_key",
-              "unknown"
-            ],
-            "title": "Analysis Kind"
-          },
-          "agreement": {
-            "$ref": "#/components/schemas/EvaluationOut"
-          },
-          "quality": {
-            "$ref": "#/components/schemas/EvaluationOut"
-          },
-          "sources": {
-            "items": {
-              "$ref": "#/components/schemas/SourceEvaluationOut"
-            },
-            "type": "array",
-            "title": "Sources"
-          },
-          "comparisons": {
-            "items": {
-              "$ref": "#/components/schemas/ComparisonEvaluationOut"
-            },
-            "type": "array",
-            "title": "Comparisons"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "analysis_kind",
-          "agreement",
-          "quality",
-          "sources",
-          "comparisons"
-        ],
-        "title": "ResultEvaluationOut"
       },
       "ResultOut": {
         "properties": {
@@ -7679,30 +6709,17 @@
             "enum": [
               "compatible_in_sample",
               "difference_observed",
-              "profile_only",
               "inconclusive"
             ],
             "title": "Conclusion"
           },
           "result": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Result"
+            "$ref": "#/components/schemas/ComparisonResult"
           },
           "created_at": {
             "type": "string",
             "format": "date-time",
             "title": "Created At"
-          },
-          "evaluation": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ResultEvaluationOut"
-              },
-              {
-                "type": "null"
-              }
-            ]
           }
         },
         "additionalProperties": false,
@@ -7716,212 +6733,224 @@
         ],
         "title": "ResultOut"
       },
-      "RuleConfiguration": {
+      "RowCountMatch": {
         "properties": {
-          "revision": {
+          "reference_count": {
             "type": "integer",
-            "title": "Revision",
-            "default": 0
+            "title": "Reference Count"
           },
-          "rules": {
-            "items": {
-              "$ref": "#/components/schemas/RuleOut"
-            },
-            "type": "array",
-            "title": "Rules"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "RuleConfiguration"
-      },
-      "RuleInput": {
-        "properties": {
-          "id": {
+          "target_count": {
+            "type": "integer",
+            "title": "Target Count"
+          },
+          "equal": {
+            "type": "boolean",
+            "title": "Equal"
+          },
+          "signed_difference": {
+            "type": "integer",
+            "title": "Signed Difference"
+          },
+          "absolute_difference": {
+            "type": "integer",
+            "title": "Absolute Difference"
+          },
+          "percentage_difference": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "uuid"
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Id"
+            "title": "Percentage Difference"
           },
-          "name": {
-            "type": "string",
-            "maxLength": 128,
-            "minLength": 1,
-            "pattern": "\\S",
-            "title": "Name"
-          },
-          "column": {
-            "type": "string",
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Column"
-          },
-          "is_active": {
-            "type": "boolean",
-            "title": "Is Active",
-            "default": true
-          },
-          "definition": {
-            "oneOf": [
+          "reason": {
+            "anyOf": [
               {
-                "$ref": "#/components/schemas/RequiredRule"
+                "type": "string"
               },
               {
-                "$ref": "#/components/schemas/DomainRule"
-              },
-              {
-                "$ref": "#/components/schemas/RangeRule"
-              },
-              {
-                "$ref": "#/components/schemas/TemporalOrderRule"
+                "type": "null"
               }
             ],
-            "title": "Definition",
-            "discriminator": {
-              "propertyName": "kind",
-              "mapping": {
-                "domain": "#/components/schemas/DomainRule",
-                "range": "#/components/schemas/RangeRule",
-                "required": "#/components/schemas/RequiredRule",
-                "temporal_order": "#/components/schemas/TemporalOrderRule"
-              }
-            }
+            "title": "Reason"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "name",
-          "column",
-          "definition"
+          "reference_count",
+          "target_count",
+          "equal",
+          "signed_difference",
+          "absolute_difference",
+          "percentage_difference",
+          "reason",
+          "scope"
         ],
-        "title": "RuleInput"
+        "title": "RowCountMatch"
       },
-      "RuleOut": {
+      "RowMatchRate": {
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
+          "numerator": {
+            "type": "integer",
+            "title": "Numerator"
           },
-          "name": {
-            "type": "string",
-            "maxLength": 128,
-            "minLength": 1,
-            "pattern": "\\S",
-            "title": "Name"
+          "denominator": {
+            "type": "integer",
+            "title": "Denominator"
           },
-          "column": {
-            "type": "string",
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Column"
+          "total": {
+            "type": "integer",
+            "title": "Total"
           },
-          "is_active": {
-            "type": "boolean",
-            "title": "Is Active",
-            "default": true
+          "not_evaluated": {
+            "type": "integer",
+            "title": "Not Evaluated"
           },
-          "definition": {
-            "oneOf": [
+          "percentage": {
+            "anyOf": [
               {
-                "$ref": "#/components/schemas/RequiredRule"
+                "type": "string"
               },
               {
-                "$ref": "#/components/schemas/DomainRule"
-              },
-              {
-                "$ref": "#/components/schemas/RangeRule"
-              },
-              {
-                "$ref": "#/components/schemas/TemporalOrderRule"
+                "type": "null"
               }
             ],
-            "title": "Definition",
-            "discriminator": {
-              "propertyName": "kind",
-              "mapping": {
-                "domain": "#/components/schemas/DomainRule",
-                "range": "#/components/schemas/RangeRule",
-                "required": "#/components/schemas/RequiredRule",
-                "temporal_order": "#/components/schemas/TemporalOrderRule"
+            "title": "Percentage"
+          },
+          "coverage_percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
               }
-            }
+            ],
+            "title": "Coverage Percentage"
           },
-          "version": {
-            "type": "integer",
-            "minimum": 1,
-            "title": "Version"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "column",
-          "definition",
-          "version"
-        ],
-        "title": "RuleOut"
-      },
-      "RuleSetOut": {
-        "properties": {
-          "dataset_id": {
+          "scope": {
             "type": "string",
-            "format": "uuid",
-            "title": "Dataset Id"
+            "title": "Scope"
           },
-          "revision": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "partial",
+              "not_evaluated"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "different_rows": {
             "type": "integer",
-            "title": "Revision"
+            "title": "Different Rows"
           },
-          "rules": {
-            "items": {
-              "$ref": "#/components/schemas/RuleOut"
-            },
-            "type": "array",
-            "title": "Rules"
+          "unknown_rows": {
+            "type": "integer",
+            "title": "Unknown Rows"
+          },
+          "missing_rows": {
+            "type": "integer",
+            "title": "Missing Rows"
+          },
+          "formula": {
+            "type": "string",
+            "title": "Formula"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "dataset_id",
-          "revision",
-          "rules"
+          "numerator",
+          "denominator",
+          "total",
+          "not_evaluated",
+          "percentage",
+          "coverage_percentage",
+          "scope",
+          "status",
+          "reason",
+          "different_rows",
+          "unknown_rows",
+          "missing_rows",
+          "formula"
         ],
-        "title": "RuleSetOut"
+        "title": "RowMatchRate"
       },
-      "RuleSetUpdate": {
+      "RowMatchTrendOut": {
         "properties": {
-          "expected_revision": {
+          "days": {
             "type": "integer",
-            "minimum": 0,
-            "title": "Expected Revision"
+            "enum": [
+              7,
+              15,
+              30
+            ],
+            "title": "Days"
           },
-          "rules": {
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          },
+          "start_day": {
+            "type": "string",
+            "title": "Start Day"
+          },
+          "end_day": {
+            "type": "string",
+            "title": "End Day"
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          },
+          "series": {
             "items": {
-              "$ref": "#/components/schemas/RuleInput"
+              "$ref": "#/components/schemas/ComparisonRowMatchSeries"
             },
             "type": "array",
-            "maxItems": 100,
-            "title": "Rules"
+            "title": "Series"
+          },
+          "overall": {
+            "items": {
+              "$ref": "#/components/schemas/TrendOut"
+            },
+            "type": "array",
+            "title": "Overall",
+            "default": []
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "expected_revision",
-          "rules"
+          "days",
+          "timezone",
+          "start_day",
+          "end_day",
+          "as_of",
+          "series"
         ],
-        "title": "RuleSetUpdate"
+        "title": "RowMatchTrendOut"
       },
       "RunOut": {
         "properties": {
@@ -7932,10 +6961,7 @@
           },
           "kind": {
             "type": "string",
-            "enum": [
-              "comparison",
-              "profile"
-            ],
+            "const": "comparison",
             "title": "Kind"
           },
           "comparison_id": {
@@ -7949,18 +6975,6 @@
               }
             ],
             "title": "Comparison Id"
-          },
-          "dataset_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dataset Id"
           },
           "status": {
             "type": "string",
@@ -8047,7 +7061,6 @@
           "id",
           "kind",
           "comparison_id",
-          "dataset_id",
           "status",
           "parameters",
           "requested_at",
@@ -8059,28 +7072,51 @@
         ],
         "title": "RunOut"
       },
-      "Sampling": {
+      "Sampling-Input": {
         "properties": {
-          "pilot_rows": {
-            "type": "integer",
-            "maximum": 10000,
-            "minimum": 1,
-            "title": "Pilot Rows",
-            "default": 64
+          "method": {
+            "type": "string",
+            "enum": [
+              "rows",
+              "percentage"
+            ],
+            "title": "Method",
+            "default": "rows"
           },
-          "min_rows": {
+          "rows": {
             "type": "integer",
             "maximum": 10000,
             "minimum": 1,
-            "title": "Min Rows",
-            "default": 64
-          },
-          "max_rows": {
-            "type": "integer",
-            "maximum": 10000,
-            "minimum": 1,
-            "title": "Max Rows",
+            "title": "Rows",
             "default": 1000
+          },
+          "percentage": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100,
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentage"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{1,20}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
           },
           "max_cells": {
             "type": "integer",
@@ -8093,26 +7129,64 @@
             "minimum": 1,
             "title": "Max Sample Bytes",
             "default": 16777216
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Sampling"
+      },
+      "Sampling-Output": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": [
+              "rows",
+              "percentage"
+            ],
+            "title": "Method",
+            "default": "rows"
           },
-          "proportion_margin": {
-            "type": "number",
-            "exclusiveMaximum": 1,
-            "exclusiveMinimum": 0,
-            "title": "Proportion Margin",
-            "default": 0.05
+          "rows": {
+            "type": "integer",
+            "maximum": 10000,
+            "minimum": 1,
+            "title": "Rows",
+            "default": 1000
+          },
+          "percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentage"
           },
           "seed": {
             "anyOf": [
               {
-                "type": "integer",
-                "maximum": 18446744073709552000,
-                "minimum": 0
+                "type": "string",
+                "pattern": "^[0-9]{1,20}$"
               },
               {
                 "type": "null"
               }
             ],
             "title": "Seed"
+          },
+          "max_cells": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Max Cells",
+            "default": 100000
+          },
+          "max_sample_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Max Sample Bytes",
+            "default": 16777216
           }
         },
         "additionalProperties": false,
@@ -8217,26 +7291,6 @@
         ],
         "title": "ScopeFilter"
       },
-      "SourceEvaluationOut": {
-        "properties": {
-          "columns": {
-            "additionalProperties": {
-              "additionalProperties": {
-                "$ref": "#/components/schemas/EvaluationOut"
-              },
-              "type": "object"
-            },
-            "type": "object",
-            "title": "Columns"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "columns"
-        ],
-        "title": "SourceEvaluationOut"
-      },
       "TableOut": {
         "properties": {
           "catalog_name": {
@@ -8265,60 +7319,6 @@
           "table_name"
         ],
         "title": "TableOut"
-      },
-      "TemporalOrderRule": {
-        "properties": {
-          "null_policy": {
-            "type": "string",
-            "enum": [
-              "fail",
-              "skip"
-            ],
-            "title": "Null Policy",
-            "default": "fail"
-          },
-          "kind": {
-            "type": "string",
-            "const": "temporal_order",
-            "title": "Kind"
-          },
-          "other_column": {
-            "type": "string",
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Other Column"
-          },
-          "operator": {
-            "type": "string",
-            "enum": [
-              "lt",
-              "lte",
-              "gt",
-              "gte"
-            ],
-            "title": "Operator",
-            "default": "lte"
-          },
-          "timezone": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 100
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Timezone"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "kind",
-          "other_column"
-        ],
-        "title": "TemporalOrderRule"
       },
       "TestOut": {
         "properties": {
@@ -8536,25 +7536,6 @@
           "schedules"
         ],
         "title": "ComparisonDependenciesOut"
-      },
-      "EnvironmentSettingsOut": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "type": "object",
-        "properties": {
-          "comparison_target_percentage": {
-            "type": "string"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-          }
-        },
-        "required": [
-          "comparison_target_percentage",
-          "updated_at"
-        ],
-        "additionalProperties": false
       },
       "ScheduleDispatchOut": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",

@@ -1,12 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { Database, GitCompareArrows, LayoutDashboard, Library, History, Settings, LogOut, UserRound, CalendarClock, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
+import { Database, GitCompareArrows, LayoutDashboard, Library, History, LogOut, UserRound, CalendarClock, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { useAppearance } from '../lib/appearance';
 import { ThemeControl } from './ThemeControl';
 import { NavigationTip } from './NavigationTip';
 const links = [
   ['/', 'Overview', LayoutDashboard], ['/connections', 'Connections', Database], ['/catalog', 'Catalog', Library],
   ['/comparisons', 'Comparisons', GitCompareArrows], ['/schedules', 'Schedules', CalendarClock], ['/runs', 'Runs', History],
-  ['/settings', 'Environment settings', Settings], ['/account', 'Account', UserRound],
+  ['/account', 'Account', UserRound],
 ] as const;
 export function SidebarContent({ mobile = false, onNavigate, onSignOut }: { mobile?: boolean; onNavigate: () => void; onSignOut: () => void }) {
   const { sidebar, setSidebar } = useAppearance();

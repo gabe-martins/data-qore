@@ -1,7 +1,7 @@
 # DataQore Engine
 
 The engine provides the internal services for connections, the dataset catalog,
-data profiles, and comparison runs. The web app accesses it through the
+five critical metrics and comparison runs. The web app accesses it through the
 controller. A separate worker handles background jobs.
 
 For a first installation, follow the [project quick start](../README.md#get-started).
@@ -116,8 +116,8 @@ por catálogo/schema/tabela ou view. Instale `requirements-databricks.lock`
 e aplique a revisão `0003_databricks` antes de iniciar.
 [Configuração, limites e homologação](../docs/DATABRICKS.md).
 
-## Regras de qualidade de negócio
+## Métricas Críticas e atualização v6
 
-Aplique a revisão `0004_quality_rules` antes de usar o editor de regras por dataset.
-Veja [configuração, contratos e interpretação](../docs/BUSINESS_QUALITY_RULES.md).
-Regras e versões são congeladas no enfileiramento e avaliadas somente na amostra.
+[Contrato, amostragem reproduzível e reinício operacional](../docs/CRITICAL_METRICS.md).
+Aplique as revisões 0005_critical_metrics (engine) e 3_critical_metrics (app).
+Perfis estatísticos e regras de negócio foram removidos.

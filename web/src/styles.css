@@ -898,16 +898,6 @@ dd {
     monospace;
   margin-top: 16px;
 }
-.profile-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
-}
-.column-profile {
-  border: 1px solid var(--semantic-border-default);
-  padding: 16px;
-  border-radius: 10px;
-}
 .filter-label {
   max-width: 240px;
 }
@@ -1193,8 +1183,7 @@ select:focus-visible {
     font-size: 23px;
   }
   .form-grid,
-  .dataset-pair,
-  .profile-grid {
+  .dataset-pair {
     grid-template-columns: 1fr;
   }
   .card-heading,
@@ -1246,44 +1235,6 @@ select:focus-visible {
     padding: 0 15px 20px;
   }
 }
-.profile-statistics {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin: 15px 0;
-}
-.profile-statistics > div {
-  background: var(--semantic-background-subtle);
-  padding: 10px;
-  border-radius: 6px;
-  min-width: 0;
-}
-.profile-statistics dt,
-.profile-statistics dd {
-  border: 0;
-  padding: 0;
-}
-.profile-statistics dt {
-  text-transform: capitalize;
-  font-size: 10px;
-}
-.profile-statistics dd {
-  font-size: 13px;
-  font-weight: 600;
-  margin-top: 4px;
-  overflow-wrap: anywhere;
-}
-.column-chart {
-  height: 150px;
-  font-size: 10px;
-  margin: 15px 0;
-}
-.observation-field {
-  display: contents;
-}
-.observation-field dt {
-  text-transform: capitalize;
-}
 .button[aria-disabled="true"] {
   opacity: 0.5;
   cursor: progress;
@@ -1293,29 +1244,6 @@ select:focus-visible {
 .schedule-mode legend { font-weight: 600; padding: 0 6px; }
 .schedule-mode input[type="radio"] { width: 16px; height: 16px; min-height: 16px; padding: 0; margin: 0; flex-shrink: 0; accent-color: var(--semantic-action-primary); }
 .schedule-mode .check-label { margin: 4px 0; white-space: nowrap; }
-.tolerance-field { margin-bottom: 20px; }
-.tolerance-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.tolerance-label label { margin: 0; }
-.percentage-input { position: relative; }
-.percentage-input input { padding-right: 36px; }
-.percentage-input > span { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--semantic-text-secondary); }
-.help-tip { position: relative; display: inline-flex; vertical-align: middle; }
-.help-tip-button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; color: var(--semantic-text-secondary); background: transparent; }
-.help-tip-button:hover { background: var(--semantic-background-subtle); }
-.help-tip-content { position: fixed; width: min(320px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; z-index: 40; padding: 14px; border: 1px solid var(--semantic-border-default); border-radius: 9px; background: var(--semantic-background-surface); color: var(--semantic-text-primary); box-shadow: 0 8px 24px #172c3c26; font-size: 12px; font-weight: 400; line-height: 1.6; white-space: normal; }
-
-.quality-period { display: flex; align-items: center; gap: 12px; margin: 16px 0; }
-.quality-period select { width: auto; min-width: 110px; }
-.quality-legend { display: flex; flex-wrap: wrap; gap: 10px 20px; list-style: none; padding: 0; font-size: 12px; }
-.quality-legend li { min-width: 0; overflow-wrap: anywhere; }
-.quality-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
-.quality-tooltip { background: var(--semantic-background-surface); border: 1px solid var(--semantic-border-default); border-radius: 8px; padding: 12px; max-width: min(340px, 75vw); max-height: 330px; overflow: auto; font-size: 12px; overflow-wrap: anywhere; }
-.quality-point { margin-top: 10px; }
-.quality-details { margin: 16px 0; font-size: 12px; }
-.quality-details summary { cursor: pointer; }
-.quality-daily-details { max-height: 360px; overflow: auto; }
-.quality-daily-details section { padding: 12px 0; border-bottom: 1px solid var(--semantic-border-default); }
-
 /* Appearance and navigation share the same tokens, including portal content. */
 [data-theme="dark"] { color-scheme: dark; }
 .navigation-tip { display: block; min-width: 0; width: 100%; }

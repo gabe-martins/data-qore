@@ -105,7 +105,7 @@ def check():
     try:
         with engine.connect() as c:
             if c.scalar(text('SELECT current_user'))!='srv_dataqore_engine':raise RuntimeError('Use a conta restrita do motor.')
-            for name in ('connections','datasets','comparison_definitions','runs','run_results','column_profiles','metrics'):
+            for name in ('connections','datasets','comparison_definitions','runs','run_results'):
                 c.execute(text(f'SELECT 1 FROM engine.{name} LIMIT 0'))
     finally:engine.dispose()
     result=subprocess.run(['node',str(ROOT/'controller/dist/src/check.js')],cwd=ROOT/'controller',env=environment('controller.env'),capture_output=True,text=True)

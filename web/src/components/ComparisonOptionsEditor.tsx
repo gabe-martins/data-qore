@@ -1,11 +1,10 @@
 import type { Model } from "../api";
-import { Button, Card, JsonView } from "./common";
+import { Button, Card } from "./common";
 
 export type ComparisonOptions = Model<"ComparisonOptions">;
 type Pair = { left: string; right: string };
 type Columns = Record<string, { type?: string; family?: string }>;
 type Props = {
-  mode?: string;
   value: ComparisonOptions;
   onChange: (v: ComparisonOptions) => void;
   left: Columns;
@@ -75,7 +74,8 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
                       left: "",
                       right: "",
                       timezone: "America/Sao_Paulo",
-                      days: 1,
+                      unit: "days",
+                      quantity: 1,
                       safety_delay_minutes: 0,
                       ...(e.target.value === "fixed"
                         ? { start: "", end: "" }
@@ -86,7 +86,7 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
         >
           <option value="none">All available dates</option>
           <option value="fixed">Fixed period</option>
-          <option value="relative">Previous complete days</option>
+          <option value="relative">Previous complete units</option>
         </select>
       </label>
       {period && (
@@ -94,13 +94,21 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
           <div className="form-grid">
             <ColumnSelect
               label="Period column A"
-              columns={left}
+              columns={Object.fromEntries(
+                Object.entries(left).filter(([, v]) =>
+                  /date|time/i.test(v.type ?? ""),
+                ),
+              )}
               value={period.left}
               onChange={(v) => changePeriod({ left: v })}
             />
             <ColumnSelect
               label="Period column B"
-              columns={right}
+              columns={Object.fromEntries(
+                Object.entries(right).filter(([, v]) =>
+                  /date|time/i.test(v.type ?? ""),
+                ),
+              )}
               value={period.right}
               onChange={(v) => changePeriod({ right: v })}
             />
@@ -118,16 +126,32 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
             {period.kind === "relative" ? (
               <>
                 <label>
-                  Complete days
+                  Unit
+                  <select
+                    aria-label="Period unit"
+                    value={period.unit ?? "days"}
+                    onChange={(e) =>
+                      changePeriod({
+                        unit: e.target.value as "hours" | "days" | "months",
+                      })
+                    }
+                  >
+                    <option value="hours">Hours</option>
+                    <option value="days">Days</option>
+                    <option value="months">Months</option>
+                  </select>
+                </label>
+                <label>
+                  Complete units
                   <input
-                    aria-label="Complete days"
+                    aria-label="Complete units"
                     type="number"
                     required
                     min={1}
-                    max={3660}
-                    value={period.days ?? 1}
+                    max={100000}
+                    value={period.quantity ?? 1}
                     onChange={(e) =>
-                      changePeriod({ days: Number(e.target.value) })
+                      changePeriod({ quantity: Number(e.target.value) })
                     }
                   />
                 </label>
@@ -154,7 +178,8 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
                   Start (inclusive)
                   <input
                     aria-label="Start (inclusive)"
-                    type="date"
+                    type="text"
+                    placeholder="YYYY-MM-DD or timestamp with offset"
                     required
                     value={period.start ?? ""}
                     onChange={(e) => changePeriod({ start: e.target.value })}
@@ -164,7 +189,8 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
                   End (exclusive)
                   <input
                     aria-label="End (exclusive)"
-                    type="date"
+                    type="text"
+                    placeholder="YYYY-MM-DD or timestamp with offset"
                     required
                     value={period.end ?? ""}
                     onChange={(e) => changePeriod({ end: e.target.value })}
@@ -191,11 +217,11 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
             ))}
           </div>
           <p className="notice">
-            The end is exclusive. Relative windows use complete calendar days in
-            the chosen timezone, after subtracting the safety delay. A preview
-            is provisional; execution freezes the window when queued. Explicit
-            timezone interpretation is required for timestamps without a
-            timezone.
+            The end is exclusive. Relative windows use complete hours, calendar
+            days or calendar months in the chosen timezone, after subtracting
+            the safety delay. A preview is provisional; execution freezes the
+            window when queued. Explicit timezone interpretation is required for
+            timestamps without a timezone.
           </p>
         </>
       )}
@@ -356,7 +382,7 @@ export function suggestedPairs(
   return pairs;
 }
 
-export function MappingEditor({ value, onChange, left, right, mode }: Props) {
+export function MappingEditor({ value, onChange, left, right }: Props) {
   const manual = value.mapping ?? [],
     keys = value.business_key ?? [];
   const effective = suggestedPairs(left, right, manual);
@@ -428,7 +454,7 @@ export function MappingEditor({ value, onChange, left, right, mode }: Props) {
                     <input
                       aria-label={`Business key ${name}`}
                       type="checkbox"
-                      disabled={!pair || mode === "independent_random"}
+                      disabled={!pair}
                       checked={!!pair && keyFor(pair)}
                       onChange={(e) =>
                         pair &&
@@ -448,246 +474,17 @@ export function MappingEditor({ value, onChange, left, right, mode }: Props) {
         </table>
       </div>
       <p className="notice">
-        {mode === "independent_random" &&
-          "Choose an aligned strategy to enable business keys. "}
         Select one or more mapped pairs for a business key. Nulls and duplicates
         are checked across the entire scope on both sources during execution.
-        Invalid keys make the result inconclusive without record agreement. With
+        Invalid keys prevent record alignment and are reported explicitly. With
         no selection, compatible PK / non-null UNIQUE keys are discovered
         automatically.
       </p>
       <p className="muted small">
         Mapping preserves original values and native type differences. Columns
-        without a pair remain schema differences. The preview uses current
-        metadata and is authoritative for matching.
+        without a pair prevent a complete Row Match Rate evaluation. The preview
+        uses current metadata and is authoritative for matching.
       </p>
     </Card>
-  );
-}
-
-export function ScopeSummary({
-  preview,
-}: {
-  preview: Model<"ComparisonPreviewOut"> | null;
-}) {
-  if (!preview)
-    return (
-      <p className="notice">
-        Preview the current scope and mapping before saving.
-      </p>
-    );
-  return (
-    <div aria-live="polite">
-      <h3>Scope preview</h3>
-      <ScopeView scope={preview.resolved_scope} />
-      <h3>Effective column pairs</h3>
-      <div className="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Source A</th>
-              <th>Source B</th>
-              <th>Method</th>
-            </tr>
-          </thead>
-          <tbody>
-            {preview.mapping.map((p, i) => (
-              <tr key={i}>
-                <td>{p.left}</td>
-                <td>{p.right}</td>
-                <td>{p.method}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p>
-        Unpaired A: {preview.unmatched_columns.left?.join(", ") || "None"}
-        <br />
-        Unpaired B: {preview.unmatched_columns.right?.join(", ") || "None"}
-      </p>
-      <p>
-        Business key:{" "}
-        {preview.business_key
-          .map((k) => `${k.left} ↔ ${k.right}`)
-          .join(" + ") || "Automatic PK / non-null UNIQUE"}
-      </p>
-      <p className="notice">
-        {preview.key_validation} Each source uses its own snapshot when
-        available; snapshots across databases are not synchronized.
-      </p>
-    </div>
-  );
-}
-
-export function FrozenComparisonContext({ result }: { result: any }) {
-  if (!result?.column_mapping) return null;
-  return (
-    <Card title="Frozen scope, mapping & key validation">
-      <h3>Resolved scope</h3>
-      <ScopeView scope={result.resolved_scope} />
-      <div className="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Source A</th>
-              <th>Source B</th>
-              <th>Method</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.column_mapping.map((p: any, i: number) => (
-              <tr key={i}>
-                <td>{p.left}</td>
-                <td>{p.right}</td>
-                <td>{p.method}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <h3>Full-scope key validation</h3>
-      {result.key_validation?.length ? (
-        result.key_validation.map((v: any, i: number) => (
-          <div key={i}>
-            <strong>
-              Source {i + 1}:{" "}
-              {v.valid ? "Valid key" : "Invalid key — inconclusive"}
-            </strong>
-            <p>
-              {v.reason &&
-                "Key unavailable or changed after aggregate validation. "}
-              {v.columns.join(" + ")} · {v.total_rows} scoped rows ·{" "}
-              {v.null_key_rows} null-key rows · {v.duplicate_groups} duplicate
-              groups · {v.duplicate_excess_rows} excess duplicate rows
-            </p>
-          </div>
-        ))
-      ) : (
-        <p>No explicit business key selected.</p>
-      )}
-      <h3>Read consistency</h3>
-      <ul>
-        {result.read_consistency?.map((source: any) => (
-          <li key={source.source}>
-            Source {source.source}:{" "}
-            {source.mode === "stable_snapshot"
-              ? "Stable local snapshot"
-              : "Stable snapshot unavailable — reads may observe changes"}
-          </li>
-        ))}
-      </ul>
-    </Card>
-  );
-}
-
-function ScopeView({ scope }: { scope: any }) {
-  const period = scope?.period;
-  const operators: Record<string, string> = {
-    eq: "Equals",
-    in: "In a list",
-    gte: "Greater than or equal",
-    lt: "Less than",
-    is_null: "Is null",
-    is_not_null: "Is not null",
-  };
-  function boundary(value: string, zone: string) {
-    try {
-      return new Intl.DateTimeFormat("en-GB", {
-        dateStyle: "medium",
-        timeStyle: "long",
-        timeZone: zone,
-      }).format(new Date(value));
-    } catch {
-      return value;
-    }
-  }
-  return (
-    <>
-      {period ? (
-        <>
-          <p>
-            <strong>
-              {period.kind === "relative"
-                ? `Previous ${period.days} complete day(s)`
-                : "Fixed period"}
-            </strong>{" "}
-            · {period.timezone}
-            {period.kind === "relative" &&
-              ` · safety delay ${period.safety_delay_minutes} minutes`}
-          </p>
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Source / column</th>
-                  <th>Start (inclusive)</th>
-                  <th>End (exclusive)</th>
-                  <th>Displayed timezone</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sides.map((side, i) => {
-                  const zone =
-                    period[`${side}_naive_timezone`] || period.timezone;
-                  return (
-                    <tr key={side}>
-                      <td>
-                        {i ? "B" : "A"} · {period[side]}
-                      </td>
-                      <td>{boundary(period.start, zone)}</td>
-                      <td>{boundary(period.end, zone)}</td>
-                      <td>{zone}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <p className="muted small">
-            The end is excluded. Date columns select complete calendar dates;
-            timestamp limits represent the same instants on both sources.
-          </p>
-        </>
-      ) : (
-        <p>All available dates.</p>
-      )}
-      {scope?.filters?.length ? (
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Column A</th>
-                <th>Column B</th>
-                <th>Condition (AND)</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {scope.filters.map((filter: any, i: number) => (
-                <tr key={i}>
-                  <td>{filter.left}</td>
-                  <td>{filter.right}</td>
-                  <td>{operators[filter.operator]}</td>
-                  <td>
-                    {filter.value == null
-                      ? "—"
-                      : Array.isArray(filter.value)
-                        ? filter.value.map(String).join(", ")
-                        : String(filter.value)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p>No additional filters.</p>
-      )}
-      <details>
-        <summary className="small">Scope definition</summary>
-        <JsonView value={scope} />
-      </details>
-    </>
   );
 }

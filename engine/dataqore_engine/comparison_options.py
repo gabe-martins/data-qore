@@ -53,7 +53,8 @@ class Period(ColumnPair):
     timezone: str = "America/Sao_Paulo"
     start: str | None = None
     end: str | None = None
-    days: Annotated[int, Field(strict=True, ge=1, le=3660)] = 1
+    unit: Literal["hours", "days", "months"] = "days"
+    quantity: Annotated[int, Field(strict=True, ge=1, le=100000)] = 1
     safety_delay_minutes: Annotated[int, Field(strict=True, ge=0, le=525600)] = 0
     left_naive_timezone: str | None = None
     right_naive_timezone: str | None = None
@@ -171,9 +172,19 @@ def resolve_scope(value, at=None):
         raise invalid("invalid_scope_period")
     at = at.astimezone(timezone.utc)
     if p.kind == "relative":
-        end_day = (at - timedelta(minutes=p.safety_delay_minutes)).astimezone(zone).date()
-        start = _local_boundary(end_day - timedelta(days=p.days), zone)
-        end = _local_boundary(end_day, zone)
+        local = (at - timedelta(minutes=p.safety_delay_minutes)).astimezone(zone)
+        if p.unit == "hours":
+            end = local.replace(minute=0, second=0, microsecond=0).astimezone(timezone.utc)
+            start = end - timedelta(hours=p.quantity)
+        elif p.unit == "days":
+            end = _local_boundary(local.date(), zone)
+            start = _local_boundary(local.date() - timedelta(days=p.quantity), zone)
+        else:
+            end = _local_boundary(local.date().replace(day=1), zone)
+            month_index = local.year * 12 + local.month - 1 - p.quantity
+            year, month = divmod(month_index, 12)
+            if year < 1:raise invalid("invalid_scope_period")
+            start = _local_boundary(date(year, month + 1, 1), zone)
     else:
         start, end = _fixed_bound(p.start, zone), _fixed_bound(p.end, zone)
     if start >= end:
@@ -229,27 +240,18 @@ def typed_value(value, info, operator):
     raise invalid("invalid_scope_value")
 
 
-def validate_options(value, columns, mode="auto", resolved=None):
+def validate_options(value, columns, resolved=None):
     options = ComparisonOptions.model_validate(value or {})
     pairs, unmatched = effective_mapping(columns, options)
     effective = {(p["left"], p["right"]) for p in pairs}
     seen = [set(), set()]
     for key in options.business_key:
-        if (key.left, key.right) not in effective or mode == "independent_random":
+        if (key.left, key.right) not in effective:
             raise invalid("invalid_business_key")
         for i, name in enumerate((key.left, key.right)):
             if name in seen[i] or family(columns[i][name]) not in {"integer", "decimal", "text", "binary", "uuid", "uniqueidentifier"}:
                 raise invalid("invalid_business_key")
             seen[i].add(name)
-    if mode == "matched_keys" and not options.business_key:
-        from .core.comparison_engine import common_comparison_key
-        sources=[]
-        for i, side in enumerate(("left", "right")):
-            names={f"pair_{j}": pair[side] for j,pair in enumerate(pairs)}
-            names.update({f"unpaired_{side}_{j}": name for j,name in enumerate(unmatched[side])})
-            sources.append({"columns":columns[i],"names":names})
-        if not common_comparison_key(sources)[0]:
-            raise invalid("comparison_key_unavailable")
     resolved = resolved if resolved is not None else resolve_scope(value)
     predicates = [[], []]
     for condition in resolved.get("filters", []):
@@ -278,6 +280,7 @@ def validate_options(value, columns, mode="auto", resolved=None):
             kinds.append(kind)
             bounds = [start, end]
             if kind == "date":
+                if period.get("unit") == "hours":raise invalid("invalid_scope_type")
                 days = [x.astimezone(zone).date() for x in bounds]
                 if any(_local_boundary(d, zone) != x for d, x in zip(days, bounds)):
                     raise invalid("invalid_scope_period")
@@ -312,5 +315,5 @@ def validate_options(value, columns, mode="auto", resolved=None):
 
 
 def metadata_signature(columns):
-    return {name: {k: info.get(k) for k in ("type", "family", "precision", "scale", "datetime_precision", "length", "collation", "comparison_timezone")}
+    return {name: {k: info.get(k) for k in ("type", "family", "precision", "scale", "datetime_precision", "length", "collation", "comparison_timezone", "nullable", "primary_key", "primary_key_order", "unique_groups", "unique_orders")}
             for name, info in columns.items()}

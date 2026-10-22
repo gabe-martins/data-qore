@@ -115,28 +115,9 @@ follow that reference's new-environment procedure. Do not combine both table
 creation paths. `MIGRATION_DATABASE_URL` belongs only to migration tools; it must
 not replace a runtime `DATABASE_URL`.
 
-## Monthly partitions
+## ADQ v6
 
-Initial setup creates metric partitions for the previous month, the current
-month, and the next three months. Maintain them regularly with an administrator
-connected to `dataqore_engine`:
-
-```sql
-BEGIN;
-SET LOCAL ROLE dataqore_engine_owner;
-SELECT engine.ensure_metrics_partitions(
-    date_trunc('month', now() AT TIME ZONE 'UTC')::date, 4
-);
-COMMIT;
-```
-
-This maintenance can be repeated. Runtime accounts cannot create partitions.
-Missing partitions prevent new metrics from being saved for the affected month.
-There is no automatic deletion of historical metrics.
-
-## Configuration changes
-
-Restart DataQore after changing local connection settings. Editing a password in
-an environment file does not change that account's password in PostgreSQL.
-Changing a database URL does not move existing data to the new database.
-Preserve the original encryption key and version when reusing saved connections.
+A revisão 0005_critical_metrics remove séries estatísticas, perfis e a rotina
+de partições mensais. Não execute manutenção de partições após essa revisão.
+Os scripts iniciais continuam sendo o baseline histórico; instale sempre todas
+as migrations. Veja [o guia de atualização e reset explícito](../docs/CRITICAL_METRICS.md).

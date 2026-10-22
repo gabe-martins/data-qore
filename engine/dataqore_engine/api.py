@@ -13,14 +13,12 @@ from sqlalchemy import select,text,func,tuple_
 from sqlalchemy.exc import DBAPIError,IntegrityError
 from pydantic import ValidationError
 
-from .business_rules import BusinessRules, RuleSetOut, RuleSetUpdate
 from . import models as m
 from . import schemas as s
 from .connectors import SourceManager
 from .jobs import Queue
 from .dataset_deletion import DatasetDeletion
 from .comparison_deletion import ComparisonDeletion
-from .evaluation import profile_evaluations, result_evaluation, metric_evaluation
 from .comparison_options import compact_options, metadata_signature, validate_options
 from .settings import load_settings
 from .storage import DomainError,Repository,database_engine,json_safe
@@ -239,14 +237,6 @@ def create_app(settings=None):
     def get_dataset(identifier:UUID):
         return repository.get(m.datasets,identifier)
 
-    @router.get("/datasets/{identifier}/quality-rules", response_model=RuleSetOut, tags=["datasets"])
-    def get_quality_rules(identifier: UUID):
-        return BusinessRules(engine).get(identifier)
-
-    @router.post("/datasets/{identifier}/quality-rules", response_model=RuleSetOut, tags=["datasets"])
-    def update_quality_rules(identifier: UUID, payload: RuleSetUpdate):
-        return BusinessRules(engine).replace(identifier, payload)
-
     @router.get("/datasets/{identifier}/dependencies",response_model=s.DatasetDependenciesOut,tags=["datasets"])
     def dataset_dependencies(identifier:UUID,comparison_limit:Limit=20,comparison_offset:Offset=0):
         return DatasetDeletion(engine).dependencies(identifier,comparison_limit,comparison_offset)
@@ -262,21 +252,6 @@ def create_app(settings=None):
         _,metadata=sources.table_metadata(row,dataset["schema_name"],dataset["table_name"],dataset["catalog_name"])
         return repository.update(m.datasets,identifier,{"metadata":json_safe(metadata),"discovered_at":datetime.now(timezone.utc)})
 
-    @router.post("/datasets/{identifier}/profile-runs",response_model=s.RunOut,status_code=202,tags=["runs"])
-    def profile_run(identifier:UUID,payload:s.ProfileRequest=s.ProfileRequest(),idempotency_key:IdempotencyKey=None):
-        return out(s.RunOut,queue.enqueue("profile",identifier,payload.model_dump(),idempotency_key))
-
-    @router.get("/datasets/{identifier}/profiles",response_model=s.Page[s.ProfileOut],tags=["datasets"])
-    def profiles(identifier:UUID,limit:Limit=50,offset:Offset=0,run_id:UUID | None=None):
-        repository.get(m.datasets,identifier)
-        conditions=[m.column_profiles.c.dataset_id==identifier]
-        if run_id:
-            conditions.append(m.column_profiles.c.run_id==run_id)
-        result=repository.page(m.column_profiles,limit,offset,*conditions,
-            order=[m.column_profiles.c.created_at.desc(),m.column_profiles.c.id])
-        result["items"]=[out(s.ProfileOut,{**row,"evaluation":profile_evaluations(row["profile"])}) for row in result["items"]]
-        return result
-
     def validate_comparison(values,require_active=True):
         columns=[]
         for name in ("left_dataset_id","right_dataset_id"):
@@ -285,23 +260,35 @@ def create_app(settings=None):
             if require_active and not repository.get(m.connections,dataset["connection_id"])["is_active"]:
                 raise DomainError(409,"connection_inactive","Uma conexão está desativada.")
         values["comparison_options"]=compact_options(values.get("comparison_options"))
-        if values["comparison_options"]:
-            validate_options(values["comparison_options"],columns,values["mode"])
+        validate_options(values["comparison_options"],columns)
 
     @router.post("/comparisons/preview",response_model=s.ComparisonPreviewOut,tags=["comparisons"])
     def preview_comparison(payload:s.ComparisonCreate):
         values=payload.model_dump()
         validate_comparison(values)
         columns=[]
-        for name in ("left_dataset_id","right_dataset_id"):
+        counts=[]
+        from .core.sampling import SamplingOptions
+        from .core.comparison_engine import common_comparison_key
+        for i,name in enumerate(("left_dataset_id","right_dataset_id")):
             dataset=repository.get(m.datasets,values[name])
-            _,metadata=sources.table_metadata(repository.get(m.connections,dataset["connection_id"]),
-                dataset["schema_name"],dataset["table_name"],dataset["catalog_name"])
+            connection=repository.get(m.connections,dataset["connection_id"])
+            _,metadata=sources.table_metadata(connection,dataset["schema_name"],dataset["table_name"],dataset["catalog_name"])
             if metadata_signature(metadata["columns"]) != metadata_signature(dataset["metadata"].get("columns",{})):
-                raise DomainError(409,"source_schema_changed","Refresh the dataset metadata before previewing this definition.")
+                raise DomainError(409,"source_schema_changed","Refresh dataset metadata before previewing.")
             columns.append(metadata["columns"])
-        context=validate_options(values["comparison_options"],columns,values["mode"])
-        return {k:v for k,v in context.items() if k!="predicates"}
+        context=validate_options(values["comparison_options"],columns)
+        for i,name in enumerate(("left_dataset_id","right_dataset_id")):
+            dataset=repository.get(m.datasets,values[name])
+            with sources.session(repository.get(m.connections,dataset["connection_id"]),comparison=True,catalog_name=dataset["catalog_name"]) as source:
+                counts.append(source["adapter"].count_rows(source["conn"],dataset["schema_name"],dataset["table_name"],context["predicates"][i]))
+        target=SamplingOptions(**values["sampling_options"]).target(counts,max(map(len,columns)))
+        suggested=[]
+        if not context["business_key"]:
+            pseudo=[{"columns":cols,"names":{f"pair_{j}":pair[side] for j,pair in enumerate(context["mapping"])}} for cols,side in zip(columns,("left","right"))]
+            keys,_=common_comparison_key(pseudo)
+            suggested=[{"left":pseudo[0]["names"][key],"right":pseudo[1]["names"][key]} for key in keys]
+        return {**{k:v for k,v in context.items() if k!="predicates"},"scope_counts":counts,"sample_target":target,"suggested_business_key":suggested}
 
     @router.post("/comparisons",response_model=s.ComparisonOut,status_code=201,tags=["comparisons"])
     def create_comparison(payload:s.ComparisonCreate):
@@ -346,10 +333,10 @@ def create_app(settings=None):
         return out(s.RunOut,queue.enqueue("comparison",identifier,key=idempotency_key))
 
     @router.get("/runs",response_model=s.Page[s.RunOut],tags=["runs"])
-    def list_runs(limit:Limit=50,offset:Offset=0,comparison_id:UUID | None=None,dataset_id:UUID | None=None,
+    def list_runs(limit:Limit=50,offset:Offset=0,comparison_id:UUID | None=None,
         status:Annotated[str | None,Query(pattern="^(queued|running|succeeded|failed)$")]=None):
         conditions=[]
-        for column,value in ((m.runs.c.comparison_id,comparison_id),(m.runs.c.dataset_id,dataset_id),(m.runs.c.status,status)):
+        for column,value in ((m.runs.c.comparison_id,comparison_id),(m.runs.c.status,status)):
             if value is not None:
                 conditions.append(column==value)
         return page(s.RunOut,m.runs,limit,offset,*conditions,order=[m.runs.c.requested_at.desc(),m.runs.c.id])
@@ -367,37 +354,7 @@ def create_app(settings=None):
             row=conn.execute(select(m.run_results).where(m.run_results.c.run_id==identifier)).mappings().first()
         if row is None:
             raise DomainError(404,"result_not_found","Resultado não encontrado.")
-        return {**row,"evaluation":result_evaluation(row["result"],run["kind"],run["parameters"])}
-
-    @router.get("/metrics",response_model=s.Page[s.MetricOut],tags=["metrics"])
-    def metrics(dataset_id:UUID,limit:Limit=50,offset:Offset=0,column_name:str | None=None,
-        metric_name:str | None=None,from_time:datetime | None=None,to_time:datetime | None=None):
-        repository.get(m.datasets,dataset_id)
-        end=to_time or datetime.now(timezone.utc)
-        start=from_time or end-timedelta(days=30)
-        if start.tzinfo is None or end.tzinfo is None or start>=end:
-            raise DomainError(422,"invalid_period","Informe um período crescente com timezone explícito.")
-        conditions=[m.metrics.c.dataset_id==dataset_id,m.metrics.c.measured_at>=start,m.metrics.c.measured_at<end]
-        if column_name is not None:
-            conditions.append(m.metrics.c.column_name==column_name)
-        if metric_name is not None:
-            conditions.append(m.metrics.c.metric_name==metric_name)
-        result=repository.page(m.metrics,limit,offset,*conditions,order=[m.metrics.c.measured_at.desc(),m.metrics.c.id])
-        keys={(row["run_id"],row["dataset_id"],row["column_name"]) for row in result["items"] if row["column_name"] is not None}
-        saved={}
-        if keys:
-            with engine.connect() as conn:
-                for row in conn.execute(select(m.column_profiles.c.run_id,m.column_profiles.c.dataset_id,
-                    m.column_profiles.c.column_name,m.column_profiles.c.profile).where(tuple_(m.column_profiles.c.run_id,
-                    m.column_profiles.c.dataset_id,m.column_profiles.c.column_name).in_(keys))).mappings():
-                    saved[(row["run_id"],row["dataset_id"],row["column_name"])]=row["profile"]
-        items=[]
-        for row in result["items"]:
-            profile=saved.get((row["run_id"],row["dataset_id"],row["column_name"]),{})
-            metrics={**profile.get("metrics",{}),row["metric_name"]:row["value"]}
-            items.append(out(s.MetricOut,{**row,"evaluation":metric_evaluation(metrics,row["metric_name"],profile.get("metadata"))}))
-        result["items"]=items
-        return result
+        return dict(row)
 
     from .read_api import register_read_api
     register_read_api(router,engine)

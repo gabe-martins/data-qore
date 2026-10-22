@@ -29,7 +29,9 @@ class NativeCursor:
         self.rows=self.conn.execute(sql,parameters).fetchall();return self
     def fetchall(self):return self.rows[:]
     def fetchone(self):return self.rows[0] if self.rows else None
-    def fetchmany(self,count):return self.rows[:count]
+    def fetchmany(self,count):
+        batch,self.rows=self.rows[:count],self.rows[count:]
+        return batch
     def close(self):pass
 
 

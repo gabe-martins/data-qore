@@ -1,107 +1,171 @@
-"""Planejamento amostral adaptativo compartilhado pelas duas fontes."""
+"""Reproducible bottom-k selection over the union of typed source keys."""
 
 from dataclasses import dataclass
-from decimal import Decimal
-import math
-import secrets
+from decimal import Decimal, ROUND_CEILING, localcontext, MAX_EMAX, MIN_EMIN
+import hashlib
+import heapq
+import json
 import sys
+from uuid import UUID
+from .quality import value_token, metadata_family
+from ..storage import DomainError
+
+
+def size_bytes(value):
+    if isinstance(value, (list, tuple)):
+        return sys.getsizeof(value) + sum(size_bytes(v) for v in value)
+    if isinstance(value, dict):
+        return sys.getsizeof(value) + sum(
+            size_bytes(k) + size_bytes(v) for k, v in value.items()
+        )
+    return sys.getsizeof(value)
 
 
 @dataclass(frozen=True)
 class SamplingOptions:
-    pilot_rows: int = 64
-    min_rows: int = 64
-    max_rows: int = 1000
-    max_cells: int = 100000
-    max_sample_bytes: int = 16 * 1024 * 1024
-    proportion_margin: float = 0.05
+    method: str = "rows"
+    rows: int = 1000
+    percentage: str | None = None
     seed: int | None = None
+    max_cells: int = 100000
+    max_sample_bytes: int = 16777216
 
     def __post_init__(self):
-        for field in ("pilot_rows", "min_rows", "max_rows", "max_cells", "max_sample_bytes"):
-            value = getattr(self, field)
-            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
-                raise ValueError(f"{field} must be a positive integer")
-        if self.max_rows > 10000:
-            raise ValueError("max_rows cannot exceed 10000")
-        if self.seed is not None and (isinstance(self.seed, bool) or not isinstance(self.seed, int)):
-            raise ValueError("seed must be an integer")
-        if not math.isfinite(self.proportion_margin) or not 0 < self.proportion_margin < 1:
-            raise ValueError("proportion_margin must be between 0 and 1")
+        if self.method not in {"rows", "percentage"}:
+            raise ValueError("Invalid sampling method")
+        if (
+            isinstance(self.rows, bool)
+            or not isinstance(self.rows, int)
+            or not 1 <= self.rows <= 10000
+        ):
+            raise ValueError("Rows must be between 1 and 10000")
+        if isinstance(self.seed, str):
+            if not self.seed.isascii() or not self.seed.isdigit():
+                raise ValueError("Invalid seed")
+            object.__setattr__(self, "seed", int(self.seed))
+        if self.seed is not None and (
+            isinstance(self.seed, bool)
+            or not isinstance(self.seed, int)
+            or not 0 <= self.seed < 2**64
+        ):
+            raise ValueError("Invalid seed")
+        if self.method == "percentage":
+            p = Decimal(str(self.percentage))
+            if not p.is_finite() or not 0 < p <= 100:
+                raise ValueError("Percentage must be greater than zero and at most 100")
+        elif self.percentage is not None:
+            raise ValueError("Percentage is only used with percentage sampling")
+        for v in (self.max_cells, self.max_sample_bytes):
+            if isinstance(v, bool) or not isinstance(v, int) or v < 1:
+                raise ValueError("Budgets must be positive integers")
+
+    def target(self, counts, width):
+        k = self.rows
+        if self.method == "percentage":
+            percentage = Decimal(str(self.percentage))
+            with localcontext() as context:
+                context.prec = max(
+                    40, len(percentage.as_tuple().digits) + len(str(max(counts))) + 3
+                )
+                context.Emax = MAX_EMAX
+                context.Emin = MIN_EMIN
+                k = int(
+                    (percentage * max(counts) / 100).to_integral_value(
+                        rounding=ROUND_CEILING
+                    )
+                )
+        if k > 10000:
+            raise DomainError(
+                422,
+                "sample_limit_exceeded",
+                "Requested sample exceeds 10000 keys; reduce rows or percentage.",
+            )
+        if min(k, sum(counts)) * width * 2 > self.max_cells:
+            raise DomainError(
+                422,
+                "sample_cell_budget_exceeded",
+                "Requested sample exceeds the cell budget; reduce the sample or increase the budget.",
+            )
+        return k
 
 
-def row_capacity(sources, options):
-    width = max(len(source["columns"]) for source in sources)
-    if width > options.max_cells:
-        raise ValueError("Cell budget cannot hold even one projected row")
-    return max(1, min(options.max_rows, options.max_cells // max(1, width)))
+def canonical_key(values, metadata):
+    parts = []
+    for value, info in zip(values, metadata):
+        family = metadata_family(info)
+        if family in {"integer", "decimal"}:
+            token = value_token(value, info)
+            if token[0] != "number":
+                raise ValueError("Unavailable key")
+            number = token[1]
+            # Strip coefficient zeros without Decimal.normalize's context rounding.
+            sign, digits, exponent = number.as_tuple()
+            digits = list(digits)
+            if not any(digits):
+                sign, digits, exponent = 0, [0], 0
+            else:
+                while digits[-1] == 0:
+                    digits.pop()
+                    exponent += 1
+            parts.append(["number", sign, "".join(map(str, digits)), exponent])
+        elif family == "text" and isinstance(value, str):
+            parts.append(["text", value])
+        elif family == "binary" and isinstance(value, (bytes, bytearray, memoryview)):
+            parts.append(["binary", bytes(value).hex()])
+        elif family in {"uuid", "uniqueidentifier"}:
+            try:
+                parts.append(["uuid", str(UUID(str(value)))])
+            except (ValueError, TypeError, AttributeError):
+                raise ValueError("Unavailable key") from None
+        else:
+            raise ValueError("Unavailable key")
+    return json.dumps(parts, ensure_ascii=True, separators=(",", ":")).encode("ascii")
 
 
-def pilot_size(sources, options, requested=None):
-    return min(options.pilot_rows, row_capacity(sources, options),
-               requested if requested is not None else options.max_rows)
-
-
-def _value_bytes(value):
-    if isinstance(value, (tuple, list)):
-        return sys.getsizeof(value) + sum(_value_bytes(v) for v in value)
-    if isinstance(value, dict):
-        return sys.getsizeof(value) + sum(_value_bytes(k) + _value_bytes(v) for k, v in value.items())
-    return sys.getsizeof(value)
-
-
-def plan_sample(sources, pilots, options, mode, keys, key_kind, requested=None):
-    capacity = row_capacity(sources, options)
-    initial = pilot_size(sources, options, requested)
-    avg_bytes = max((sum(_value_bytes(row) for row in p["sample_rows"]) / p["sample_size"]
-                     for p in pilots if p["sample_size"]), default=1)
-    byte_capacity = max(1, int(options.max_sample_bytes / max(1, avg_bytes)))
-    capacity = min(capacity, byte_capacity)
-    estimates = [s["estimated_rows"] for s in sources if s["estimated_rows"] is not None and s["estimated_rows"] > 0]
-    reasons = []
-    all_exhausted = all(p["sample_size"] < initial for p in pilots)
-    if requested is not None:
-        desired = requested
-        reasons.append("explicit row budget")
-    elif all_exhausted:
-        # Ambos os sorteios esgotaram os registros no momento de cada consulta.
-        desired = max(1, sum(p["sample_size"] for p in pilots))
-        reasons.append("both pilot reads exhausted their tables")
-    else:
-        volume = math.ceil(10 * math.sqrt(max(estimates))) if estimates else options.min_rows
-        # Referência de planejamento para uma proporção: pior variância p(1-p)=.25.
-        # Não é intervalo de confiança do resultado nem regra de parada inferencial.
-        proportion = math.ceil(1.96 ** 2 * 0.25 / options.proportion_margin ** 2)
-        variability = options.min_rows
-        for profile in pilots:
-            for name, metric in profile["metrics"].items():
-                if name.casefold() in keys or not metric.get("numeric_count"):
-                    continue
-                mean, stddev = metric.get("mean"), metric.get("stddev")
-                if mean is not None and stddev is not None:
-                    cv = min(Decimal(10), abs(stddev) / max(abs(mean), Decimal("0.000001")))
-                    variability = max(variability, math.ceil(options.min_rows * (1 + float(cv))))
-        desired = max(options.min_rows, volume, proportion, variability)
-        reasons.append("population estimates, proportion planning target and pilot numeric variability")
-    target = max(1, min(desired, capacity))
-    if target < desired:
-        reasons.append("limited by row/cell budget or pilot byte estimate")
-    return {
-        "plan_version": 2, "mode": mode, "key_kind": key_kind,
-        "key_columns": keys, "target_rows": target, "requested_rows": requested,
-        "uncapped_target_rows": desired, "pilot_rows": initial,
-        "pilot_observed_rows": [p["sample_size"] for p in pilots],
-        "max_rows": options.max_rows, "width_limit": row_capacity(sources, options),
-        "estimated_byte_limit_rows": byte_capacity, "max_sample_bytes": options.max_sample_bytes,
-        "byte_budget_scope": "planning estimate from pilot; not a hard transport or process memory limit",
-        "max_cells": options.max_cells, "proportion_planning_margin": options.proportion_margin,
-        "strategy_reason": "; ".join(reasons),
-        "seed": options.seed if options.seed is not None else secrets.randbits(64),
-        "selection": "random pools from both sources; shared key union" if keys else "independent random samples",
-        "repeatable_across_runs": False,
-        "seed_scope": "shared-key selection within captured pools; database random draws are not repeatable",
-        "metric_scope": "common matched rows" if keys else "independent profiles; descriptive differences only",
-        "column_matching": "unambiguous casefold",
-        "rounds": [{"stage": "pilot", "requested_rows_per_source": initial,
-                    "observed_rows": [p["sample_size"] for p in pilots]}],
-    }
+def select_keys(sources, key_columns, target, seed, byte_budget):
+    if not target:
+        return [], [0, 0]
+    heap = []
+    selected = {}
+    scanned = []
+    used = 0
+    for source, names in zip(sources, key_columns):
+        count = 0
+        infos = [source["columns"][name] for name in names]
+        for values in source["adapter"].iter_keys(
+            source["conn"],
+            source["schema"],
+            source["table"],
+            names,
+            source["columns"],
+            source["scope"],
+        ):
+            count += 1
+            token = canonical_key(values, infos)
+            rank = (
+                int.from_bytes(
+                    hashlib.sha256(str(seed).encode() + b":" + token).digest(), "big"
+                ),
+                token,
+            )
+            if token in selected:
+                continue
+            if len(selected) == target and rank >= (-heap[0][0], heap[0][1]):
+                continue
+            if len(selected) == target:
+                _, old = heapq.heappop(heap)
+                used -= size_bytes(selected.pop(old)) + len(old)
+            values = tuple(values)
+            used += size_bytes(values) + len(token)
+            if used > byte_budget:
+                raise DomainError(
+                    422,
+                    "sample_byte_budget_exceeded",
+                    "Selected keys exceed the byte budget; reduce the sample.",
+                )
+            selected[token] = values
+            heapq.heappush(heap, (-rank[0], token))
+        scanned.append(count)
+    return [
+        (token, selected[token]) for _, token in sorted([(-h, t) for h, t in heap])
+    ], scanned

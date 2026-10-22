@@ -25,8 +25,8 @@ export function DeleteComparisonDialog({comparison,onClose,onDeleted,returnFocus
       await api<Model<"ComparisonDeletedOut">>(`/comparisons/${comparison.id}`,{method:"DELETE",body:JSON.stringify({})});
       deleted.current=true;
       onDeleted();
-      for(const key of ["comparisons","comparison","comparison-runs","comparison-latest-success","overview","quality-trend",
-        "runs","run","result","metrics","profiles","dataset-dependencies","connection-dependencies","schedule-comparisons"])
+      for(const key of ["comparisons","comparison","comparison-runs","comparison-latest","overview","row-match-trend",
+        "runs","run","result","dataset-dependencies","connection-dependencies","schedule-comparisons"])
         void cache.invalidateQueries({queryKey:[key]});
     } catch(e) {
       setError(e);
@@ -54,14 +54,12 @@ export function DeleteComparisonDialog({comparison,onClose,onDeleted,returnFocus
             <dl className="dataset-delete-counts">
               <div><dt>Runs</dt><dd>{q.data.history.runs}</dd></div>
               <div><dt>Results</dt><dd>{q.data.history.results}</dd></div>
-              <div><dt>Column profiles</dt><dd>{q.data.history.column_profiles}</dd></div>
-              <div><dt>Metrics</dt><dd>{q.data.history.metrics}</dd></div>
             </dl>
           </section>
           {!!q.data.schedules.total&&<p className="notice warning" role="status">This comparison has current or historical schedules and cannot be deleted. Paused schedules also block deletion.</p>}
           {!!q.data.active_runs&&<p className="notice warning" role="status">{q.data.active_runs} queued or running run(s). Wait for them to finish before deleting.</p>}
           {!q.data.can_delete&&<Button variant="outline" disabled={q.isFetching} onClick={()=>void q.refetch()}>Refresh dependencies</Button>}
-          {q.data.can_delete&&<p className="notice warning" role="status">This permanently deletes the comparison and all its runs, results, column profiles and metrics. This cannot be undone. Datasets, connections, individual profile history and source data will remain unchanged.</p>}
+          {q.data.can_delete&&<p className="notice warning" role="status">This permanently deletes the comparison and all its runs and results. This cannot be undone. Datasets, connections, source data will remain unchanged.</p>}
         </>}
         <div className="form-footer">
           <Button variant="outline" disabled={busy} onClick={onClose}>Cancel</Button>

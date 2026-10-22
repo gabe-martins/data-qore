@@ -1,0 +1,1277 @@
+{
+  "database": [
+    {
+      "datname": "dataqore_app",
+      "owner": "dataqore_app_owner",
+      "encoding": "UTF8"
+    }
+  ],
+  "schemas": [
+    {
+      "nspname": "app",
+      "owner": "dataqore_app_owner",
+      "public_create": false,
+      "public_usage": false,
+      "runtime_create": false,
+      "runtime_usage": true
+    },
+    {
+      "nspname": "public",
+      "owner": "pg_database_owner",
+      "public_create": false,
+      "public_usage": false,
+      "runtime_create": false,
+      "runtime_usage": false
+    }
+  ],
+  "tables": [
+    {
+      "relname": "audit_log",
+      "relkind": "r",
+      "owner": "dataqore_app_owner",
+      "partition_key": null
+    },
+    {
+      "relname": "auth_sessions",
+      "relkind": "r",
+      "owner": "dataqore_app_owner",
+      "partition_key": null
+    },
+    {
+      "relname": "schedule_dispatches",
+      "relkind": "r",
+      "owner": "dataqore_app_owner",
+      "partition_key": null
+    },
+    {
+      "relname": "schedules",
+      "relkind": "r",
+      "owner": "dataqore_app_owner",
+      "partition_key": null
+    },
+    {
+      "relname": "users",
+      "relkind": "r",
+      "owner": "dataqore_app_owner",
+      "partition_key": null
+    }
+  ],
+  "columns": [
+    {
+      "relname": "audit_log",
+      "attname": "id",
+      "attnum": 1,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "gen_random_uuid()"
+    },
+    {
+      "relname": "audit_log",
+      "attname": "actor_user_id",
+      "attnum": 2,
+      "type": "uuid",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "audit_log",
+      "attname": "action",
+      "attnum": 3,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "audit_log",
+      "attname": "resource_type",
+      "attnum": 4,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "audit_log",
+      "attname": "resource_id",
+      "attnum": 5,
+      "type": "text",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "audit_log",
+      "attname": "request_id",
+      "attnum": 6,
+      "type": "uuid",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "audit_log",
+      "attname": "outcome",
+      "attnum": 7,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "audit_log",
+      "attname": "details",
+      "attnum": 8,
+      "type": "jsonb",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "'{}'::jsonb"
+    },
+    {
+      "relname": "audit_log",
+      "attname": "created_at",
+      "attnum": 9,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "now()"
+    },
+    {
+      "relname": "auth_sessions",
+      "attname": "id",
+      "attnum": 1,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "gen_random_uuid()"
+    },
+    {
+      "relname": "auth_sessions",
+      "attname": "user_id",
+      "attnum": 2,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "auth_sessions",
+      "attname": "refresh_token_hash",
+      "attnum": 3,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "auth_sessions",
+      "attname": "expires_at",
+      "attnum": 4,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "auth_sessions",
+      "attname": "revoked_at",
+      "attnum": 5,
+      "type": "timestamp with time zone",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "auth_sessions",
+      "attname": "created_at",
+      "attnum": 6,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "now()"
+    },
+    {
+      "relname": "schedule_dispatches",
+      "attname": "id",
+      "attnum": 1,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "gen_random_uuid()"
+    },
+    {
+      "relname": "schedule_dispatches",
+      "attname": "schedule_id",
+      "attnum": 2,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "schedule_dispatches",
+      "attname": "comparison_id",
+      "attnum": 3,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "schedule_dispatches",
+      "attname": "scheduled_for",
+      "attnum": 4,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "schedule_dispatches",
+      "attname": "status",
+      "attnum": 5,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": "'pending'::text"
+    },
+    {
+      "relname": "schedule_dispatches",
+      "attname": "attempts",
+      "attnum": 6,
+      "type": "integer",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "0"
+    },
+    {
+      "relname": "schedule_dispatches",
+      "attname": "enqueue_started",
+      "attnum": 7,
+      "type": "boolean",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "false"
+    },
+    {
+      "relname": "schedule_dispatches",
+      "attname": "run_id",
+      "attnum": 8,
+      "type": "uuid",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "schedule_dispatches",
+      "attname": "error_code",
+      "attnum": 9,
+      "type": "text",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "schedule_dispatches",
+      "attname": "retry_at",
+      "attnum": 10,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "now()"
+    },
+    {
+      "relname": "schedule_dispatches",
+      "attname": "lease_until",
+      "attnum": 11,
+      "type": "timestamp with time zone",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "schedule_dispatches",
+      "attname": "claim_token",
+      "attnum": 12,
+      "type": "uuid",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "schedule_dispatches",
+      "attname": "finished_at",
+      "attnum": 13,
+      "type": "timestamp with time zone",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "schedule_dispatches",
+      "attname": "created_at",
+      "attnum": 14,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "now()"
+    },
+    {
+      "relname": "schedules",
+      "attname": "id",
+      "attnum": 1,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "gen_random_uuid()"
+    },
+    {
+      "relname": "schedules",
+      "attname": "name",
+      "attnum": 2,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "schedules",
+      "attname": "comparison_id",
+      "attnum": 3,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "schedules",
+      "attname": "cron_expression",
+      "attnum": 4,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "schedules",
+      "attname": "timezone",
+      "attnum": 5,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": "'America/Sao_Paulo'::text"
+    },
+    {
+      "relname": "schedules",
+      "attname": "is_active",
+      "attnum": 6,
+      "type": "boolean",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "true"
+    },
+    {
+      "relname": "schedules",
+      "attname": "next_run_at",
+      "attnum": 7,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "schedules",
+      "attname": "created_by",
+      "attnum": 8,
+      "type": "uuid",
+      "attnotnull": false,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": null
+    },
+    {
+      "relname": "schedules",
+      "attname": "created_at",
+      "attnum": 9,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "now()"
+    },
+    {
+      "relname": "schedules",
+      "attname": "updated_at",
+      "attnum": 10,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "now()"
+    },
+    {
+      "relname": "users",
+      "attname": "id",
+      "attnum": 1,
+      "type": "uuid",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "gen_random_uuid()"
+    },
+    {
+      "relname": "users",
+      "attname": "email",
+      "attnum": 2,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "users",
+      "attname": "display_name",
+      "attnum": 3,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "users",
+      "attname": "password_hash",
+      "attnum": 4,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": null
+    },
+    {
+      "relname": "users",
+      "attname": "role",
+      "attnum": 5,
+      "type": "text",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": "default",
+      "default_value": "'admin'::text"
+    },
+    {
+      "relname": "users",
+      "attname": "is_active",
+      "attnum": 6,
+      "type": "boolean",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "true"
+    },
+    {
+      "relname": "users",
+      "attname": "created_at",
+      "attnum": 7,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "now()"
+    },
+    {
+      "relname": "users",
+      "attname": "updated_at",
+      "attnum": 8,
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "attidentity": "",
+      "attgenerated": "",
+      "collation": null,
+      "default_value": "now()"
+    }
+  ],
+  "constraints": [
+    {
+      "relname": "audit_log",
+      "conname": "audit_log_action_check",
+      "contype": "c",
+      "definition": "CHECK (btrim(action) <> ''::text)"
+    },
+    {
+      "relname": "audit_log",
+      "conname": "audit_log_actor_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (actor_user_id) REFERENCES app.users(id) ON DELETE SET NULL"
+    },
+    {
+      "relname": "audit_log",
+      "conname": "audit_log_details_check",
+      "contype": "c",
+      "definition": "CHECK (jsonb_typeof(details) = 'object'::text)"
+    },
+    {
+      "relname": "audit_log",
+      "conname": "audit_log_outcome_check",
+      "contype": "c",
+      "definition": "CHECK (outcome = ANY (ARRAY['success'::text, 'failure'::text]))"
+    },
+    {
+      "relname": "audit_log",
+      "conname": "audit_log_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "audit_log",
+      "conname": "audit_log_resource_type_check",
+      "contype": "c",
+      "definition": "CHECK (btrim(resource_type) <> ''::text)"
+    },
+    {
+      "relname": "auth_sessions",
+      "conname": "auth_sessions_check",
+      "contype": "c",
+      "definition": "CHECK (expires_at > created_at)"
+    },
+    {
+      "relname": "auth_sessions",
+      "conname": "auth_sessions_check1",
+      "contype": "c",
+      "definition": "CHECK (revoked_at IS NULL OR revoked_at >= created_at)"
+    },
+    {
+      "relname": "auth_sessions",
+      "conname": "auth_sessions_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "auth_sessions",
+      "conname": "auth_sessions_refresh_token_hash_check",
+      "contype": "c",
+      "definition": "CHECK (refresh_token_hash <> ''::text)"
+    },
+    {
+      "relname": "auth_sessions",
+      "conname": "auth_sessions_refresh_token_hash_key",
+      "contype": "u",
+      "definition": "UNIQUE (refresh_token_hash)"
+    },
+    {
+      "relname": "auth_sessions",
+      "conname": "auth_sessions_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES app.users(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "schedule_dispatches",
+      "conname": "schedule_dispatches_attempts_check",
+      "contype": "c",
+      "definition": "CHECK (attempts >= 0)"
+    },
+    {
+      "relname": "schedule_dispatches",
+      "conname": "schedule_dispatches_check",
+      "contype": "c",
+      "definition": "CHECK ((status = 'dispatched'::text) = (run_id IS NOT NULL))"
+    },
+    {
+      "relname": "schedule_dispatches",
+      "conname": "schedule_dispatches_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "schedule_dispatches",
+      "conname": "schedule_dispatches_schedule_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (schedule_id) REFERENCES app.schedules(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "schedule_dispatches",
+      "conname": "schedule_dispatches_schedule_id_scheduled_for_key",
+      "contype": "u",
+      "definition": "UNIQUE (schedule_id, scheduled_for)"
+    },
+    {
+      "relname": "schedule_dispatches",
+      "conname": "schedule_dispatches_status_check",
+      "contype": "c",
+      "definition": "CHECK (status = ANY (ARRAY['pending'::text, 'dispatched'::text, 'skipped'::text, 'failed'::text]))"
+    },
+    {
+      "relname": "schedules",
+      "conname": "schedules_created_by_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (created_by) REFERENCES app.users(id) ON DELETE SET NULL"
+    },
+    {
+      "relname": "schedules",
+      "conname": "schedules_cron_expression_check",
+      "contype": "c",
+      "definition": "CHECK (btrim(cron_expression) <> ''::text)"
+    },
+    {
+      "relname": "schedules",
+      "conname": "schedules_name_check",
+      "contype": "c",
+      "definition": "CHECK (btrim(name) <> ''::text)"
+    },
+    {
+      "relname": "schedules",
+      "conname": "schedules_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "users",
+      "conname": "users_display_name_check",
+      "contype": "c",
+      "definition": "CHECK (btrim(display_name) <> ''::text)"
+    },
+    {
+      "relname": "users",
+      "conname": "users_email_check",
+      "contype": "c",
+      "definition": "CHECK (email = btrim(email) AND email <> ''::text)"
+    },
+    {
+      "relname": "users",
+      "conname": "users_password_hash_check",
+      "contype": "c",
+      "definition": "CHECK (password_hash <> ''::text)"
+    },
+    {
+      "relname": "users",
+      "conname": "users_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "users",
+      "conname": "users_role_check",
+      "contype": "c",
+      "definition": "CHECK (role = 'admin'::text)"
+    }
+  ],
+  "indexes": [
+    {
+      "relname": "audit_log",
+      "index_name": "audit_log_actor_idx",
+      "definition": "CREATE INDEX audit_log_actor_idx ON app.audit_log USING btree (actor_user_id, created_at DESC)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "audit_log",
+      "index_name": "audit_log_created_idx",
+      "definition": "CREATE INDEX audit_log_created_idx ON app.audit_log USING btree (created_at DESC)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "audit_log",
+      "index_name": "audit_log_pkey",
+      "definition": "CREATE UNIQUE INDEX audit_log_pkey ON app.audit_log USING btree (id)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "auth_sessions",
+      "index_name": "auth_sessions_expiry_idx",
+      "definition": "CREATE INDEX auth_sessions_expiry_idx ON app.auth_sessions USING btree (expires_at)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "auth_sessions",
+      "index_name": "auth_sessions_pkey",
+      "definition": "CREATE UNIQUE INDEX auth_sessions_pkey ON app.auth_sessions USING btree (id)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "auth_sessions",
+      "index_name": "auth_sessions_refresh_token_hash_key",
+      "definition": "CREATE UNIQUE INDEX auth_sessions_refresh_token_hash_key ON app.auth_sessions USING btree (refresh_token_hash)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "auth_sessions",
+      "index_name": "auth_sessions_user_idx",
+      "definition": "CREATE INDEX auth_sessions_user_idx ON app.auth_sessions USING btree (user_id)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "schedule_dispatches",
+      "index_name": "schedule_dispatches_pending_idx",
+      "definition": "CREATE INDEX schedule_dispatches_pending_idx ON app.schedule_dispatches USING btree (status, retry_at)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "schedule_dispatches",
+      "index_name": "schedule_dispatches_pkey",
+      "definition": "CREATE UNIQUE INDEX schedule_dispatches_pkey ON app.schedule_dispatches USING btree (id)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "schedule_dispatches",
+      "index_name": "schedule_dispatches_schedule_id_scheduled_for_key",
+      "definition": "CREATE UNIQUE INDEX schedule_dispatches_schedule_id_scheduled_for_key ON app.schedule_dispatches USING btree (schedule_id, scheduled_for)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "schedules",
+      "index_name": "schedules_comparison_idx",
+      "definition": "CREATE INDEX schedules_comparison_idx ON app.schedules USING btree (comparison_id)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "schedules",
+      "index_name": "schedules_due_idx",
+      "definition": "CREATE INDEX schedules_due_idx ON app.schedules USING btree (is_active, next_run_at)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "schedules",
+      "index_name": "schedules_pkey",
+      "definition": "CREATE UNIQUE INDEX schedules_pkey ON app.schedules USING btree (id)",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "users",
+      "index_name": "users_email_unique",
+      "definition": "CREATE UNIQUE INDEX users_email_unique ON app.users USING btree (lower(email))",
+      "indisvalid": true,
+      "indisready": true
+    },
+    {
+      "relname": "users",
+      "index_name": "users_pkey",
+      "definition": "CREATE UNIQUE INDEX users_pkey ON app.users USING btree (id)",
+      "indisvalid": true,
+      "indisready": true
+    }
+  ],
+  "table_grants": [
+    {
+      "relname": "audit_log",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "audit_log",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "audit_log",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "REFERENCES",
+      "is_grantable": false
+    },
+    {
+      "relname": "audit_log",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "audit_log",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "TRIGGER",
+      "is_grantable": false
+    },
+    {
+      "relname": "audit_log",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "TRUNCATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "audit_log",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "audit_log",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "audit_log",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "auth_sessions",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "auth_sessions",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "auth_sessions",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "REFERENCES",
+      "is_grantable": false
+    },
+    {
+      "relname": "auth_sessions",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "auth_sessions",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "TRIGGER",
+      "is_grantable": false
+    },
+    {
+      "relname": "auth_sessions",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "TRUNCATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "auth_sessions",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "auth_sessions",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "auth_sessions",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "auth_sessions",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "auth_sessions",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedule_dispatches",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedule_dispatches",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedule_dispatches",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "REFERENCES",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedule_dispatches",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedule_dispatches",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "TRIGGER",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedule_dispatches",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "TRUNCATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedule_dispatches",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedule_dispatches",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedule_dispatches",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedule_dispatches",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedule_dispatches",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedules",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedules",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedules",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "REFERENCES",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedules",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedules",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "TRIGGER",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedules",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "TRUNCATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedules",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedules",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedules",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedules",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "schedules",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "users",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "users",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "users",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "REFERENCES",
+      "is_grantable": false
+    },
+    {
+      "relname": "users",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "users",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "TRIGGER",
+      "is_grantable": false
+    },
+    {
+      "relname": "users",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "TRUNCATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "users",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    },
+    {
+      "relname": "users",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "relname": "users",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "relname": "users",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "relname": "users",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    }
+  ],
+  "default_grants": [
+    {
+      "schema": "",
+      "object_type": "f",
+      "grantee": "dataqore_app_owner",
+      "privilege_type": "EXECUTE",
+      "is_grantable": false
+    },
+    {
+      "schema": "app",
+      "object_type": "S",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "schema": "app",
+      "object_type": "S",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "USAGE",
+      "is_grantable": false
+    },
+    {
+      "schema": "app",
+      "object_type": "r",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "DELETE",
+      "is_grantable": false
+    },
+    {
+      "schema": "app",
+      "object_type": "r",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "INSERT",
+      "is_grantable": false
+    },
+    {
+      "schema": "app",
+      "object_type": "r",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "SELECT",
+      "is_grantable": false
+    },
+    {
+      "schema": "app",
+      "object_type": "r",
+      "grantee": "srv_dataqore_app",
+      "privilege_type": "UPDATE",
+      "is_grantable": false
+    }
+  ],
+  "functions": [],
+  "triggers": [],
+  "database_grants": [
+    {
+      "datname": "dataqore_app",
+      "runtime_connect": true,
+      "runtime_create": false,
+      "runtime_temp": false,
+      "public_grants": false
+    },
+    {
+      "datname": "dataqore_engine",
+      "runtime_connect": false,
+      "runtime_create": false,
+      "runtime_temp": false,
+      "public_grants": false
+    }
+  ],
+  "role_flags": [
+    {
+      "rolname": "dataqore_app_owner",
+      "rolsuper": false,
+      "rolcreatedb": false,
+      "rolcreaterole": false,
+      "rolreplication": false,
+      "rolbypassrls": false,
+      "rolcanlogin": false,
+      "rolinherit": true
+    },
+    {
+      "rolname": "srv_dataqore_app",
+      "rolsuper": false,
+      "rolcreatedb": false,
+      "rolcreaterole": false,
+      "rolreplication": false,
+      "rolbypassrls": false,
+      "rolcanlogin": true,
+      "rolinherit": false
+    },
+    {
+      "rolname": "srv_dataqore_app_migrator",
+      "rolsuper": false,
+      "rolcreatedb": false,
+      "rolcreaterole": false,
+      "rolreplication": false,
+      "rolbypassrls": false,
+      "rolcanlogin": true,
+      "rolinherit": false
+    }
+  ],
+  "role_memberships": [
+    {
+      "member": "srv_dataqore_app_migrator",
+      "granted_role": "dataqore_app_owner",
+      "admin_option": false
+    }
+  ]
+}

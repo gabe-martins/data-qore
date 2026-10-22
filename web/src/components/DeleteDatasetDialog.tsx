@@ -22,7 +22,6 @@ export function DeleteDatasetDialog({dataset, onClose, onDeleted, returnFocus}: 
     staleTime: 0,
     retry: false,
   });
-  const history = q.data?.profile_history;
   async function remove() {
     if (locked.current || q.isFetching || q.error || !q.data?.can_delete) return;
     locked.current = true;
@@ -44,7 +43,7 @@ export function DeleteDatasetDialog({dataset, onClose, onDeleted, returnFocus}: 
     }
   }
   return <Dialog open onOpenChange={open => {if (!open && !locked.current) onClose();}}>
-    <DialogContent title="Delete dataset" description="Review dependencies and profile history. Source tables and data will remain unchanged."
+    <DialogContent title="Delete dataset" description="Review linked comparisons. Source tables and data will remain unchanged."
       returnFocus={() => deleted.current ? returnFocus() : null}>
       <div className="dataset-delete-dialog" aria-busy={busy}>
         <p className="dataset-delete-location"><strong>{[dataset.catalog_name,dataset.schema_name,dataset.table_name].filter(Boolean).join(".")}</strong></p>
@@ -60,26 +59,14 @@ export function DeleteDatasetDialog({dataset, onClose, onDeleted, returnFocus}: 
             </li>)}</ul> : <p className="muted">No linked comparisons.</p>}
             <Pagination total={q.data.comparisons.total} offset={offset} setOffset={setOffset} />
           </section>
-          <section aria-label="Individual profile history" className="connection-dependencies">
-            <h3>Individual profile history</h3>
-            <dl className="dataset-delete-counts">
-              <div><dt>Profile runs</dt><dd>{history!.runs}</dd></div>
-              <div><dt>Results</dt><dd>{history!.results}</dd></div>
-              <div><dt>Column profiles</dt><dd>{history!.column_profiles}</dd></div>
-              <div><dt>Metrics</dt><dd>{history!.metrics}</dd></div>
-            </dl>
-          </section>
           {!!q.data.comparisons.total && <p className="notice warning" role="status">This dataset is used by current or historical comparisons and cannot be deleted. Inactive comparisons also block deletion.</p>}
-          {!!q.data.active_profile_runs && <p className="notice warning" role="status">{q.data.active_profile_runs} queued or running profile(s). Wait for them to finish, then refresh the dependency check.</p>}
           {!q.data.can_delete && <Button variant="outline" disabled={q.isFetching} onClick={() => void q.refetch()}>Refresh dependencies</Button>}
-          {q.data.can_delete && <p className="notice warning" role="status">{history!.runs
-            ? "This permanently deletes the dataset registration and all its individual profile runs, results, column profiles and metrics. This cannot be undone."
-            : "This permanently deletes the dataset registration. No profile history was found."} Source tables and data will remain unchanged.</p>}
+          {q.data.can_delete && <p className="notice warning">This permanently deletes the dataset registration.</p>}
         </>}
         <div className="form-footer">
           <Button variant="outline" disabled={busy} onClick={onClose}>Cancel</Button>
           <Button disabled={busy || q.isFetching || !!q.error || !q.data?.can_delete} onClick={() => void remove()}>
-            {busy ? "Deleting…" : history?.runs ? "Delete dataset and profile history" : "Delete dataset"}
+            {busy ? "Deleting…" : "Delete dataset"}
           </Button>
         </div>
       </div>

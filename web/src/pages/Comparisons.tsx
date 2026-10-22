@@ -1,32 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Plus,
-  Search,
-  GitCompareArrows,
-  Play,
-  Check,
-  ArrowRight,
-  Trash2,
-} from "lucide-react";
-import { api, allPages, patch, post, type Model, type Page } from "../api";
-import {
-  normalizeTolerance,
-  fractionToPercent,
-  percentToFraction,
-} from "../lib/tolerances";
-import { ToleranceHelp } from "../components/ToleranceHelp";
-import { DeleteComparisonDialog } from "../components/DeleteComparisonDialog";
-import { BusinessQualityResult } from "../components/BusinessQuality";
-import { AnalysisNotice, EvaluationValue } from "../components/Evaluation";
+import { api, allPages, post, type Model, type Page } from "../api";
 import {
   ScopeEditor,
   MappingEditor,
-  ScopeSummary,
-  FrozenComparisonContext,
   type ComparisonOptions,
 } from "../components/ComparisonOptionsEditor";
+import { DeleteComparisonDialog } from "../components/DeleteComparisonDialog";
+import { Rate, CriticalMetrics } from "../components/CriticalMetrics";
+import { normalizeTolerance } from "../lib/tolerances";
 import {
   Badge,
   Button,
@@ -37,30 +20,13 @@ import {
   Loading,
   PageTitle,
   Pagination,
-  percent,
   RunsTable,
-  Stat,
 } from "../components/common";
-const defaults = {
-  pilot_rows: 64,
-  min_rows: 64,
-  max_rows: 1000,
-  max_cells: 100000,
-  max_sample_bytes: 16777216,
-  proportion_margin: 0.05,
-};
 export function Comparisons() {
-  const [search, setSearch] = useState("");
-  const [offset, setOffset] = useState(0);
-  const [error, setError] = useState<unknown>(null);
-  const [startingId, setStartingId] = useState<string | null>(null);
-  const starting = useRef(false);
-  const [deleting,setDeleting]=useState<Model<"ComparisonSummaryOut">|null>(null);
-  const searchInput=useRef<HTMLInputElement>(null);
-  const cache = useQueryClient();
-  const navigate = useNavigate();
+  const [offset, setOffset] = useState(0),
+    [search, setSearch] = useState("");
   const q = useQuery({
-    queryKey: ["comparisons", search, offset],
+    queryKey: ["comparisons", offset, search],
     queryFn: () =>
       api<Page<Model<"ComparisonSummaryOut">>>(
         `/comparison-summaries?limit=20&offset=${offset}&search=${encodeURIComponent(search)}`,
@@ -70,526 +36,316 @@ export function Comparisons() {
     <>
       <PageTitle
         title="Comparisons"
-        subtitle="Validate source and target data with sample evidence and reusable settings."
+        subtitle="Five critical metrics, equivalent scopes and reproducible samples."
+        action={
+          <Button asChild>
+            <Link to="/comparisons/new">New comparison</Link>
+          </Button>
+        }
       />
-      <div className="toolbar">
-        <div className="search">
-          <Search size={19} />
+      <Card>
+        <label>
+          Search
           <input
-            ref={searchInput}
-            aria-label="Search comparisons"
-            placeholder="Search comparisons…"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
               setOffset(0);
             }}
           />
-        </div>
-        <Button asChild>
-          <Link to="/comparisons/new">
-            <Plus size={18} />
-            New comparison
-          </Link>
-        </Button>
-      </div>
-      <ErrorBox error={error || q.error} />
-      {q.isPending ? (
-        <Loading />
-      ) : q.data?.items.length ? (
-        q.data.items.map((c) => (
-          <Card key={c.id}>
-            <div className="card-heading">
-              <div className="resource-title">
-                <span className="resource-icon">
-                  <GitCompareArrows />
-                </span>
-                <div>
-                  <h2>
-                    <Link to={"/comparisons/" + c.id}>{c.name}</Link>
-                  </h2>
-                  <span className="muted">
-                    {c.mode.replaceAll("_", " ")} · Sample comparison
-                  </span>
-                </div>
-              </div>
-              <div className="actions">
-                <Badge value={c.is_active ? "active" : "inactive"} />
-                <Button asChild variant="outline">
-                  <Link to={`/comparisons/${c.id}/edit`}>Edit</Link>
-                </Button>
-                <Button variant="outline" onClick={()=>setDeleting(c)}><Trash2 size={16} aria-hidden="true"/>Delete</Button>
-              </div>
+        </label>
+        <ErrorBox error={q.error} />
+        {q.isPending ? (
+          <Loading />
+        ) : q.data?.items.length ? (
+          <>
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Comparison</th>
+                    <th>State</th>
+                    <th>Row Match Rate</th>
+                    <th>Latest run</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {q.data.items.map((c) => (
+                    <tr key={c.id}>
+                      <td>
+                        <Link to={`/comparisons/${c.id}`}>{c.name}</Link>
+                      </td>
+                      <td>
+                        <Badge value={c.is_active ? "active" : "inactive"} />
+                      </td>
+                      <td>
+                        <Rate value={c.latest_result?.row_match_rate} />
+                      </td>
+                      <td>
+                        <Badge value={c.latest_run?.status} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <dl className="comparison-facts">
-              <dt>Execution</dt>
-              <dd><Link to={"/schedules?comparison_id=" + c.id}>Manual / schedules</Link></dd>
-              <dt>Status</dt>
-              <dd>
-                <button
-                  className={"switch " + (c.is_active ? "on" : "")}
-                  aria-label={"Activate " + c.name}
-                  role="switch"
-                  aria-checked={c.is_active}
-                  onClick={async () => {
-                    try {
-                      await patch("/comparisons/" + c.id, {
-                        is_active: !c.is_active,
-                      });
-                      await cache.invalidateQueries({
-                        queryKey: ["comparisons"],
-                      });
-                    } catch (e) {
-                      setError(e);
-                    }
-                  }}
-                />
-                {c.is_active ? "Active" : "Inactive"}
-              </dd>
-              <dt>Last result</dt>
-              <dd>
-                <Badge value={c.latest_result?.conclusion} />
-              </dd>
-              <dt>Context</dt>
-              <dd>
-                Review scope, alignment and coverage before interpreting
-                observed differences.
-              </dd>
-            </dl>
-            <div className="card-bottom">
-              <span className="muted small">
-                {c.latest_run
-                  ? `Latest run: ${c.latest_run.status}`
-                  : "No runs yet"}
-              </span>
-              <Button
-                disabled={!c.is_active || startingId !== null}
-                onClick={async () => {
-                  if (starting.current) return;
-                  starting.current = true;
-                  setStartingId(c.id);
-                  setError(null);
-                  try {
-                    const r = await post<Model<"RunOut">>(
-                      `/comparisons/${c.id}/runs`,
-                      {},
-                      crypto.randomUUID(),
-                    );
-                    navigate("/runs/" + r.id);
-                  } catch (e) {
-                    setError(e);
-                  } finally {
-                    starting.current = false;
-                    setStartingId(null);
-                  }
-                }}
-              >
-                <Play size={16} />
-                {startingId === c.id ? "Starting…" : "Run now"}
-              </Button>
-            </div>
-          </Card>
-        ))
-      ) : (
-        <Card>
-          <Empty title="No comparisons found">
-            Choose two registered datasets to create your first comparison.
-          </Empty>
-        </Card>
-      )}
-      {q.data && (
-        <Pagination
-          total={q.data.total}
-          offset={offset}
-          setOffset={setOffset}
-        />
-      )}
-      {deleting&&<DeleteComparisonDialog comparison={deleting} onClose={()=>setDeleting(null)}
-        returnFocus={()=>searchInput.current} onDeleted={()=>{setDeleting(null);setOffset(0);}}/>}
+            <Pagination
+              total={q.data.total}
+              offset={offset}
+              setOffset={setOffset}
+            />
+          </>
+        ) : (
+          <Empty title="No comparisons" />
+        )}
+      </Card>
     </>
   );
 }
 export function ComparisonDetail() {
-  const { id } = useParams();
-  const [tab, setTab] = useState("Overview");
-  const [offset, setOffset] = useState(0);
-  const [error, setError] = useState<unknown>(null);
-  const [deleting,setDeleting]=useState(false);
-  const [isStarting, setIsStarting] = useState(false);
-  const starting = useRef(false);
-  const navigate = useNavigate();
+  const { id } = useParams(),
+    navigate = useNavigate(),
+    cache = useQueryClient();
+  const [error, setError] = useState<unknown>(null),
+    [busy, setBusy] = useState(false),
+    [deleting, setDeleting] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
   const c = useQuery({
     queryKey: ["comparison", id],
-    queryFn: () => api<Model<"ComparisonOut">>("/comparisons/" + id),
+    queryFn: () => api<Model<"ComparisonOut">>(`/comparisons/${id}`),
   });
+  const [offset, setOffset] = useState(0);
   const runs = useQuery({
     queryKey: ["comparison-runs", id, offset],
     queryFn: () =>
       api<Page<Model<"RunOut">>>(
         `/runs?comparison_id=${id}&limit=20&offset=${offset}`,
       ),
-    refetchInterval: (q) =>
-      q.state.data?.items.some((r) => ["queued", "running"].includes(r.status))
-        ? 2000
-        : false,
+    refetchInterval: 2000,
   });
-  const latestSuccessful = useQuery({
+  const latest = useQuery({
     queryKey: [
-      "comparison-latest-success",
+      "comparison-latest",
       id,
-      runs.data?.items[0]?.id,
       runs.data?.items[0]?.status,
+      runs.data?.items[0]?.id,
     ],
     queryFn: () =>
-      api<Page<Model<"RunOut">>>(
-        `/runs?comparison_id=${id}&status=succeeded&limit=1`,
-      ),
+      api<Model<"ResultOut">>(`/runs/${runs.data!.items[0].id}/result`),
+    enabled: runs.data?.items[0]?.status === "succeeded" && offset === 0,
   });
-  const latest = latestSuccessful.data?.items[0];
-  const result = useQuery({
-    queryKey: ["result", latest?.id],
-    queryFn: () => api<Model<"ResultOut">>(`/runs/${latest!.id}/result`),
-    enabled: !!latest,
-  });
-  const r = result.data?.result as any;
-  const row = r?.row_comparisons?.[0];
   return (
     <>
       <PageTitle
         title={c.data?.name ?? "Comparison"}
-        subtitle="Monitor observed outcomes, execution history and configuration."
-        eyebrow="DATA QUALITY / COMPARISONS"
+        subtitle="Definition, critical metrics and execution history."
         action={
           <>
-            <Button asChild variant="outline"><Link to={"/schedules?comparison_id=" + id}>Schedules</Link></Button>
-            <Button asChild variant="outline">
+            <Button asChild>
               <Link to={`/comparisons/${id}/edit`}>Edit</Link>
             </Button>
-            <Button variant="outline" disabled={!c.data} onClick={()=>setDeleting(true)}><Trash2 size={16} aria-hidden="true"/>Delete</Button>
             <Button
-              disabled={!c.data?.is_active || isStarting}
+              disabled={busy || !c.data?.is_active}
               onClick={async () => {
-                if (starting.current) return;
-                starting.current = true;
-                setIsStarting(true);
+                setBusy(true);
                 setError(null);
                 try {
                   const run = await post<Model<"RunOut">>(
                     `/comparisons/${id}/runs`,
                     {},
-                    crypto.randomUUID(),
                   );
-                  navigate("/runs/" + run.id);
+                  navigate(`/runs/${run.id}`);
                 } catch (e) {
                   setError(e);
                 } finally {
-                  starting.current = false;
-                  setIsStarting(false);
+                  setBusy(false);
                 }
               }}
             >
-              <Play size={16} />
-              {isStarting ? "Starting…" : "Run now"}
+              Run comparison
             </Button>
           </>
         }
       />
-      <ErrorBox error={error || c.error || runs.error || result.error} />
+      <ErrorBox error={error || c.error || runs.error || latest.error} />
       {c.isPending ? (
         <Loading />
       ) : (
         c.data && (
           <>
-            <div className="tabs" role="tablist">
-              {["Overview", "Differences", "Rules", "Runs", "Settings"].map(
-                (t) => (
-                  <button
-                    role="tab"
-                    aria-selected={tab === t}
-                    key={t}
-                    className={tab === t ? "active" : ""}
-                    onClick={() => setTab(t)}
-                  >
-                    {t}
-                  </button>
-                ),
+            <Card title="Definition">
+              <Badge value={c.data.is_active ? "active" : "inactive"} />
+              <p>
+                Sample: {c.data.sampling_options?.method} ·{" "}
+                {c.data.sampling_options?.method === "percentage"
+                  ? `${c.data.sampling_options?.percentage}% of the larger scope`
+                  : `${c.data.sampling_options?.rows} keys`}
+              </p>
+              <details>
+                <summary>Scope, mapping and tolerances</summary>
+                <JsonView value={c.data} />
+              </details>
+              <div className="form-footer">
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      await api(`/comparisons/${id}`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ is_active: !c.data!.is_active }),
+                      });
+                      await cache.invalidateQueries({
+                        queryKey: ["comparison", id],
+                      });
+                    } catch (e) {
+                      setError(e);
+                    }
+                  }}
+                >
+                  {c.data.is_active ? "Deactivate" : "Activate"}
+                </Button>
+                <Button
+                  variant="outline"
+                  ref={trigger}
+                  onClick={() => setDeleting(true)}
+                >
+                  Delete comparison
+                </Button>
+              </div>
+            </Card>
+            {latest.data && <CriticalMetrics result={latest.data.result} />}
+            <Card title="Execution history">
+              {runs.data?.items.length ? (
+                <>
+                  <RunsTable runs={runs.data.items} />
+                  <Pagination
+                    total={runs.data.total}
+                    offset={offset}
+                    setOffset={setOffset}
+                  />
+                </>
+              ) : (
+                <Empty title="No runs" />
               )}
-            </div>
-            {tab === "Overview" ? (
-              <>
-                {result.data && <BusinessQualityResult result={r} />}
-                {result.data && <AnalysisNotice evaluation={result.data.evaluation} />}
-                <div className="stats-grid four">
-                  <Stat
-                    label="Rows observed per source"
-                    value={
-                      r?.sources?.map((s: any) => s.sample_size).join(" / ") ||
-                      "No completed execution"
-                    }
-                    detail="Observed sample only"
-                  />
-                  <Stat
-                    label="Cell agreement"
-                    value={result.data ? <EvaluationValue value={r?.indicators?.agreement?.percentage == null ? null : percent(r.indicators.agreement.percentage)} evaluation={result.data.evaluation?.agreement} /> : "No completed execution"}
-                    detail={result.data && <>Coverage <EvaluationValue value={r?.indicators?.agreement?.coverage_percentage == null ? null : percent(r.indicators.agreement.coverage_percentage)} evaluation={result.data.evaluation?.agreement} /></>}
-                  />
-                  <Stat
-                    label="Different sampled rows"
-                    value={result.data ? <EvaluationValue value={row?.different_rows} evaluation={result.data.evaluation?.agreement} /> : "No completed execution"}
-                  />
-                  <Stat
-                    label="Execution"
-                    value="Manual / schedules"
-                    detail={
-                      <Badge value={c.data.is_active ? "active" : "inactive"} />
-                    }
-                  />
-                </div>
-                <div className="content-columns">
-                  <Card
-                    title="Latest available result"
-                    subtitle="A sample cannot establish equality of entire tables."
-                  >
-                    {result.data ? (
-                      <>
-                        <Badge value={result.data.conclusion} />
-                        <div className="notice">
-                          {r?.sampling_plan?.metric_scope ??
-                            "Review source sample scope and coverage."}
-                        </div>
-                        <Button asChild variant="outline">
-                          <Link to={"/runs/" + result.data.run_id}>
-                            Open results <ArrowRight size={16} />
-                          </Link>
-                        </Button>
-                      </>
-                    ) : (
-                      <Empty title="No successful run yet">
-                        Run this comparison to collect evidence.
-                      </Empty>
-                    )}
-                  </Card>
-                  <Card title="Source configuration">
-                    <dl>
-                      <dt>Source A</dt>
-                      <dd>
-                        <Link to={"/datasets/" + c.data.left_dataset_id}>
-                          Open source dataset
-                        </Link>
-                      </dd>
-                      <dt>Source B</dt>
-                      <dd>
-                        <Link to={"/datasets/" + c.data.right_dataset_id}>
-                          Open comparison dataset
-                        </Link>
-                      </dd>
-                      <dt>Method</dt>
-                      <dd>{c.data.mode}</dd>
-                      <dt>Key alignment</dt>
-                      <dd>
-                        {c.data.comparison_options?.business_key?.length
-                          ? c.data.comparison_options.business_key
-                              .map((p) => `${p.left} ↔ ${p.right}`)
-                              .join(" + ")
-                          : "Automatic PK / non-null UNIQUE"}
-                      </dd>
-                    </dl>
-                  </Card>
-                </div>
-              </>
-            ) : tab === "Runs" ? (
-              <Card title="Run history">
-                {runs.data?.items.length ? (
-                  <>
-                    <RunsTable runs={runs.data.items} />
-                    <Pagination
-                      total={runs.data.total}
-                      offset={offset}
-                      setOffset={setOffset}
-                    />
-                  </>
-                ) : (
-                  <Empty />
-                )}
-              </Card>
-            ) : tab === "Differences" ? (
-              <Card title="Aggregate differences">
-                {result.data ? (
-                  <>
-                    <p className="muted">
-                      Inspect schema, quality and per-column observations
-                      without record values.
-                    </p>
-                    <Button asChild>
-                      <Link to={"/runs/" + result.data.run_id + "/differences"}>
-                        Open differences
-                      </Link>
-                    </Button>
-                  </>
-                ) : (
-                  <Empty title="No results yet" />
-                )}
-              </Card>
-            ) : tab === "Rules" ? (
-              <Card title="Comparison rules">
-                <dl>
-                  <dt>
-                    Absolute tolerance (units) <ToleranceHelp />
-                  </dt>
-                  <dd>{c.data.absolute_tolerance}</dd>
-                  <dt>
-                    Relative tolerance (%) <ToleranceHelp relative />
-                  </dt>
-                  <dd>{fractionToPercent(c.data.relative_tolerance)}%</dd>
-                  <dt>Strings</dt>
-                  <dd>Exact; case and whitespace preserved</dd>
-                  <dt>Column correspondence</dt>
-                  <dd>Manual pairs followed by automatic name matching</dd>
-                  <dt>Scope & mapping configuration</dt>
-                  <dd>
-                    <JsonView value={c.data.comparison_options} />
-                  </dd>
-                </dl>
-              </Card>
-            ) : (
-              <>
-                <FrozenComparisonContext result={r} />
-                <Card title="Sampling settings">
-                  <JsonView
-                    value={{
-                      mode: c.data.mode,
-                      sample_size: c.data.sample_size,
-                      ...c.data.sampling_options,
-                      comparison_options: c.data.comparison_options,
-                    }}
-                  />
-                </Card>
-              </>
+            </Card>
+            {deleting && (
+              <DeleteComparisonDialog
+                comparison={c.data}
+                onClose={() => setDeleting(false)}
+                returnFocus={() => trigger.current}
+                onDeleted={() => {
+                  cache.invalidateQueries({ queryKey: ["comparisons"] });
+                  navigate("/comparisons");
+                }}
+              />
             )}
           </>
         )
       )}
-      {deleting&&c.data&&<DeleteComparisonDialog comparison={c.data} onClose={()=>setDeleting(false)}
-        returnFocus={()=>document.querySelector<HTMLInputElement>('input[aria-label="Search comparisons"]')}
-        onDeleted={()=>navigate("/comparisons")}/>}
     </>
   );
 }
 export function Wizard() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const cache = useQueryClient();
-  const [step, setStep] = useState(1);
-  const [comparisonOptions, setComparisonOptions] = useState<ComparisonOptions>(
-    {},
-  );
-  const [preview, setPreview] = useState<Model<"ComparisonPreviewOut"> | null>(
-    null,
-  );
-  const [name, setName] = useState("");
-  const [left, setLeft] = useState("");
-  const [right, setRight] = useState("");
-  const [mode, setMode] = useState("auto");
-  const [absolute, setAbsolute] = useState("0");
-  const [relative, setRelative] = useState("0");
-  const [sampling, setSampling] = useState(defaults);
-  const [size, setSize] = useState("");
-  const [error, setError] = useState<unknown>(null);
-  const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState<string | null>(null);
-  const [retryKey, setRetryKey] = useState<string | null>(null);
+  const { id } = useParams(),
+    navigate = useNavigate(),
+    cache = useQueryClient();
+  const [step, setStep] = useState(0),
+    [name, setName] = useState("");
+  const [left, setLeft] = useState(""),
+    [right, setRight] = useState("");
+  const [options, setOptions] = useState<ComparisonOptions>({});
+  const [method, setMethod] = useState<"rows" | "percentage">("rows"),
+    [rows, setRows] = useState(1000),
+    [percentage, setPercentage] = useState("10"),
+    [seed, setSeed] = useState("");
+  const [absolute, setAbsolute] = useState("0"),
+    [relative, setRelative] = useState("0"),
+    [maxCells, setMaxCells] = useState(100000),
+    [maxBytes, setMaxBytes] = useState(16777216);
+  const [error, setError] = useState<unknown>(null),
+    [busy, setBusy] = useState(false),
+    [preview, setPreview] = useState<Model<"ComparisonPreviewOut"> | null>(
+      null,
+    );
   const datasets = useQuery({
-    queryKey: ["wizard-datasets"],
+    queryKey: ["all-datasets"],
     queryFn: () => allPages<Model<"DatasetOut">>("/datasets"),
   });
-  const existing = useQuery({
+  const current = useQuery({
     queryKey: ["comparison", id],
-    queryFn: () => api<Model<"ComparisonOut">>("/comparisons/" + id),
+    queryFn: () => api<Model<"ComparisonOut">>(`/comparisons/${id}`),
     enabled: !!id,
   });
   useEffect(() => {
-    if (existing.data) {
-      const c = existing.data;
-      setName(c.name);
-      setComparisonOptions(c.comparison_options ?? {});
-      setLeft(c.left_dataset_id);
-      setRight(c.right_dataset_id);
-      setMode(c.mode);
-      setAbsolute(String(c.absolute_tolerance));
-      setRelative(fractionToPercent(c.relative_tolerance));
-      setSampling({
-        ...defaults,
-        ...Object.fromEntries(
-          Object.entries(c.sampling_options ?? {}).filter(
-            ([, value]) => value != null,
-          ),
-        ),
-      });
-      setSize(c.sample_size ? String(c.sample_size) : "");
-    }
-  }, [existing.data]);
-  const l = datasets.data?.items.find((d) => d.id === left);
-  const r = datasets.data?.items.find((d) => d.id === right);
-  const columns = (d?: Model<"DatasetOut">) =>
-    (d?.metadata as any)?.columns ?? {};
-  function values() {
+    const c = current.data;
+    if (!c) return;
+    setName(c.name);
+    setLeft(c.left_dataset_id);
+    setRight(c.right_dataset_id);
+    setOptions(c.comparison_options ?? {});
+    setMethod(c.sampling_options?.method ?? "rows");
+    setRows(c.sampling_options?.rows ?? 1000);
+    setPercentage(String(c.sampling_options?.percentage ?? 10));
+    setSeed(
+      c.sampling_options?.seed == null ? "" : String(c.sampling_options?.seed),
+    );
+    setAbsolute(String(c.absolute_tolerance));
+    setRelative(String(c.relative_tolerance));
+    setMaxCells(c.sampling_options?.max_cells ?? 100000);
+    setMaxBytes(c.sampling_options?.max_sample_bytes ?? 16777216);
+  }, [current.data]);
+  const columns = (identifier: string) =>
+    (datasets.data?.items.find((d) => d.id === identifier)?.metadata.columns ??
+      {}) as Record<string, any>;
+  function payload() {
     return {
       name,
       left_dataset_id: left,
       right_dataset_id: right,
-      mode,
+      comparison_options: options,
       absolute_tolerance: normalizeTolerance(absolute),
-      relative_tolerance: percentToFraction(relative),
-      sampling_options: sampling,
-      sample_size: size ? Number(size) : null,
-      comparison_options: comparisonOptions,
+      relative_tolerance: normalizeTolerance(relative),
+      sampling_options: {
+        method,
+        rows,
+        percentage:
+          method === "percentage" ? normalizeTolerance(percentage) : null,
+        seed: seed || null,
+        max_cells: maxCells,
+        max_sample_bytes: maxBytes,
+      },
     };
   }
-  async function refreshPreview() {
+  async function review() {
     setBusy(true);
     setError(null);
     try {
-      const result = await post<Model<"ComparisonPreviewOut">>(
-        "/comparisons/preview",
-        values(),
+      setPreview(
+        await post<Model<"ComparisonPreviewOut">>(
+          "/comparisons/preview",
+          payload(),
+        ),
       );
-      setPreview(result);
-      return true;
+      setStep(2);
     } catch (e) {
       setError(e);
-      return false;
     } finally {
       setBusy(false);
     }
   }
   async function save(run: boolean) {
-    setError(null);
     setBusy(true);
+    setError(null);
     try {
-      let comparison = saved;
-      if (!comparison) {
-        const payload = values();
-        const c = id
-          ? await patch<Model<"ComparisonOut">>("/comparisons/" + id, {
-              ...payload,
-              sample_size: size ? Number(size) : null,
-            })
-          : await post<Model<"ComparisonOut">>("/comparisons", payload);
-        comparison = c.id;
-        setSaved(c.id);
-        await cache.invalidateQueries({ queryKey: ["comparisons"] });
-        await cache.invalidateQueries({ queryKey: ["comparison", comparison] });
-      }
+      const c = await api<Model<"ComparisonOut">>(
+        id ? `/comparisons/${id}` : "/comparisons",
+        { method: id ? "PATCH" : "POST", body: JSON.stringify(payload()) },
+      );
+      await cache.invalidateQueries({ queryKey: ["comparisons"] });
       if (run) {
-        const key = retryKey ?? crypto.randomUUID();
-        setRetryKey(key);
-        const job = await post<Model<"RunOut">>(
-          `/comparisons/${comparison}/runs`,
-          {},
-          key,
-        );
-        navigate("/runs/" + job.id);
-      } else navigate("/comparisons/" + comparison);
+        const r = await post<Model<"RunOut">>(`/comparisons/${c.id}/runs`, {});
+        navigate(`/runs/${r.id}`);
+      } else navigate(`/comparisons/${c.id}`);
     } catch (e) {
       setError(e);
     } finally {
@@ -599,383 +355,236 @@ export function Wizard() {
   return (
     <>
       <PageTitle
-        title={
-          id
-            ? "Edit comparison"
-            : step === 1
-              ? "Create comparison"
-              : step === 2
-                ? "Review columns & define rules"
-                : "Review comparison"
-        }
-        subtitle="Compare datasets side by side and evaluate observed differences."
-        eyebrow="DATA QUALITY / COMPARISONS"
+        title={id ? "Edit comparison" : "New comparison"}
+        subtitle={`Step ${step + 1} of 3 · ${["Sources and scope", "Identity and sample", "Review"][step]}`}
       />
-      <ErrorBox error={error || datasets.error || existing.error} />
-      {saved && (
-        <div className="notice warning">
-          The comparison is saved. If execution failed, retry with the same
-          request key or open its run history before creating another run.{" "}
-          <Link to={"/comparisons/" + saved}>Open saved comparison</Link>
-        </div>
-      )}
-      <div className="wizard-steps">
-        {["Datasets & scope", "Mapping & rules", "Review"].map((label, i) => (
-          <div
-            key={label}
-            className={step === i + 1 ? "current" : step > i + 1 ? "done" : ""}
-          >
-            <span>
-              {step > i + 1 ? (
-                <Check size={17} />
-              ) : (
-                String(i + 1).padStart(2, "0")
-              )}
-            </span>
-            <div>
-              <strong>{label}</strong>
-              <small>
-                {
-                  [
-                    "Sources & equivalent criteria",
-                    "Column pairs & identity",
-                    "Save or run",
-                  ][i]
-                }
-              </small>
-            </div>
-          </div>
-        ))}
-      </div>
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          if (left === right) {
-            setError(Error("Choose two distinct datasets."));
-            return;
-          }
-          if (step === 2) {
-            try {
-              normalizeTolerance(absolute);
-              percentToFraction(relative);
-            } catch (error) {
-              setError(error);
-              return;
-            }
-          }
-          setError(null);
-          if (step === 2) {
-            if (await refreshPreview()) setStep(3);
-          } else if (step < 3) setStep(step + 1);
-          else void save(true);
-        }}
-      >
-        <fieldset disabled={busy || !!saved} className="wizard-fieldset">
-          {step === 1 ? (
+      <ErrorBox error={error || datasets.error || current.error} />
+      {datasets.isPending || (id && current.isPending) ? (
+        <Loading />
+      ) : (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (step === 0) setStep(1);
+            else if (step === 1) void review();
+            else void save(false);
+          }}
+        >
+          {step === 0 && (
             <>
-              <div className="content-columns">
-                <Card
-                  title="Datasets to compare"
-                  subtitle="Select two registered source tables."
-                >
-                  <div className="dataset-pair">
-                    {[
-                      ["A", "Source dataset", left, setLeft],
-                      ["B", "Comparison dataset", right, setRight],
-                    ].map(([badge, title, value, setter]: any) => (
-                      <div className="dataset-choice" key={badge}>
-                        <h3>
-                          <span className="badge success">{badge}</span> {title}
-                        </h3>
-                        <label>
-                          Dataset
-                          <select
-                            aria-label="Dataset"
-                            value={value}
-                            onChange={(e) => {
-                              setter(e.target.value);
-                              setComparisonOptions({});
-                              setPreview(null);
-                            }}
-                            required
-                          >
-                            <option value="">Choose dataset</option>
-                            {datasets.data?.items.map((d) => (
-                              <option key={d.id} value={d.id}>
-                                {d.catalog_name ? d.catalog_name + "." : ""}{d.schema_name ? d.schema_name + "." : ""}
-                                {d.table_name} · {d.id.slice(0, 8)}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <Link to="/catalog">Browse source catalog</Link>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="notice">
-                    Review the equivalent scope below. Column pairs and business
-                    keys are selected in the next step.
-                  </p>
-                </Card>
-                <Card title="Comparison settings">
-                  <label>
-                    Comparison name
-                    <input
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      maxLength={255}
-                    />
-                  </label>
-                </Card>
-              </div>
-              <ScopeEditor
-                value={comparisonOptions}
-                onChange={(v) => {
-                  setComparisonOptions(v);
-                  setPreview(null);
-                }}
-                left={columns(l)}
-                right={columns(r)}
-              />
-            </>
-          ) : step === 2 ? (
-            <div className="content-columns">
-              <MappingEditor
-                mode={mode}
-                value={comparisonOptions}
-                onChange={(v) => {
-                  setComparisonOptions(v);
-                  setPreview(null);
-                }}
-                left={columns(l)}
-                right={columns(r)}
-              />
-              <Card title="Validation rules">
+              <Card title="Sources">
                 <label>
-                  Strategy
-                  <select
-                    aria-label="Strategy"
-                    value={mode}
-                    onChange={(e) => setMode(e.target.value)}
-                  >
-                    <option value="auto">
-                      Auto — align when a safe key exists
-                    </option>
-                    <option value="matched_keys">
-                      Matched keys — require safe alignment
-                    </option>
-                    <option
-                      value="independent_random"
-                      disabled={!!comparisonOptions.business_key?.length}
-                    >
-                      Independent random — profiles only
-                    </option>
-                  </select>
-                </label>
-                <p className="muted small">
-                  Keys are discovered from compatible PK or non-null UNIQUE
-                  constraints. Profiles alone cannot prove row correspondence.
-                </p>
-
-                <div className="tolerance-field">
-                  <div className="tolerance-label">
-                    <label htmlFor="absolute-tolerance">
-                      Absolute tolerance (units)
-                    </label>
-                    <ToleranceHelp />
-                  </div>
+                  Name
                   <input
-                    id="absolute-tolerance"
-                    value={absolute}
-                    onChange={(e) => {
-                      setAbsolute(e.target.value);
-                      setError(null);
-                    }}
                     required
-                    inputMode="decimal"
-                    aria-describedby="absolute-tolerance-hint"
-                  />
-                  <p id="absolute-tolerance-hint" className="muted small">
-                    Fixed difference in each numeric column’s units, e.g. 0.50.
-                  </p>
-                </div>
-                <div className="tolerance-field">
-                  <div className="tolerance-label">
-                    <label htmlFor="relative-tolerance">
-                      Relative tolerance (%)
-                    </label>
-                    <ToleranceHelp relative />
-                  </div>
-                  <div className="percentage-input">
-                    <input
-                      id="relative-tolerance"
-                      value={relative}
-                      onChange={(e) => {
-                        setRelative(e.target.value);
-                        setError(null);
-                      }}
-                      required
-                      inputMode="decimal"
-                      aria-describedby="relative-tolerance-hint"
-                    />
-                    <span aria-hidden="true">%</span>
-                  </div>
-                  <p id="relative-tolerance-hint" className="muted small">
-                    Enter 1 for 1%. Use a dot or comma for decimals; no
-                    thousands separators.
-                  </p>
-                </div>
-                <p className="notice">
-                  Numeric values match when their difference is within the
-                  larger of the absolute and relative limits. The limits are not
-                  added. Both at zero means exact numeric equality. These rules
-                  do not set a percentage of differing records.
-                </p>
-                <dl>
-                  <dt>Strings</dt>
-                  <dd>Exact match, preserving case and spaces</dd>
-                  <dt>NULL handling</dt>
-                  <dd>
-                    NULL equals NULL; non-NULL values are compared normally
-                  </dd>
-                  <dt>Matching key</dt>
-                  <dd>
-                    {comparisonOptions.business_key?.length
-                      ? "Explicit business key; full-scope validation at execution"
-                      : "Automatic and checked at execution"}
-                  </dd>
-                </dl>
-              </Card>
-            </div>
-          ) : (
-            <div className="content-columns">
-              <Card title="Comparison summary" subtitle={name}>
-                <div className="stats-grid">
-                  <Stat label="Datasets" value="2" />
-                  <Stat
-                    label="Column pairs"
-                    value={preview?.mapping.length ?? "Preview required"}
-                  />
-                </div>
-                <dl>
-                  <dt>Source A</dt>
-                  <dd>{[l?.catalog_name,l?.schema_name,l?.table_name].filter(Boolean).join(".")}</dd>
-                  <dt>Source B</dt>
-                  <dd>{[r?.catalog_name,r?.schema_name,r?.table_name].filter(Boolean).join(".")}</dd>
-                  <dt>Strategy</dt>
-                  <dd>{mode}</dd>
-                  <dt>Tolerances</dt>
-                  <dd>
-                    {absolute} units absolute / {relative}% relative
-                  </dd>
-                </dl>
-                <ScopeSummary preview={preview} />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => void refreshPreview()}
-                >
-                  Refresh preview
-                </Button>
-                <p className="notice">
-                  The run freezes this definition and selected tables. It
-                  resolves current credentials when execution starts. All
-                  results describe sampled observations.
-                </p>
-              </Card>
-              <Card
-                title="Execution settings"
-                subtitle="Manual execution with explicit sample budgets."
-              >
-                <label>
-                  Explicit sample size (optional)
-                  <input
-                    type="number"
-                    min="1"
-                    max={sampling.max_rows}
-                    value={size}
-                    onChange={(e) => setSize(e.target.value)}
-                    placeholder="Adaptive planning"
+                    maxLength={255}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                   />
                 </label>
                 <div className="form-grid">
-                  {Object.entries(sampling).map(([k, v]) => (
-                    <label key={k}>
-                      {k.replaceAll("_", " ")}
-                      <input
-                        type="number"
-                        value={v}
-                        min={k === "proportion_margin" ? 0.000001 : 1}
-                        max={
-                          k === "proportion_margin"
-                            ? 0.999999
-                            : ["max_rows", "min_rows", "pilot_rows"].includes(k)
-                              ? 10000
-                              : undefined
-                        }
-                        step={k === "proportion_margin" ? "any" : "1"}
+                  {([left, right] as string[]).map((v, i) => (
+                    <label key={i}>
+                      Source {i ? "B" : "A"}
+                      <select
+                        aria-label={`Source ${i ? "B" : "A"}`}
                         required
-                        onChange={(e) =>
-                          setSampling({
-                            ...sampling,
-                            [k]: Number(e.target.value),
-                          })
-                        }
-                      />
+                        value={v}
+                        onChange={(e) => {
+                          (i ? setRight : setLeft)(e.target.value);
+                          setOptions({});
+                        }}
+                      >
+                        <option value="">Choose dataset</option>
+                        {datasets.data?.items
+                          .filter((d) => d.id !== (i ? left : right))
+                          .map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {[d.catalog_name, d.schema_name, d.table_name]
+                                .filter(Boolean)
+                                .join(".")}{" "}
+                              · {d.id.slice(0, 8)}
+                            </option>
+                          ))}
+                      </select>
                     </label>
                   ))}
                 </div>
-                <p className="muted small">
-                  Byte budgets are estimates. Random ordering may scan the
-                  source table.
+              </Card>
+              <ScopeEditor
+                value={options}
+                onChange={setOptions}
+                left={columns(left)}
+                right={columns(right)}
+              />
+            </>
+          )}
+          {step === 1 && (
+            <>
+              <MappingEditor
+                value={options}
+                onChange={setOptions}
+                left={columns(left)}
+                right={columns(right)}
+              />
+              <Card
+                title="Reproducible random sample"
+                subtitle="The same selected keys are fetched in both sources. Selection scans all eligible keys; at most 10,000 keys are compared."
+              >
+                <label>
+                  Sample size
+                  <select
+                    aria-label="Sample size"
+                    value={method}
+                    onChange={(e) => setMethod(e.target.value as typeof method)}
+                  >
+                    <option value="rows">Number of keys</option>
+                    <option value="percentage">
+                      Percentage of larger scope
+                    </option>
+                  </select>
+                </label>
+                {method === "rows" ? (
+                  <label>
+                    Keys
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      max={10000}
+                      step={1}
+                      value={rows}
+                      onChange={(e) => setRows(Number(e.target.value))}
+                    />
+                  </label>
+                ) : (
+                  <label>
+                    Percentage
+                    <input
+                      required
+                      inputMode="decimal"
+                      value={percentage}
+                      onChange={(e) => setPercentage(e.target.value)}
+                    />
+                  </label>
+                )}
+                <label>
+                  Seed (optional)
+                  <input
+                    inputMode="numeric"
+                    pattern="[0-9]{1,20}"
+                    value={seed}
+                    onChange={(e) => setSeed(e.target.value)}
+                    placeholder="Generated when queued"
+                  />
+                </label>
+                <p className="notice">
+                  Same seed, scope and unchanged key set reproduce the
+                  selection. Values may change. Percentage uses the larger
+                  source row count, not the union size.
                 </p>
               </Card>
-            </div>
+              <Card title="Numeric tolerances">
+                <div className="form-grid">
+                  <label>
+                    Absolute tolerance
+                    <input
+                      required
+                      value={absolute}
+                      onChange={(e) => setAbsolute(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Relative tolerance (fraction)
+                    <input
+                      required
+                      value={relative}
+                      onChange={(e) => setRelative(e.target.value)}
+                    />
+                  </label>
+                </div>
+                <p>Zero means exact numeric equality.</p>
+                <details>
+                  <summary>Capture budgets</summary>
+                  <label>
+                    Maximum cells (both sources)
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      value={maxCells}
+                      onChange={(e) => setMaxCells(Number(e.target.value))}
+                    />
+                  </label>
+                  <label>
+                    Maximum captured bytes
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      value={maxBytes}
+                      onChange={(e) => setMaxBytes(Number(e.target.value))}
+                    />
+                  </label>
+                </details>
+              </Card>
+            </>
           )}
-        </fieldset>
-        <div className="wizard-footer">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => navigate("/comparisons")}
-          >
-            Cancel
-          </Button>
-          <div className="actions">
-            {step > 1 && !saved && (
+          {step === 2 && preview && (
+            <Card title="Review">
+              <p>
+                {name} · {preview.sample_target} requested keys · scoped rows{" "}
+                {preview.scope_counts.join(" / ")}
+              </p>
+              <p>
+                Comparison key:{" "}
+                {(preview.business_key.length
+                  ? preview.business_key
+                  : preview.suggested_business_key
+                )
+                  .map((p) => `${p.left} ↔ ${p.right}`)
+                  .join(", ") || "Unavailable — choose a business key"}
+              </p>
+              <p>
+                Preview counts are provisional. Execution validates key
+                uniqueness and freezes its own counts and selection.
+              </p>
+              <JsonView value={preview} />
+              <p>Save the definition or save and run now.</p>
+            </Card>
+          )}
+          <div className="form-footer">
+            {step > 0 && (
               <Button
                 type="button"
                 variant="outline"
+                disabled={busy}
                 onClick={() => setStep(step - 1)}
               >
                 Back
               </Button>
             )}
-            {step === 3 && (
-              <Button
-                type="button"
-                variant="outline"
-                disabled={busy}
-                onClick={(e) => {
-                  if (e.currentTarget.form?.reportValidity()) void save(false);
-                }}
-              >
-                Save comparison
-              </Button>
-            )}
-            <Button disabled={busy}>
+            <Button type="submit" disabled={busy}>
               {busy
                 ? "Working…"
-                : step === 3
-                  ? saved
-                    ? "Retry run"
-                    : "Run now"
-                  : "Continue"}
+                : step === 2
+                  ? "Save comparison"
+                  : step === 1
+                    ? "Review"
+                    : "Next"}
             </Button>
+            {step === 2 && (
+              <Button
+                type="button"
+                disabled={busy}
+                onClick={() => void save(true)}
+              >
+                Save and run
+              </Button>
+            )}
           </div>
-        </div>
-      </form>
+        </form>
+      )}
     </>
   );
 }

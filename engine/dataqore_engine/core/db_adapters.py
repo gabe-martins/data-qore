@@ -1,7 +1,6 @@
 """Read-only DB-API adapters for metadata, bounded samples and key lookups.
 
-Random sampling uses each database's random ordering. Its returned row count is
-bounded; the database may still scan and sort the entire eligible table.
+Key selection scans eligible keys in batches; only selected records are materialized.
 """
 
 from decimal import Decimal
@@ -122,6 +121,23 @@ class DatabaseAdapter:
                   AND tc.constraint_type IN ('PRIMARY KEY', 'UNIQUE')
                 ORDER BY tc.constraint_name, ku.ordinal_position""", (schema, table))
             self._apply_constraints(metadata, cursor.fetchall())
+            if self.db_type == "postgresql":
+                # information_schema hides constraints from SELECT-only roles.
+                # pg_index exposes actual validated identities without write grants.
+                cursor.execute("""SELECT indexrel.relname,
+                    CASE WHEN i.indisprimary THEN 'PRIMARY KEY' ELSE 'UNIQUE' END,
+                    a.attname, k.ordinality
+                    FROM pg_catalog.pg_index i
+                    JOIN pg_catalog.pg_class t ON t.oid=i.indrelid
+                    JOIN pg_catalog.pg_namespace n ON n.oid=t.relnamespace
+                    JOIN pg_catalog.pg_class indexrel ON indexrel.oid=i.indexrelid
+                    CROSS JOIN LATERAL unnest(i.indkey) WITH ORDINALITY k(attnum,ordinality)
+                    JOIN pg_catalog.pg_attribute a ON a.attrelid=t.oid AND a.attnum=k.attnum
+                    WHERE n.nspname=COALESCE(NULLIF(%s,''),current_schema()) AND t.relname=%s
+                      AND i.indisunique AND i.indisvalid AND i.indisready
+                      AND i.indpred IS NULL AND i.indexprs IS NULL AND k.ordinality<=i.indnkeyatts
+                    ORDER BY indexrel.relname,k.ordinality""", (schema,table))
+                self._apply_constraints(metadata,cursor.fetchall())
             if self.db_type == "mssql":
                 # Unique indexes are also useful keys when they cover every row.
                 cursor.execute("""SELECT i.name, 'UNIQUE', c.name, ic.key_ordinal
@@ -520,30 +536,38 @@ class DatabaseAdapter:
         finally:
             cursor.close()
 
-    def fetch_random(self, conn, schema, table, columns, limit, metadata=None, scope=None):
+    def count_rows(self, conn, schema, table, scope=None):
         self._prepare_scope(conn, scope)
-        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= MAX_SAMPLE_ROWS:
-            raise ValueError(f"Sample limit must be an integer between 1 and {MAX_SAMPLE_ROWS}")
-        columns = list(columns)
-        projection, guards, unavailable = self._projection(columns, metadata)
-        table_sql = self._bound_table(schema, table)
-        scope_sql, params = self._scope_sql(scope, start=2 if self.db_type == "mssql" else 1)
-        where = " WHERE " + scope_sql if scope_sql else ""
-        marker = self._placeholder(1 if self.db_type == "mssql" else len(params) + 1)
-        order = {"postgresql": "RANDOM()", "mysql": "RAND()", "sqlite": "RANDOM()",
-                 "mssql": "NEWID()", "oracle": "DBMS_RANDOM.VALUE", "databricks": "RAND()"}[self.db_type]
-        if self.db_type == "mssql":
-            sql = f"SELECT TOP ({marker}) {projection} FROM {table_sql}{where} ORDER BY {order}"
-        elif self.db_type == "oracle":
-            # ROWNUM works on Oracle versions before FETCH FIRST was introduced.
-            sql = f"SELECT * FROM (SELECT {projection} FROM {table_sql}{where} ORDER BY {order}) WHERE ROWNUM <= {marker}"
-        else:
-            sql = f"SELECT {projection} FROM {table_sql}{where} ORDER BY {order} LIMIT {marker}"
+        predicate, params = self._scope_sql(scope)
+        aggregate = "COUNT_BIG(*)" if self.db_type == "mssql" else "COUNT(*)"
         cursor = conn.cursor()
         try:
-            cursor.execute(sql, tuple([limit] + params if self.db_type == "mssql" else params + [limit]))
-            rows = cursor.fetchmany(limit)
-            return columns, self._materialize(rows, columns, guards, unavailable)
+            cursor.execute(f"SELECT {aggregate} FROM {self._bound_table(schema, table)}" +
+                           (" WHERE " + predicate if predicate else ""), tuple(params))
+            return int(cursor.fetchone()[0])
+        finally:
+            cursor.close()
+
+    def iter_keys(self, conn, schema, table, columns, metadata, scope=None):
+        self._prepare_scope(conn, scope)
+        projection, guards, unavailable = self._projection(columns, metadata)
+        predicate, params = self._scope_sql(scope)
+        # Server-side cursor prevents a driver buffering the complete key scan.
+        if self.db_type == "postgresql":
+            from uuid import uuid4
+            cursor = conn.cursor(name="adq_keys_" + uuid4().hex)
+        elif self.db_type == "mysql":
+            from pymysql.cursors import SSCursor
+            cursor = conn.cursor(SSCursor)
+        else:
+            cursor = conn.cursor()
+        try:
+            cursor.execute(f"SELECT {projection} FROM {self._bound_table(schema, table)}" +
+                           (" WHERE " + predicate if predicate else ""), tuple(params))
+            while True:
+                rows = cursor.fetchmany(256)
+                if not rows:break
+                yield from self._materialize(rows, columns, guards, unavailable)
         finally:
             cursor.close()
 
@@ -553,7 +577,7 @@ class DatabaseAdapter:
         kind = info.get("type", "").lower()
         if (kind.startswith(("date", "time", "smalldatetime"))
                 and info.get("family") != "binary"):
-            raise ValueError("Temporal keys require a configured cross-database conversion; use profile sampling")
+            raise ValueError("Temporal keys require a configured cross-database conversion; select a supported business key")
         if isinstance(value, UUID):
             return str(value)
         if isinstance(value, (memoryview, bytearray)):

@@ -60,178 +60,53 @@ class ConfigurationTests(unittest.TestCase):
         self.assertEqual(result.returncode,1)
 
 
-@unittest.skipUnless(os.environ.get('DATAQORE_PG_BIN'), 'Defina DATAQORE_PG_BIN para iniciar um cluster descartável')
+@unittest.skipUnless(os.environ.get('DATAQORE_PG_BIN'),'Disposable PostgreSQL required')
 class PostgreSQLMigrationTests(TemporaryPostgres):
-    def test_environment_settings_grants_constraints_and_repeated_apply(self):
-        self.command('app','baseline');self.command('app','apply');self.command('app','verify')
-        with self.connect('app','srv_dataqore_app') as conn:
-            self.assertEqual(str(conn.execute('SELECT comparison_target_percentage FROM app.environment_settings').fetchone()[0]),'95.0000')
-            conn.execute('UPDATE app.environment_settings SET comparison_target_percentage=97.1234')
-            for sql in ['DELETE FROM app.environment_settings','INSERT INTO app.environment_settings(id) VALUES(false)',
-                        'ALTER TABLE app.environment_settings ADD COLUMN forbidden int']:
-                with self.assertRaises(psycopg.errors.InsufficientPrivilege):conn.execute(sql)
-            with self.assertRaises(psycopg.errors.CheckViolation):conn.execute('UPDATE app.environment_settings SET comparison_target_percentage=101')
-            with self.assertRaises(psycopg.errors.CheckViolation):conn.execute('UPDATE app.environment_settings SET id=false')
-        before=self.table_oids('app');self.command('app','apply');self.command('app','verify')
-        self.assertEqual(before,self.table_oids('app'))
-        with self.connect('app','srv_dataqore_app') as conn:
-            self.assertEqual(str(conn.execute('SELECT comparison_target_percentage FROM app.environment_settings').fetchone()[0]),'97.1234')
-
-    def test_baseline_preserves_data_objects_and_repeated_apply(self):
-        with self.connect('app') as connection:
-            identifier=connection.execute("INSERT INTO app.users(email,display_name,password_hash) VALUES ('test@dataqore.local','Sentinela','hash-teste') RETURNING id").fetchone()[0]
-        with self.connect('engine') as connection:
-            engine_id=connection.execute("INSERT INTO engine.connections(name,connector,credentials_ciphertext) VALUES ('teste','postgresql','ciphertext-teste') RETURNING id").fetchone()[0]
+    def test_new_schema_grants_and_idempotent_apply(self):
         for service in ('app','engine'):
-            before=self.table_oids(service)
-            self.command(service,'check')
-            self.command(service,'verify')
-            self.command(service,'baseline')
-            self.command(service,'baseline')
-            self.command(service,'apply')
-            after_first=self.table_oids(service)
-            self.command(service,'apply')
-            self.command(service,'verify')
-            after=self.table_oids(service)
-            self.assertEqual(after_first,after)
-            self.assertEqual(dict(before),{name:oid for name,oid in after if name in dict(before)})
-            self.assertEqual(set(dict(after))-set(dict(before)),{'schedules','schedule_dispatches','environment_settings'} if service=='app' else set())
-            with self.connect(service) as connection:
-                table='_prisma_migrations' if service=='app' else 'alembic_version'
-                self.assertEqual(connection.execute(f'SELECT count(*) FROM {service}.{table}').fetchone()[0],3 if service=='app' else 1)
-                for privilege in ('SELECT','INSERT','UPDATE','DELETE'):
-                    self.assertFalse(connection.execute('SELECT has_table_privilege(%s,%s,%s)',
-                        (f'srv_dataqore_{service}',f'{service}.{table}',privilege)).fetchone()[0])
-        with self.connect('app') as connection:
-            self.assertEqual(connection.execute('SELECT id FROM app.users').fetchone()[0],identifier)
-        with self.connect('engine') as connection:
-            self.assertEqual(connection.execute('SELECT id FROM engine.connections').fetchone()[0],engine_id)
-
-    def test_existing_tables_require_baseline(self):
-        for service in ('app','engine'):
-            result=self.command(service,'apply',success=False)
-            self.assertIn('sem histórico',result.stderr)
-
-    def test_drift_blocks_registration_without_creating_history(self):
-        mutations=[
-            ('app','ALTER TABLE app.users ADD COLUMN unexpected text','ALTER TABLE app.users DROP COLUMN unexpected'),
-            ('app','ALTER TABLE app.users DROP CONSTRAINT users_role_check',"ALTER TABLE app.users ADD CONSTRAINT users_role_check CHECK (role = 'admin')"),
-            ('app','DROP INDEX app.users_email_unique','CREATE UNIQUE INDEX users_email_unique ON app.users(lower(email))'),
-            ('app','GRANT DELETE ON app.audit_log TO srv_dataqore_app','REVOKE DELETE ON app.audit_log FROM srv_dataqore_app'),
-            ('engine','GRANT CREATE ON SCHEMA engine TO srv_dataqore_engine','REVOKE CREATE ON SCHEMA engine FROM srv_dataqore_engine'),
-            ('engine','ALTER FUNCTION engine.ensure_metrics_partitions(date,integer) SECURITY DEFINER','ALTER FUNCTION engine.ensure_metrics_partitions(date,integer) SECURITY INVOKER'),
-            ('engine','ALTER DEFAULT PRIVILEGES FOR ROLE dataqore_engine_owner IN SCHEMA engine REVOKE INSERT ON TABLES FROM srv_dataqore_engine','ALTER DEFAULT PRIVILEGES FOR ROLE dataqore_engine_owner IN SCHEMA engine GRANT INSERT ON TABLES TO srv_dataqore_engine'),
-            ('engine',"CREATE TABLE engine.metrics_2040_01 PARTITION OF engine.metrics FOR VALUES FROM ('2040-01-01 00:00:00+00') TO ('2040-01-02 00:00:00+00')",'DROP TABLE engine.metrics_2040_01'),
-        ]
-        for service,change,restore in mutations:
-            with self.subTest(change=change):
-                with self.connect(service) as connection:
-                    connection.execute(change)
-                try:
-                    result=self.command(service,'baseline',success=False)
-                    self.assertIn('Baseline recusado',result.stderr)
-                    with self.connect(service) as connection:
-                        table='_prisma_migrations' if service=='app' else 'alembic_version'
-                        self.assertIsNone(connection.execute('SELECT to_regclass(%s)',(f'{service}.{table}',)).fetchone()[0])
-                finally:
-                    with self.connect(service) as connection:
-                        connection.execute(restore)
-
-    def test_empty_database_migrations_reproduce_legacy_schema(self):
-        for service in ('app','engine'):
-            with self.connect(service) as connection:
-                connection.execute(f'DROP SCHEMA {service} CASCADE')
-            self.command(service,'apply')
-            self.command(service,'verify')
-            before=self.table_oids(service)
-            self.command(service,'apply')
-            self.assertEqual(before,self.table_oids(service))
-
-    def test_isolation_ownership_and_future_default_grants(self):
-        for service in ('app','engine'):
-            other='engine' if service=='app' else 'app'
-            for user in (f'srv_dataqore_{service}',f'srv_dataqore_{service}_migrator'):
-                with self.assertRaises(psycopg.OperationalError):
-                    self.connect(other,user)
-            with self.connect(service,f'srv_dataqore_{service}') as connection:
-                with self.assertRaises(psycopg.errors.InsufficientPrivilege):
-                    connection.execute(f'CREATE TABLE {service}.forbidden (id int)')
-            with self.connect(service,f'srv_dataqore_{service}_migrator') as connection:
-                connection.execute(f'CREATE TABLE {service}.grant_probe (id bigint GENERATED ALWAYS AS IDENTITY)')
-                owner=connection.execute('SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid=%s::regclass',(f'{service}.grant_probe',)).fetchone()[0]
-                self.assertEqual(owner,f'dataqore_{service}_owner')
-            with self.connect(service,f'srv_dataqore_{service}') as connection:
-                connection.execute(f'INSERT INTO {service}.grant_probe DEFAULT VALUES')
-                self.assertEqual(connection.execute(f'SELECT id FROM {service}.grant_probe').fetchone()[0],1)
-
-    def test_monthly_partitions_are_ignored_by_alembic_autogenerate(self):
-        self.command('engine','baseline')
-        self.command('engine','apply')
-        with self.connect('engine', 'srv_dataqore_engine_migrator') as connection:
-            connection.execute("SELECT engine.ensure_metrics_partitions('2035-01-01'::date,2)")
-        environment=os.environ.copy()
-        environment['MIGRATION_DATABASE_URL']=f'postgresql://srv_dataqore_engine_migrator@127.0.0.1:{self.port}/dataqore_engine'
-        result=subprocess.run([sys.executable,'-m','alembic','-c',str(ROOT/'engine/alembic.ini'),'check'],
-            env=environment,cwd=ROOT,capture_output=True,text=True)
-        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
-        self.assertIn('No new upgrade operations',result.stdout)
-
-    def test_comparison_options_upgrade_preserves_existing_definition_and_grants(self):
-        with self.connect('engine','srv_dataqore_engine') as conn:
-            c=conn.execute("INSERT INTO engine.connections(name,connector,credentials_ciphertext) VALUES ('preserved','sqlite','test') RETURNING id").fetchone()[0]
-            a,b=[conn.execute("INSERT INTO engine.datasets(connection_id,table_name) VALUES (%s,%s) RETURNING id",(c,t)).fetchone()[0] for t in ('a','b')]
-            identifier=conn.execute("INSERT INTO engine.comparison_definitions(name,left_dataset_id,right_dataset_id) VALUES ('legacy',%s,%s) RETURNING id",(a,b)).fetchone()[0]
-        before=self.table_oids('engine')
-        self.command('engine','baseline');self.command('engine','apply');self.command('engine','verify')
-        self.command('engine','apply')
-        self.assertEqual(before,self.table_oids('engine'))
-        with self.connect('engine','srv_dataqore_engine') as conn:
-            name,options=conn.execute('SELECT name,comparison_options FROM engine.comparison_definitions WHERE id=%s',(identifier,)).fetchone()
-            self.assertEqual((name,options),('legacy',{}))
-            conn.execute("UPDATE engine.comparison_definitions SET comparison_options='{\"mapping\":[]}' WHERE id=%s",(identifier,))
-            with self.assertRaises(psycopg.errors.CheckViolation):
-                conn.execute("UPDATE engine.comparison_definitions SET comparison_options='[]' WHERE id=%s",(identifier,))
-            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
-                conn.execute('ALTER TABLE engine.comparison_definitions ADD COLUMN forbidden text')
-        with self.connect('engine') as conn:
-            owner=conn.execute("SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid='engine.comparison_definitions'::regclass").fetchone()[0]
-            self.assertEqual(owner,'dataqore_engine_owner')
-
-    def test_metrics_route_to_monthly_partitions_with_decimal_precision(self):
-        expected=Decimal('0.123456789012345678901234567890123456789')
-        with self.connect('engine','srv_dataqore_engine') as connection:
-            source=connection.execute("INSERT INTO engine.connections(name,connector,credentials_ciphertext) VALUES ('metrics-test','postgresql','ciphertext-test') RETURNING id").fetchone()[0]
-            dataset=connection.execute("INSERT INTO engine.datasets(connection_id,table_name) VALUES (%s,'sample') RETURNING id",(source,)).fetchone()[0]
-            run=connection.execute("INSERT INTO engine.runs(kind,dataset_id,parameters) VALUES ('profile',%s,'{}') RETURNING id",(dataset,)).fetchone()[0]
-            for month in (0,1):
-                connection.execute("""INSERT INTO engine.metrics(measured_at,run_id,dataset_id,metric_name,value)
-                    VALUES (date_trunc('month',now())+make_interval(months=>%s),%s,%s,'mean',%s)""",(month,run,dataset,expected))
-            rows=connection.execute('SELECT tableoid,value FROM engine.metrics ORDER BY measured_at').fetchall()
-            self.assertEqual(len({row[0] for row in rows}),2)
-            self.assertEqual([row[1] for row in rows],[expected,expected])
-
-    def test_databricks_upgrade_preserves_legacy_datasets_and_identity(self):
+            self.command(service,'baseline');self.command(service,'apply');self.command(service,'verify')
+            before=self.table_oids(service);self.command(service,'apply');self.assertEqual(before,self.table_oids(service))
         with self.connect('engine','srv_dataqore_engine') as c:
-            identifier=c.execute("INSERT INTO engine.connections(name,connector,credentials_ciphertext) VALUES ('legacy','postgresql','encrypted') RETURNING id").fetchone()[0]
-            dataset=c.execute("INSERT INTO engine.datasets(connection_id,schema_name,table_name) VALUES (%s,'public','records') RETURNING id",(identifier,)).fetchone()[0]
-        before=self.table_oids('engine')
-        self.command('engine','baseline');self.command('engine','apply');self.command('engine','verify');self.command('engine','apply')
-        self.assertEqual(before,self.table_oids('engine'))
-        with self.connect('engine','srv_dataqore_engine') as c:
-            self.assertEqual(c.execute('SELECT catalog_name FROM engine.datasets WHERE id=%s',(dataset,)).fetchone()[0],'')
-            c.execute("UPDATE engine.connections SET connector='databricks' WHERE id=%s",(identifier,))
-            c.execute("INSERT INTO engine.datasets(connection_id,catalog_name,schema_name,table_name) VALUES (%s,'main','public','records'),(%s,'other','public','records')",(identifier,identifier))
-            with self.assertRaises(psycopg.errors.UniqueViolation):
-                c.execute("INSERT INTO engine.datasets(connection_id,catalog_name,schema_name,table_name) VALUES (%s,'main','public','records')",(identifier,))
+            self.assertIsNone(c.execute("SELECT to_regclass('engine.metrics')").fetchone()[0])
+            self.assertIsNone(c.execute("SELECT to_regclass('engine.column_profiles')").fetchone()[0])
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):c.execute('ALTER TABLE engine.runs ADD COLUMN forbidden int')
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):c.execute('SELECT * FROM engine.alembic_version')
+        with self.connect('app','srv_dataqore_app') as c:
+            self.assertIsNone(c.execute("SELECT to_regclass('app.environment_settings')").fetchone()[0])
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):c.execute('CREATE TABLE app.forbidden(id int)')
 
-    def test_baseline_never_rewinds_existing_engine_history(self):
+    def test_migration_refuses_nonempty_engine_without_deleting_connections(self):
         self.command('engine','baseline')
-        with self.connect('engine') as connection:
-            connection.execute("UPDATE engine.alembic_version SET version_num='later_revision'")
-        self.command('engine','baseline',success=False)
-        with self.connect('engine') as connection:
-            self.assertEqual(connection.execute('SELECT version_num FROM engine.alembic_version').fetchone()[0],'later_revision')
+        with self.connect('engine') as c:c.execute("INSERT INTO engine.connections(name,connector,credentials_ciphertext) VALUES('preserved','sqlite','cipher')")
+        self.command('engine','apply',success=False)
+        with self.connect('engine') as c:self.assertEqual(c.execute('SELECT count(*) FROM engine.connections').fetchone()[0],1)
 
+    def test_reset_preserves_admin_and_migrations_and_is_idempotent(self):
+        from tools.reset_operational_data import reset_service
+        for service in ('app','engine'):
+            self.command(service,'baseline');self.command(service,'apply')
+        with self.connect('app') as c:
+            user=c.execute("INSERT INTO app.users(email,display_name,password_hash) VALUES('reset@test.local','Admin','original-hash') RETURNING id").fetchone()[0]
+            c.execute("INSERT INTO app.auth_sessions(user_id,refresh_token_hash,expires_at) VALUES(%s,'session',now()+interval '1 day')",(user,))
+            c.execute("INSERT INTO app.audit_log(action,resource_type,outcome) VALUES('test','test','success')")
+            c.execute("INSERT INTO app.schedules(name,comparison_id,cron_expression,next_run_at) VALUES('test',gen_random_uuid(),'0 * * * *',now())")
+        with self.connect('engine') as c:c.execute("INSERT INTO engine.connections(name,connector,credentials_ciphertext) VALUES('delete','sqlite','cipher')")
+        for service in ('app','engine'):
+            with self.connect(service,f'srv_dataqore_{service}_migrator') as c:
+                reset_service(c,service);reset_service(c,service)
+            self.command(service,'verify')
+        with self.connect('app') as c:
+            self.assertEqual(c.execute('SELECT password_hash FROM app.users WHERE id=%s',(user,)).fetchone()[0],'original-hash')
+            self.assertEqual(c.execute('SELECT count(*) FROM app.auth_sessions').fetchone()[0],0)
+            self.assertEqual(c.execute('SELECT count(*) FROM app.schedules').fetchone()[0],0)
+        with self.connect('engine') as c:self.assertEqual(c.execute('SELECT count(*) FROM engine.connections').fetchone()[0],0)
 
-if __name__=='__main__':
-    unittest.main()
+    def test_reset_rejects_wrong_identity(self):
+        from tools.reset_operational_data import reset_service
+        with self.connect('app') as c:
+            with self.assertRaises(ValueError):reset_service(c,'app')
+
+    def test_drift_still_blocks_verification(self):
+        self.command('engine','baseline');self.command('engine','apply')
+        with self.connect('engine') as c:c.execute('ALTER TABLE engine.runs ADD COLUMN unexpected int')
+        self.command('engine','verify',success=False)

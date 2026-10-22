@@ -1,6 +1,6 @@
 # DataQore Web App
 
-The DataQore web app provides the workspace for connections, datasets, profiles,
+The DataQore web app provides the workspace for connections, datasets, critical comparison metrics,
 comparisons, and run history. It uses React, Vite, and TypeScript, with locally
 served Inter fonts and the project's shared color tokens.
 
@@ -47,7 +47,7 @@ header, and browser tab. Keep their proportions and original colors.
 ## Using the workspace
 
 Start in **Connections** to add and test a data source. In **Catalog**, register
-a table and open its dataset to run a profile. Use **Comparisons** to create or
+a table and open its dataset to inspect metadata. Use **Comparisons** to create or
 run a comparison, then visit **Runs** to review progress and results.
 
 Access tokens stay in memory; session renewal uses an HttpOnly cookie.

@@ -14,28 +14,6 @@ const origin = process.env.WEB_ORIGIN!;
 const base = process.env.DATAQORE_CONTROLLER_URL!;
 const email = "admin@dataqore.test",
   password = "DataQore-test-password-2026";
-test("environment target is authenticated, validated, persisted and audited", { skip: !isolated }, async () => {
-  assert.equal((await call("/environment-settings")).status,401);
-  const entry=await login();
-  const token=entry.body.access_token;
-  const update=(value: unknown)=>fetch(base+"/api/v1/environment-settings",{
-    method:"PATCH",headers:{Origin:origin,"Content-Type":"application/json",Authorization:"Bearer "+token},
-    body:JSON.stringify({comparison_target_percentage:value}),
-  });
-  try {
-    for(const value of ["-1","101","95.00001","NaN","Infinity","1e2",95])assert.equal((await update(value)).status,422);
-    for(const value of ["0","100","97.1234"]){
-      const response=await update(value);assert.equal(response.status,200);
-      const body=await response.json();
-      assert.equal(body.comparison_target_percentage,Number(value).toFixed(4));
-      const read=await call("/environment-settings",undefined,token);
-      assert.deepEqual(await read.json(),body);
-      const row=await db!.environmentSettings.findUniqueOrThrow({where:{id:true}});
-      assert.equal(row.comparisonTargetPercentage.toFixed(4),body.comparison_target_percentage);
-    }
-    assert.ok(await db!.auditLog.count({where:{action:"environment_settings_updated",outcome:"success"}}));
-  }finally{assert.equal((await update("95")).status,200);}
-});
 async function call(
   path: string,
   body?: unknown,
@@ -304,7 +282,7 @@ test(
     try {
       const response = await f.inject({
         method: "GET",
-        url: "/api/v1/metrics?dataset_id=" + randomUUID(),
+        url: "/api/v1/runs?comparison_id=" + randomUUID(),
         headers: { authorization: "Bearer " + a.body.access_token },
       });
       assert.equal(response.statusCode, 200);
