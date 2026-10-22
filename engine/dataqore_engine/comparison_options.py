@@ -79,10 +79,31 @@ class Scope(OptionModel):
     filters: Annotated[list[ScopeFilter], Field(max_length=20)] = Field(default_factory=list)
 
 
+class ExcludedColumns(OptionModel):
+    left: Annotated[list[ColumnName], Field(max_length=500)] = Field(default_factory=list)
+    right: Annotated[list[ColumnName], Field(max_length=500)] = Field(default_factory=list)
+
+
+class TimestampTimezones(OptionModel):
+    left: dict[ColumnName, str] = Field(default_factory=dict, max_length=500)
+    right: dict[ColumnName, str] = Field(default_factory=dict, max_length=500)
+
+    @model_validator(mode="after")
+    def valid_zones(self):
+        for zone in (*self.left.values(), *self.right.values()):
+            try:
+                ZoneInfo(zone)
+            except (ZoneInfoNotFoundError, ValueError):
+                raise ValueError("Use a valid IANA timezone") from None
+        return self
+
+
 class ComparisonOptions(OptionModel):
     scope: Scope | None = None
     mapping: Annotated[list[ColumnPair], Field(max_length=500)] = Field(default_factory=list)
     business_key: Annotated[list[ColumnPair], Field(max_length=32)] = Field(default_factory=list)
+    excluded_columns: ExcludedColumns = Field(default_factory=ExcludedColumns)
+    timestamp_timezones: TimestampTimezones = Field(default_factory=TimestampTimezones)
 
 
 def compact_options(value):
@@ -105,6 +126,8 @@ def compatible(a, b):
 
 def effective_mapping(columns, options):
     """Manual exact names first; only unique casefold names are auto-paired."""
+    excluded = [set(options.excluded_columns.left), set(options.excluded_columns.right)]
+    columns = [{n: v for n, v in cols.items() if n not in excluded[i]} for i, cols in enumerate(columns)]
     result, used = [], [set(), set()]
     for pair in options.mapping:
         for i, name in enumerate((pair.left, pair.right)):
@@ -165,7 +188,15 @@ def resolve_scope(value, at=None):
     result = {"filters": [f.model_dump() for f in scope.filters]} if scope else {"filters": []}
     if not scope or scope.period is None:
         return result
-    p = scope.period
+    p = scope.period.model_copy(deep=True)
+    for side in ("left", "right"):
+        name = getattr(p, side)
+        configured = getattr(options.timestamp_timezones, side).get(name)
+        current = getattr(p, side + "_naive_timezone")
+        if configured and current and configured != current:
+            raise invalid("conflicting_timestamp_timezone")
+        if configured and not current:
+            setattr(p, side + "_naive_timezone", configured)
     zone = ZoneInfo(p.timezone)
     at = at or datetime.now(timezone.utc)
     if at.tzinfo is None:
@@ -242,7 +273,20 @@ def typed_value(value, info, operator):
 
 def validate_options(value, columns, resolved=None):
     options = ComparisonOptions.model_validate(value or {})
+    for i, side in enumerate(("left", "right")):
+        excluded = getattr(options.excluded_columns, side)
+        if len(excluded) != len(set(excluded)) or any(n not in columns[i] for n in excluded):
+            raise invalid("invalid_excluded_columns")
+        if any((columns[i][n].get("primary_key") and not options.business_key) or any(getattr(k, side) == n for k in options.business_key) for n in excluded):
+            raise invalid("comparison_key_excluded")
+        for name, zone in getattr(options.timestamp_timezones, side).items():
+            if name not in columns[i] or _temporal_kind(columns[i][name]) != "naive":
+                raise invalid("invalid_timestamp_timezone")
+            if columns[i][name].get("comparison_timezone") == "UTC" and zone not in {"UTC", "Etc/UTC"}:
+                raise invalid("source_timezone_required")
     pairs, unmatched = effective_mapping(columns, options)
+    if not pairs and not (unmatched["left"] or unmatched["right"]):
+        raise invalid("no_comparable_columns")
     effective = {(p["left"], p["right"]) for p in pairs}
     seen = [set(), set()]
     for key in options.business_key:
@@ -310,6 +354,7 @@ def validate_options(value, columns, resolved=None):
     if any(sum(len(term[2]) for term in terms) > 800 for terms in predicates):
         raise invalid("scope_parameter_budget_exceeded")
     return {"mapping": pairs, "unmatched_columns": unmatched, "business_key": [p.model_dump() for p in options.business_key],
+        "excluded_columns": options.excluded_columns.model_dump(), "timestamp_timezones": options.timestamp_timezones.model_dump(),
         "resolved_scope": resolved, "predicates": predicates,
         "key_validation": "Full-scope null and duplicate validation runs during execution, not preview."}
 

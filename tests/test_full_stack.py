@@ -30,6 +30,13 @@ class FullStackTests(TemporaryPostgres):
             with sqlite3.connect(source/f'evaluation-{side}.sqlite') as db:
                 db.execute('CREATE TABLE records(id integer PRIMARY KEY, amount numeric, label text, null_text text, created date)')
                 db.executemany('INSERT INTO records VALUES(?,?,?,?,?)',[(1,0,'same',None,'2026-10-01'),(2,0,'same',None,'2026-10-02')])
+        for side in ('left','right'):
+            with sqlite3.connect(source/f'timezone-{side}.sqlite') as db:
+                db.execute('CREATE TABLE records(id integer PRIMARY KEY, sold timestamp'+(', ingestion_datetime text' if side=='right' else '')+')')
+                if side=='left':
+                    db.executemany('INSERT INTO records VALUES(?,?)',[(1,'2026-10-20T12:00:00'),(2,'2026-10-20T13:00:00')])
+                else:
+                    db.executemany('INSERT INTO records VALUES(?,?,?)',[(1,'2026-10-20T15:00:00+00:00','extra'),(2,'2026-10-20T16:00:00+00:00','extra')])
         for side in ('nokey-left','nokey-right','empty'):
             with sqlite3.connect(source/f'{side}.sqlite') as db:
                 db.execute('CREATE TABLE records(id integer, amount numeric)')
@@ -128,7 +135,7 @@ class FullStackTests(TemporaryPostgres):
                     self.fail('Service did not start: '+url)
                 time.sleep(.2)
         commands=[(['node','--import','tsx','--test','tests/controller.test.ts','tests/diagnostics.test.ts'],ROOT/'controller'),
-            (['node','node_modules/@playwright/test/cli.js','test','critical-metrics.spec.ts','comparison-animation.spec.ts','--output','test-results/critical-artifacts'],ROOT/'web'),
+            (['node','node_modules/@playwright/test/cli.js','test','critical-metrics.spec.ts','comparison-animation.spec.ts','result-interpretation.spec.ts','--output','test-results/critical-artifacts'],ROOT/'web'),
             (['node','node_modules/@playwright/test/cli.js','test','ui-appearance.spec.ts','--output','test-results/appearance-artifacts'],ROOT/'web'),
             (['node','--import','tsx','--test','tests/comparison-delete.test.ts','tests/schedules.test.ts'],ROOT/'controller')]
         for group,(cmd,cwd) in enumerate(commands):

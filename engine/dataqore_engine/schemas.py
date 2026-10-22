@@ -181,6 +181,8 @@ class ComparisonPreviewOut(Model):
     business_key: list[dict[str,str]]
     resolved_scope: dict[str,Any]
     key_validation: str
+    excluded_columns: dict[str,list[str]] = Field(default_factory=dict)
+    timestamp_timezones: dict[str,dict[str,str]] = Field(default_factory=dict)
 
 
 class RunOut(Model):
@@ -272,6 +274,7 @@ class ComparisonResult(Model):
     resolved_scope: dict[str,Any]
     column_mapping: list[dict[str,str]]
     unmatched_columns: dict[str,list[str]]
+    comparison_options: ComparisonOptions = Field(default_factory=ComparisonOptions)
     key_validation: list[dict[str,Any]]
     sampling_plan: dict[str,Any]
     metrics: CriticalMetrics

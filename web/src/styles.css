@@ -1290,3 +1290,10 @@ select:focus-visible {
 @media (max-width: 850px) {
   .app-main { transition: none; }
 }
+.metric-good { color: var(--semantic-status-success-foreground); }
+.metric-attention { color: var(--semantic-status-warning-foreground); }
+.metric-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 1.5rem; margin: 1.5rem 0; }
+.metric-summary-grid > div { display: flex; flex-direction: column; gap: .45rem; }
+.metric-summary-value { font-size: clamp(1.6rem, 3vw, 2.4rem); line-height: 1.2; }
+.metric-sources, .comparison-settings span { overflow-wrap: anywhere; }
+.comparison-settings p { display: flex; flex-direction: column; gap: .4rem; margin: .6rem 0; }

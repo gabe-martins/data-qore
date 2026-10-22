@@ -241,7 +241,11 @@ def execute_comparison(
                 "formula": "100 * duplicate_excess_rows / non_null_key_rows",
             }
         )
-    target = options.target(counts, max(len(s["columns"]) for s in sources))
+    capture_columns = [
+        {n: v for n, v in s["columns"].items() if n not in context["excluded_columns"][side]}
+        for s, side in zip(sources, ("left", "right"))
+    ]
+    target = options.target(counts, max(map(len, capture_columns)))
     seed = options.seed if options.seed is not None else secrets.randbits(64)
     selection = []
     scanned = [0, 0]
@@ -263,7 +267,7 @@ def execute_comparison(
         allowed = {token for token, _ in selection}
         try:
             for i, (source, names) in enumerate(zip(sources, key_columns)):
-                columns = list(source["columns"])
+                columns = list(capture_columns[i])
                 _, rows = source["adapter"].fetch_keys(
                     source["conn"],
                     source["schema"],
@@ -332,7 +336,8 @@ def execute_comparison(
         unknown = bool(unpaired["left"] or unpaired["right"])
         for i, pair in enumerate(pairs):
             lm, rm = (
-                sources[j]["columns"][pair[side]]
+                {**sources[j]["columns"][pair[side]],
+                 "naive_timezone": context["timestamp_timezones"][side].get(pair[side])}
                 for j, side in enumerate(("left", "right"))
             )
             lf, rf = _family(lm), _family(rm)
@@ -452,6 +457,7 @@ def execute_comparison(
         "resolved_scope": context["resolved_scope"],
         "column_mapping": pairs,
         "unmatched_columns": unpaired,
+        "comparison_options": comparison_options or {},
         "key_validation": diagnostics,
         "sampling_plan": {
             "algorithm": "sha256_bottom_k_union_v1",

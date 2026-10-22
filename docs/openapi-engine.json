@@ -3552,6 +3552,12 @@
             "type": "array",
             "maxItems": 32,
             "title": "Business Key"
+          },
+          "excluded_columns": {
+            "$ref": "#/components/schemas/ExcludedColumns"
+          },
+          "timestamp_timezones": {
+            "$ref": "#/components/schemas/TimestampTimezones"
           }
         },
         "additionalProperties": false,
@@ -3687,6 +3693,26 @@
           "key_validation": {
             "type": "string",
             "title": "Key Validation"
+          },
+          "excluded_columns": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Excluded Columns"
+          },
+          "timestamp_timezones": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Timestamp Timezones"
           }
         },
         "additionalProperties": false,
@@ -3761,6 +3787,9 @@
             },
             "type": "object",
             "title": "Unmatched Columns"
+          },
+          "comparison_options": {
+            "$ref": "#/components/schemas/ComparisonOptions"
           },
           "key_validation": {
             "items": {
@@ -5056,6 +5085,35 @@
           "message"
         ],
         "title": "ErrorOut"
+      },
+      "ExcludedColumns": {
+        "properties": {
+          "left": {
+            "items": {
+              "type": "string",
+              "maxLength": 255,
+              "minLength": 1,
+              "pattern": "^[^\\x00]+$"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Left"
+          },
+          "right": {
+            "items": {
+              "type": "string",
+              "maxLength": 255,
+              "minLength": 1,
+              "pattern": "^[^\\x00]+$"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Right"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ExcludedColumns"
       },
       "IndicatorOut": {
         "properties": {
@@ -6581,6 +6639,41 @@
         "additionalProperties": false,
         "type": "object",
         "title": "TestOut"
+      },
+      "TimestampTimezones": {
+        "properties": {
+          "left": {
+            "patternProperties": {
+              "^[^\\x00]+$": {
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "maxLength": 255,
+              "minLength": 1
+            },
+            "type": "object",
+            "maxProperties": 500,
+            "title": "Left"
+          },
+          "right": {
+            "patternProperties": {
+              "^[^\\x00]+$": {
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "maxLength": 255,
+              "minLength": 1
+            },
+            "type": "object",
+            "maxProperties": 500,
+            "title": "Right"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TimestampTimezones"
       },
       "TrendOut": {
         "properties": {

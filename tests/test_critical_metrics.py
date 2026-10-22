@@ -12,6 +12,7 @@ from dataqore_engine.core.db_adapters import get_adapter
 from dataqore_engine.comparison_options import resolve_scope, validate_options
 from dataqore_engine.storage import DomainError, json_safe
 from dataqore_engine.schemas import Sampling
+from dataqore_engine.core.quality import values_equal
 from pydantic import ValidationError
 
 
@@ -309,6 +310,83 @@ class CriticalMetricsTests(unittest.TestCase):
         self.assertEqual(r["metrics"]["row_count_match"]["reference_count"], 1)
         self.assertEqual(r["metrics"]["row_match_rate"]["percentage"], 100)
         self.assertEqual(r["sampling_plan"]["scanned_key_rows"], [1, 1])
+
+    def test_explicit_exclusion_removes_blocker_and_capture(self):
+        a = self.source([(1, "same")])
+        b = self.source([(1, "same", "x" * 70000)], "id integer primary key,value text,ingestion_datetime text")
+        opts = {"excluded_columns": {"right": ["ingestion_datetime"]}}
+        r = self.compare(a, b, comparison_options=opts, options=SamplingOptions(rows=1, max_cells=4, max_sample_bytes=1000))
+        self.assertEqual(r["summary"]["status"], "compatible_in_sample")
+        self.assertEqual(r["metrics"]["row_match_rate"]["percentage"], 100)
+        self.assertEqual(r["comparison_options"], opts)
+        self.assertEqual(r["unmatched_columns"], {"left": [], "right": []})
+        self.assertNotIn("ingestion_datetime", [m["right_column"] for m in r["metrics"]["column_match_rate"]])
+        self.assertFalse(any("ingestion_datetime" in e.get("sql", "") for e in r["query_log"] if e.get("rows_fetched") == 1 and "SELECT" in e.get("sql", "")))
+
+    def test_one_sided_exclusion_is_not_silent_approval(self):
+        r = self.compare(self.source([(1, "same")]), self.source([(1, "same")]), comparison_options={"excluded_columns": {"right": ["value"]}})
+        self.assertEqual(r["summary"]["status"], "inconclusive")
+        self.assertEqual(r["unmatched_columns"]["left"], ["value"])
+
+    def test_excluded_filter_columns_still_restrict_all_queries(self):
+        a = self.source([(1, "same"), (2, "outside")])
+        b = self.source([(1, "same"), (3, "outside")])
+        opts = {"excluded_columns": {"left": ["value"], "right": ["value"]}, "scope": {"filters": [{"left": "value", "right": "value", "operator": "eq", "value": "same"}]}}
+        r = self.compare(a, b, comparison_options=opts)
+        self.assertEqual(r["metrics"]["row_count_match"]["reference_count"], 1)
+        self.assertEqual(r["sampling_plan"]["scanned_key_rows"], [1, 1])
+        self.assertEqual(r["metrics"]["row_match_rate"]["percentage"], 100)
+
+    def test_exclusion_validation_protects_identity_and_mapping(self):
+        cols = [{"id": {"type": "integer", "primary_key": True}, "value": {"type": "text"}}] * 2
+        invalid_options = [
+            {"excluded_columns": {"left": ["missing"]}},
+            {"excluded_columns": {"left": ["value", "value"]}},
+            {"excluded_columns": {"left": ["id"]}},
+            {"excluded_columns": {"left": ["value"]}, "mapping": [{"left": "value", "right": "value"}]},
+            {"excluded_columns": {"left": ["value"]}, "business_key": [{"left": "value", "right": "value"}]},
+        ]
+        for opts in invalid_options:
+            with self.subTest(opts=opts), self.assertRaises(DomainError):
+                validate_options(opts, cols)
+
+    def test_timezone_and_exclusion_restore_evaluation_without_hiding_difference(self):
+        a = self.source([(1, "same", "2026-10-20T12:00:00"), (2, "left", "2026-10-20T13:00:00")], "id integer primary key,value text,sold timestamp")
+        b = self.source([(1, "same", "2026-10-20T15:00:00+00:00", "extra"), (2, "right", "2026-10-20T16:00:00+00:00", "extra")], "id integer primary key,value text,sold timestamp,ingested text")
+        before = self.compare(a, b)
+        self.assertEqual(before["metrics"]["row_match_rate"]["not_evaluated"], 1)
+        opts = {"excluded_columns": {"right": ["ingested"]}, "timestamp_timezones": {"left": {"sold": "America/Sao_Paulo"}}}
+        after = self.compare(a, b, comparison_options=opts)
+        m = after["metrics"]["row_match_rate"]
+        self.assertEqual((m["percentage"], m["denominator"], m["not_evaluated"]), (50, 2, 0))
+        self.assertEqual(after["summary"]["status"], "difference_observed")
+
+    def test_timezone_preserves_precision_and_rejects_dst_ambiguity(self):
+        left = {"type": "datetime2", "naive_timezone": "America/Sao_Paulo"}
+        right = {"type": "timestamp"}
+        self.assertTrue(values_equal("2026-10-20T12:00:00.1234567", "2026-10-20T15:00:00.1234567Z", left, right))
+        self.assertFalse(values_equal("2026-10-20T12:00:00.1234567", "2026-10-20T15:00:00.1234568Z", left, right))
+        self.assertIsNone(values_equal("2026-10-20T12:00:00", "2026-10-20T15:00:00Z", {"type": "datetime2"}, right))
+        ny = {"type": "timestamp", "naive_timezone": "America/New_York"}
+        for value in ("2026-11-01T01:30:00", "2026-03-08T02:30:00"):
+            self.assertIsNone(values_equal(value, "2026-11-01T05:30:00Z", ny, right))
+        # A stored offset is authoritative even if a naive interpretation is configured.
+        self.assertTrue(values_equal("2026-10-20T12:00:00Z", "2026-10-20T12:00:00Z", left, right))
+
+    def test_timezone_configuration_is_validated_and_frozen_in_period(self):
+        cols = [{"sold": {"type": "timestamp"}, "value": {"type": "text"}}] * 2
+        for name in ("missing", "value"):
+            with self.assertRaises(DomainError):
+                validate_options({"timestamp_timezones": {"left": {name: "UTC"}}}, cols)
+        with self.assertRaises(ValidationError):
+            validate_options({"timestamp_timezones": {"left": {"sold": "Invalid/Timezone"}}}, cols)
+        opts = {"timestamp_timezones": {"left": {"sold": "UTC"}, "right": {"sold": "UTC"}}, "scope": {"period": {"left": "sold", "right": "sold", "kind": "fixed", "start": "2026-10-01", "end": "2026-10-02"}}}
+        frozen = resolve_scope(opts)
+        self.assertEqual(frozen["period"]["left_naive_timezone"], "UTC")
+        self.assertEqual(validate_options(opts, cols, resolved=frozen)["resolved_scope"], frozen)
+        opts["scope"]["period"]["left_naive_timezone"] = "America/Sao_Paulo"
+        with self.assertRaises(DomainError):
+            resolve_scope(opts)
 
 
 class RelativeWindowTests(unittest.TestCase):

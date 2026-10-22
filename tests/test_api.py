@@ -257,6 +257,31 @@ class APITests(TemporaryPostgres):
             self.assertEqual(db.scalar(select(func.count()).select_from(m.run_results)),1)
             self.assertEqual(db.scalar(select(m.runs.c.status)),'succeeded')
 
+    def test_exclusions_and_timezone_survive_preview_queue_edit_and_history(self):
+        for side in ('left','right'):
+            with sqlite3.connect(self.settings.sqlite_allowed_root/(side+'.sqlite')) as db:
+                db.execute('ALTER TABLE records ADD COLUMN sold timestamp')
+                db.execute('UPDATE records SET sold=?',('2026-10-20T12:00:00' if side=='left' else '2026-10-20T15:00:00Z',))
+        opts={'excluded_columns':{'left':['day'],'right':['day']},'timestamp_timezones':{'left':{'sold':'America/Sao_Paulo'}}}
+        c=self.definition(comparison_options=opts,sampling_options={'seed':'42'})
+        payload={k:c[k] for k in ('name','left_dataset_id','right_dataset_id','comparison_options','sampling_options')}
+        preview=self.request('POST','/comparisons/preview',json=payload)
+        self.assertEqual(preview['excluded_columns'],opts['excluded_columns'])
+        self.assertEqual(preview['timestamp_timezones']['left'],opts['timestamp_timezones']['left'])
+        # Enqueue once, then change the definition before the worker reads it.
+        run=self.request('POST',f"/comparisons/{c['id']}/runs",202)
+        self.request('PATCH',f"/comparisons/{c['id']}",json={'comparison_options':{}})
+        identifier=self.queue.claim()
+        self.assertEqual(str(identifier),run['id'])
+        run_job(self.settings,identifier)
+        result=self.request('GET',f"/runs/{run['id']}/result")['result']
+        self.assertEqual(result['comparison_options']['excluded_columns'],opts['excluded_columns'])
+        self.assertEqual(result['comparison_options']['timestamp_timezones']['left'],opts['timestamp_timezones']['left'])
+        m=result['metrics']['row_match_rate']
+        self.assertEqual((m['percentage'],m['denominator'],m['not_evaluated']),('50.0000',2,0))
+        self.assertNotIn('day',[p['left_column'] for p in result['metrics']['column_match_rate']])
+        self.request('PATCH',f"/comparisons/{c['id']}",422,json={'comparison_options':{'excluded_columns':{'left':['id']}}})
+
     def test_seed_scope_and_definition_are_frozen_idempotently(self):
         c=self.definition(comparison_options={'scope':{'period':{'kind':'relative','left':'day','right':'day','quantity':2,'unit':'months'}}})
         key={'Idempotency-Key':'original'}

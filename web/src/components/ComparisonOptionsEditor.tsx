@@ -3,7 +3,16 @@ import { Button, Card } from "./common";
 
 export type ComparisonOptions = Model<"ComparisonOptions">;
 type Pair = { left: string; right: string };
-type Columns = Record<string, { type?: string; family?: string }>;
+type Columns = Record<
+  string,
+  {
+    type?: string;
+    family?: string;
+    primary_key?: boolean;
+    timestamp_kind?: string;
+    comparison_timezone?: string;
+  }
+>;
 type Props = {
   value: ComparisonOptions;
   onChange: (v: ComparisonOptions) => void;
@@ -349,6 +358,128 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
         Use equality or a list for a batch. Decimal values use a dot and retain
         their precision. Only compatible column types are accepted; no value
         normalization or implicit type conversion.
+      </p>
+    </Card>
+  );
+}
+
+export function ColumnsEditor({ value, onChange, left, right }: Props) {
+  return (
+    <Card
+      title="Columns and timestamp interpretation"
+      subtitle="Explicit exclusions define which values participate in Row Match Rate and Column Match Rate."
+    >
+      <p className="notice">
+        Counts, filters and key validation still cover the entire selected
+        scope. Identity columns cannot be excluded. Exclude both sides of a
+        mapped pair when neither should participate; a remaining unpaired column
+        blocks full row evaluation.
+      </p>
+      {sides.map((side, index) => {
+        const columns = index ? right : left;
+        const excluded = value.excluded_columns?.[side] ?? [];
+        const zones = value.timestamp_timezones?.[side] ?? {};
+        return (
+          <section key={side}>
+            <h3>Source {index ? "B" : "A"}</h3>
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Compare</th>
+                    <th>Column</th>
+                    <th>Timestamp timezone</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(columns).map(([name, info]) => {
+                    const identity =
+                      (info.primary_key && !value.business_key?.length) ||
+                      value.business_key?.some((p) => p[side] === name);
+                    const timestamp =
+                      info.family === "datetime" ||
+                      /^(timestamp|datetime|smalldatetime)/i.test(
+                        info.type ?? "",
+                      );
+                    const aware =
+                      info.timestamp_kind === "aware" ||
+                      /with time zone|timestamptz|datetimeoffset/i.test(
+                        info.type ?? "",
+                      );
+                    return (
+                      <tr key={name}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            aria-label={`Compare ${index ? "B" : "A"} ${name}`}
+                            checked={!excluded.includes(name)}
+                            disabled={!!identity && !excluded.includes(name)}
+                            onChange={(e) => {
+                              const next = e.target.checked
+                                ? excluded.filter((n) => n !== name)
+                                : [...excluded, name];
+                              onChange({
+                                ...value,
+                                excluded_columns: {
+                                  ...value.excluded_columns,
+                                  [side]: next,
+                                },
+                                mapping: value.mapping?.filter(
+                                  (p) => p[side] !== name,
+                                ),
+                              });
+                            }}
+                          />
+                        </td>
+                        <td>
+                          {name}
+                          <small className="muted">
+                            {" "}
+                            · {info.type}
+                            {identity ? " · identity" : ""}
+                          </small>
+                        </td>
+                        <td>
+                          {timestamp && !aware ? (
+                            <input
+                              aria-label={`Timezone ${index ? "B" : "A"} ${name}`}
+                              placeholder="Unspecified — e.g. America/Sao_Paulo"
+                              disabled={excluded.includes(name)}
+                              value={zones[name] ?? ""}
+                              onChange={(e) => {
+                                const next = { ...zones };
+                                if (e.target.value) next[name] = e.target.value;
+                                else delete next[name];
+                                onChange({
+                                  ...value,
+                                  timestamp_timezones: {
+                                    ...value.timestamp_timezones,
+                                    [side]: next,
+                                  },
+                                });
+                              }}
+                            />
+                          ) : timestamp ? (
+                            "Uses its stored offset"
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        );
+      })}
+      <p className="notice">
+        Choose the timezone that the stored clock values represent, not your
+        browser timezone. UTC timestamps keep their instant. No timezone is
+        assumed for naive timestamps; ambiguous or nonexistent local times
+        remain not evaluated. The period timezone controls the window; timestamp
+        interpretation controls value equality.
       </p>
     </Card>
   );

@@ -587,6 +587,8 @@ export interface components {
             mapping?: components["schemas"]["ColumnPair"][];
             /** Business Key */
             business_key?: components["schemas"]["ColumnPair"][];
+            excluded_columns?: components["schemas"]["ExcludedColumns"];
+            timestamp_timezones?: components["schemas"]["TimestampTimezones"];
         };
         /** ComparisonOut */
         ComparisonOut: {
@@ -660,6 +662,16 @@ export interface components {
             };
             /** Key Validation */
             key_validation: string;
+            /** Excluded Columns */
+            excluded_columns?: {
+                [key: string]: string[];
+            };
+            /** Timestamp Timezones */
+            timestamp_timezones?: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
         };
         /** ComparisonResult */
         ComparisonResult: {
@@ -701,6 +713,7 @@ export interface components {
             unmatched_columns: {
                 [key: string]: string[];
             };
+            comparison_options?: components["schemas"]["ComparisonOptions"];
             /** Key Validation */
             key_validation: {
                 [key: string]: unknown;
@@ -1168,6 +1181,13 @@ export interface components {
             message: string;
             /** Request Id */
             request_id?: string | null;
+        };
+        /** ExcludedColumns */
+        ExcludedColumns: {
+            /** Left */
+            left?: string[];
+            /** Right */
+            right?: string[];
         };
         /** IndicatorOut */
         IndicatorOut: {
@@ -1712,6 +1732,17 @@ export interface components {
              * @constant
              */
             status: "ok";
+        };
+        /** TimestampTimezones */
+        TimestampTimezones: {
+            /** Left */
+            left?: {
+                [key: string]: string;
+            };
+            /** Right */
+            right?: {
+                [key: string]: string;
+            };
         };
         /** TrendOut */
         TrendOut: {

@@ -75,6 +75,10 @@ test("closed scope → repeatable sample → five saved metrics → edit → his
   await page.getByLabel("Start (inclusive)").fill("2026-10-01");
   await page.getByLabel("End (exclusive)").fill("2026-10-03");
   await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Columns and timestamp interpretation" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
   await page.getByLabel("Keys", { exact: true }).fill("2");
   await page.getByLabel("Seed (optional)").fill("18446744073709551615");
   await page.getByRole("button", { name: "Review", exact: true }).click();
@@ -90,6 +94,23 @@ test("closed scope → repeatable sample → five saved metrics → edit → his
     await expect(page.getByRole("heading", { name, exact: true })).toBeVisible({
       timeout: 30000,
     });
+  await expect(
+    page.getByRole("heading", { name: "Result interpretation", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Counts match. A 0% count difference means equal volumes.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "No duplicate or null keys found. Here, 0% is the expected result.",
+      { exact: true },
+    ),
+  ).toHaveCount(2);
+  await expect(
+    page.getByText("Differences by column:", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("Sample quality", { exact: true })).toHaveCount(
     0,
   );
@@ -106,6 +127,7 @@ test("closed scope → repeatable sample → five saved metrics → edit → his
   await page.getByRole("link", { name: "Open comparison" }).click();
   await page.getByRole("link", { name: "Edit", exact: true }).click();
   await page.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
   await page
     .getByLabel("Sample size", { exact: true })
     .selectOption("percentage");
@@ -120,6 +142,82 @@ test("closed scope → repeatable sample → five saved metrics → edit → his
   await expect(
     page.getByRole("heading", { name: "Run history" }),
   ).toBeVisible();
+});
+
+test("explicit column exclusion and timestamp timezone survive preview, execution and editing", async ({
+  page,
+  request,
+}) => {
+  const s = await setup(request, "Timezone ", [
+    "timezone-left",
+    "timezone-right",
+  ]);
+  await login(page);
+  await page.goto("/comparisons/new");
+  await page.getByLabel("Name", { exact: true }).fill("Timestamp comparison");
+  await page
+    .getByLabel("Source A", { exact: true })
+    .selectOption(s.datasets[0].id);
+  await page
+    .getByLabel("Source B", { exact: true })
+    .selectOption(s.datasets[1].id);
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByLabel("Compare A id", { exact: true })).toBeDisabled();
+  await page
+    .getByLabel("Compare B ingestion_datetime", { exact: true })
+    .uncheck();
+  await page
+    .getByLabel("Timezone A sold", { exact: true })
+    .fill("America/Sao_Paulo");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/columns-timezone-mobile.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByRole("button", { name: "Review", exact: true }).click();
+  await expect(
+    page.getByText("Excluded columns A: None · B: ingestion_datetime", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Save and run", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Row Match Rate", exact: true }),
+  ).toBeVisible({ timeout: 30000 });
+  await expect(
+    page.getByText("2 / 2 evaluated", { exact: false }).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText("compatible in sample", { exact: true }),
+  ).toBeVisible();
+  const id = page.url().split("/").pop();
+  const response = await request.get(`${s.base}/runs/${id}/result`, {
+    headers: s.headers,
+  });
+  expect(response.status()).toBe(200);
+  const result = (await response.json()).result;
+  expect(result.metrics.row_match_rate.percentage).toBe("100.0000");
+  expect(
+    result.metrics.column_match_rate.map((v: any) => v.right_column),
+  ).not.toContain("ingestion_datetime");
+  expect(result.comparison_options.timestamp_timezones.left.sold).toBe(
+    "America/Sao_Paulo",
+  );
+  await page.getByRole("link", { name: "Open comparison" }).click();
+  await page.getByRole("link", { name: "Edit", exact: true }).click();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(
+    page.getByLabel("Compare B ingestion_datetime", { exact: true }),
+  ).not.toBeChecked();
+  await expect(page.getByLabel("Timezone A sold", { exact: true })).toHaveValue(
+    "America/Sao_Paulo",
+  );
 });
 
 test("relative units, invalid identity and mobile results remain explicit", async ({

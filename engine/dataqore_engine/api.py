@@ -282,7 +282,7 @@ def create_app(settings=None):
             dataset=repository.get(m.datasets,values[name])
             with sources.session(repository.get(m.connections,dataset["connection_id"]),comparison=True,catalog_name=dataset["catalog_name"]) as source:
                 counts.append(source["adapter"].count_rows(source["conn"],dataset["schema_name"],dataset["table_name"],context["predicates"][i]))
-        target=SamplingOptions(**values["sampling_options"]).target(counts,max(map(len,columns)))
+        target=SamplingOptions(**values["sampling_options"]).target(counts,max(len(cols)-len(context["excluded_columns"][side]) for cols,side in zip(columns,("left","right"))))
         suggested=[]
         if not context["business_key"]:
             pseudo=[{"columns":cols,"names":{f"pair_{j}":pair[side] for j,pair in enumerate(context["mapping"])}} for cols,side in zip(columns,("left","right"))]

@@ -1,16 +1,32 @@
 import { Card, Stat, percent, Badge } from "./common";
-export function Rate({ value }: { value: any }) {
+export function Rate({
+  value,
+  lowerIsBetter = false,
+}: {
+  value: any;
+  lowerIsBetter?: boolean;
+}) {
   if (!value) return <span>Not evaluated</span>;
   return (
     <>
-      <strong>
+      <strong
+        className={
+          value.percentage == null
+            ? ""
+            : Number(value.percentage) === (lowerIsBetter ? 0 : 100) &&
+                !value.not_evaluated
+              ? "metric-good"
+              : "metric-attention"
+        }
+      >
         {value.percentage == null
           ? "Not evaluated"
           : percent(String(value.percentage))}
       </strong>
       <small className="muted" style={{ display: "block" }}>
-        {value.numerator} / {value.denominator} evaluated ·{" "}
-        {value.not_evaluated} not evaluated · coverage{" "}
+        {value.numerator.toLocaleString("en-US")} /{" "}
+        {value.denominator.toLocaleString("en-US")} evaluated ·{" "}
+        {value.not_evaluated.toLocaleString("en-US")} not evaluated · coverage{" "}
         {value.coverage_percentage == null
           ? "—"
           : percent(String(value.coverage_percentage))}
@@ -25,8 +41,103 @@ export function CriticalMetrics({ result }: { result: any }) {
   const m = result.metrics,
     c = m.row_count_match,
     k = m.key_coverage;
+  const row = m.row_match_rate;
+  const columns = [...m.column_match_rate].sort(
+    (a: any, b: any) =>
+      b.different_values +
+      b.unknown_values -
+      (a.different_values + a.unknown_values),
+  );
+  const differingColumns = columns.filter((v: any) => v.different_values > 0);
+  const blockedColumns = columns.filter((v: any) => v.unknown_values > 0);
   return (
     <>
+      <Card title="Result interpretation" className="metric-summary">
+        <Badge value={result.summary.status} />
+        {result.sources?.length === 2 && (
+          <p className="metric-sources">
+            {result.sources[0].table} <span aria-label="compared with">↔</span>{" "}
+            {result.sources[1].table}
+          </p>
+        )}
+        <div className="metric-summary-grid">
+          <div>
+            <span className="muted">Matching rows</span>
+            <strong className="metric-summary-value">
+              {row.percentage == null
+                ? "Not evaluated"
+                : percent(row.percentage)}
+            </strong>
+            <span>
+              {row.numerator.toLocaleString("en-US")} /{" "}
+              {row.denominator.toLocaleString("en-US")} evaluated
+            </span>
+          </div>
+          <div>
+            <span className="muted">Evaluation coverage</span>
+            <strong className="metric-summary-value">
+              {row.coverage_percentage == null
+                ? "Not evaluated"
+                : percent(row.coverage_percentage)}
+            </strong>
+            <span>
+              {row.denominator.toLocaleString("en-US")} /{" "}
+              {row.total.toLocaleString("en-US")} selected positions
+            </span>
+          </div>
+          <div>
+            <span className="muted">Different rows</span>
+            <strong className="metric-summary-value">
+              {row.different_rows.toLocaleString("en-US")}
+            </strong>
+            <span>
+              {row.not_evaluated.toLocaleString("en-US")} not evaluated
+            </span>
+          </div>
+        </div>
+        {row.total === 0 ? (
+          <p className="notice warning">
+            No row positions are available for evaluation. Review the scope and
+            comparison key diagnostics below.
+          </p>
+        ) : row.not_evaluated > 0 ? (
+          <p className="notice warning">
+            Partial evaluation: the match rate applies only to{" "}
+            {row.denominator.toLocaleString("en-US")} evaluated positions.{" "}
+            {row.not_evaluated.toLocaleString("en-US")} positions remain
+            unknown; they are not counted as equal or different without
+            evidence.
+          </p>
+        ) : (
+          <p className="notice success">
+            All {row.total.toLocaleString("en-US")} selected row positions were
+            evaluated. {row.numerator.toLocaleString("en-US")} match and{" "}
+            {row.different_rows.toLocaleString("en-US")} differ.
+          </p>
+        )}
+        {differingColumns.length > 0 && (
+          <p>
+            <strong>Differences by column:</strong>{" "}
+            {differingColumns
+              .map(
+                (v: any) =>
+                  `${v.left_column ?? "Missing"} ↔ ${v.right_column ?? "Missing"} (${v.different_values.toLocaleString("en-US")})`,
+              )
+              .join(" · ")}
+          </p>
+        )}
+        {blockedColumns.length > 0 && (
+          <p>
+            <strong>Columns requiring review:</strong>{" "}
+            {blockedColumns
+              .map(
+                (v: any) =>
+                  `${v.left_column ?? "Missing"} ↔ ${v.right_column ?? "Missing"}`,
+              )
+              .join(" · ")}
+          </p>
+        )}
+      </Card>
       <p className="notice">
         Counts and key integrity cover the entire selected scope. Key coverage,
         row and column match rates describe the selected key sample. They do not
@@ -34,9 +145,18 @@ export function CriticalMetrics({ result }: { result: any }) {
       </p>
       <Card title="Row Count Match" subtitle="Entire selected scope">
         <div className="stats-grid">
-          <Stat label="Source A" value={c.reference_count} />
-          <Stat label="Source B" value={c.target_count} />
-          <Stat label="Absolute difference" value={c.absolute_difference} />
+          <Stat
+            label="Source A"
+            value={c.reference_count.toLocaleString("en-US")}
+          />
+          <Stat
+            label="Source B"
+            value={c.target_count.toLocaleString("en-US")}
+          />
+          <Stat
+            label="Absolute difference"
+            value={c.absolute_difference.toLocaleString("en-US")}
+          />
           <Stat
             label="Difference relative to A"
             value={
@@ -51,6 +171,11 @@ export function CriticalMetrics({ result }: { result: any }) {
           {c.equal ? "Equal counts" : "Different counts"}
           {c.reason && ` · ${c.reason.replaceAll("_", " ")}`}
         </p>
+        {c.equal && (
+          <p className="notice success">
+            Counts match. A 0% count difference means equal volumes.
+          </p>
+        )}
       </Card>
       <Card
         title="Row Match Rate"
@@ -89,7 +214,15 @@ export function CriticalMetrics({ result }: { result: any }) {
           {m.duplicate_key_rate.map((d: any) => (
             <section key={d.source}>
               <h3>Source {d.source === 1 ? "A" : "B"}</h3>
-              <Rate value={d} />
+              <Rate value={d} lowerIsBetter />
+              {d.percentage != null &&
+                Number(d.percentage) === 0 &&
+                d.null_key_rows === 0 && (
+                  <p className="metric-good">
+                    No duplicate or null keys found. Here, 0% is the expected
+                    result.
+                  </p>
+                )}
               <p>
                 Key: {d.columns.join(", ") || "Unavailable"} ·{" "}
                 {d.duplicate_groups ?? "—"} duplicate groups ·{" "}
@@ -115,7 +248,7 @@ export function CriticalMetrics({ result }: { result: any }) {
               </tr>
             </thead>
             <tbody>
-              {m.column_match_rate.map((v: any, i: number) => (
+              {columns.map((v: any, i: number) => (
                 <tr key={i}>
                   <td>{v.left_column ?? "Missing"}</td>
                   <td>{v.right_column ?? "Missing"}</td>
@@ -131,6 +264,23 @@ export function CriticalMetrics({ result }: { result: any }) {
         </div>
       </Card>
       <Card title="Selection and consistency">
+        <p>
+          Excluded columns A:{" "}
+          {result.comparison_options?.excluded_columns?.left?.join(", ") ||
+            "None"}{" "}
+          · B:{" "}
+          {result.comparison_options?.excluded_columns?.right?.join(", ") ||
+            "None"}
+        </p>
+        {(["left", "right"] as const).map((side) =>
+          Object.entries(
+            result.comparison_options?.timestamp_timezones?.[side] ?? {},
+          ).map(([column, zone]) => (
+            <p key={`${side}.${column}`}>
+              Timestamp {side === "left" ? "A" : "B"}.{column}: {String(zone)}
+            </p>
+          )),
+        )}
         <p>
           Seed: <code>{String(result.sampling_plan.seed)}</code> · requested{" "}
           {result.sampling_plan.requested_keys} keys · selected{" "}
@@ -156,7 +306,6 @@ export function CriticalMetrics({ result }: { result: any }) {
             <li key={i}>{v}</li>
           ))}
         </ul>
-        <Badge value={result.summary.status} />
       </Card>
     </>
   );

@@ -11,6 +11,7 @@ import json
 import math
 import re
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 
 @dataclass(frozen=True)
@@ -79,7 +80,7 @@ def _number(value, allow_string=False):
         return None
 
 
-def _temporal_token(value, family):
+def _temporal_token(value, family, naive_timezone=None):
     # Parse seconds and fractions independently. datetime.fromisoformat alone
     # truncates database nanoseconds to Python's six fractional digits.
     if family == "date":
@@ -109,6 +110,17 @@ def _temporal_token(value, family):
                     raise ValueError
                 delta = timedelta(minutes=(hours * 60 + minutes) * (1 if offset[0] == "+" else -1))
             base -= delta
+        elif naive_timezone and family == "datetime":
+            zone = ZoneInfo(naive_timezone)
+            instants = {
+                base.replace(tzinfo=zone, fold=fold).astimezone(timezone.utc)
+                for fold in (0, 1)
+                if base.replace(tzinfo=zone, fold=fold).astimezone(timezone.utc).astimezone(zone).replace(tzinfo=None) == base
+            }
+            if len(instants) != 1:
+                return ("unsupported", "ambiguous_or_nonexistent_local_time")
+            base = instants.pop().replace(tzinfo=None)
+            offset = "Z"
         canonical = base.isoformat(timespec="seconds") if family == "datetime" else base.time().isoformat(timespec="seconds")
         fraction = (match["fraction"] or "").rstrip("0")
         if fraction:
@@ -138,7 +150,7 @@ def _token(value, metadata=None, depth=0):
             return ("boolean", bool(value))
         return ("unsupported", "invalid_boolean")
     if family in {"date", "datetime", "time"}:
-        return _temporal_token(value, family)
+        return _temporal_token(value, family, (metadata or {}).get("naive_timezone"))
     if family == "uuid":
         try:
             return ("uuid", str(value if isinstance(value, UUID) else UUID(str(value))))
@@ -202,7 +214,8 @@ def values_equal(a, b, metadata_a=None, metadata_b=None,
 
     Text is never trimmed, case folded or parsed as a number without numeric
     metadata. Numeric tolerances apply only to numeric cells. Temporal offsets
-    are normalized, but timezone information is never inferred for naive values.
+    are normalized. Naive datetimes use only an explicitly configured metadata
+    naive_timezone; ambiguous/nonexistent local times are not evaluable.
     """
     absolute, relative = _number(absolute_tolerance, True), _number(relative_tolerance, True)
     if any(v is None or not v.is_finite() or v < 0 for v in (absolute, relative)):

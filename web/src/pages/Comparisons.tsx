@@ -5,6 +5,7 @@ import { api, allPages, post, type Model, type Page } from "../api";
 import {
   ScopeEditor,
   MappingEditor,
+  ColumnsEditor,
   type ComparisonOptions,
 } from "../components/ComparisonOptionsEditor";
 import { DeleteComparisonDialog } from "../components/DeleteComparisonDialog";
@@ -181,6 +182,72 @@ export function ComparisonDetail() {
                   ? `${c.data.sampling_options?.percentage}% of the larger scope`
                   : `${c.data.sampling_options?.rows} keys`}
               </p>
+              <div className="form-grid comparison-settings">
+                <p>
+                  <strong>Comparison key</strong>
+                  <span>
+                    {c.data.comparison_options?.business_key
+                      ?.map((p) => `${p.left} ↔ ${p.right}`)
+                      .join(", ") || "Discovered from metadata"}
+                  </span>
+                </p>
+                <p>
+                  <strong>Data scope</strong>
+                  <span>
+                    {c.data.comparison_options?.scope?.period
+                      ? "Configured period"
+                      : "Entire table"}
+                    {c.data.comparison_options?.scope?.filters?.length
+                      ? " · equivalent filters applied"
+                      : ""}
+                  </span>
+                </p>
+                <p>
+                  <strong>Excluded columns</strong>
+                  <span>
+                    A:{" "}
+                    {c.data.comparison_options?.excluded_columns?.left?.join(
+                      ", ",
+                    ) || "None"}{" "}
+                    · B:{" "}
+                    {c.data.comparison_options?.excluded_columns?.right?.join(
+                      ", ",
+                    ) || "None"}
+                  </span>
+                </p>
+                <p>
+                  <strong>Timestamp interpretation</strong>
+                  <span>
+                    {Object.entries(
+                      c.data.comparison_options?.timestamp_timezones ?? {},
+                    )
+                      .flatMap(([side, zones]) =>
+                        Object.entries(zones).map(
+                          ([column, zone]) =>
+                            `${side === "left" ? "A" : "B"}.${column}: ${zone}`,
+                        ),
+                      )
+                      .join(" · ") || "No explicit overrides"}
+                  </span>
+                </p>
+                <p>
+                  <strong>Numeric equality</strong>
+                  <span>
+                    Absolute tolerance: {String(c.data.absolute_tolerance ?? 0)}{" "}
+                    · relative: {String(c.data.relative_tolerance ?? 0)}{" "}
+                    (fraction)
+                  </span>
+                </p>
+                <p>
+                  <strong>Sample seed</strong>
+                  <span>
+                    {String(
+                      c.data.sampling_options?.seed ??
+                        "Generated on each execution",
+                    )}
+                  </span>
+                </p>
+              </div>
               <details>
                 <summary>Scope, mapping and tolerances</summary>
                 <JsonView value={c.data} />
@@ -326,7 +393,7 @@ export function Wizard() {
           payload(),
         ),
       );
-      setStep(2);
+      setStep(3);
     } catch (e) {
       setError(e);
     } finally {
@@ -356,7 +423,7 @@ export function Wizard() {
     <>
       <PageTitle
         title={id ? "Edit comparison" : "New comparison"}
-        subtitle={`Step ${step + 1} of 3 · ${["Sources and scope", "Identity and sample", "Review"][step]}`}
+        subtitle={`Step ${step + 1} of 4 · ${["Sources and scope", "Columns and timezones", "Identity and sample", "Review"][step]}`}
       />
       <ErrorBox error={error || datasets.error || current.error} />
       {datasets.isPending || (id && current.isPending) ? (
@@ -365,8 +432,8 @@ export function Wizard() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (step === 0) setStep(1);
-            else if (step === 1) void review();
+            if (step < 2) setStep(step + 1);
+            else if (step === 2) void review();
             else void save(false);
           }}
         >
@@ -420,12 +487,29 @@ export function Wizard() {
             </>
           )}
           {step === 1 && (
+            <ColumnsEditor
+              value={options}
+              onChange={setOptions}
+              left={columns(left)}
+              right={columns(right)}
+            />
+          )}
+          {step === 2 && (
             <>
               <MappingEditor
                 value={options}
                 onChange={setOptions}
-                left={columns(left)}
-                right={columns(right)}
+                left={Object.fromEntries(
+                  Object.entries(columns(left)).filter(
+                    ([name]) => !options.excluded_columns?.left?.includes(name),
+                  ),
+                )}
+                right={Object.fromEntries(
+                  Object.entries(columns(right)).filter(
+                    ([name]) =>
+                      !options.excluded_columns?.right?.includes(name),
+                  ),
+                )}
               />
               <Card
                 title="Reproducible random sample"
@@ -503,7 +587,10 @@ export function Wizard() {
                     />
                   </label>
                 </div>
-                <p>Zero means exact numeric equality.</p>
+                <p>
+                  Zero means exact numeric equality. Relative tolerance uses a
+                  fraction: 0.1 means 10%; 10 means 1,000%.
+                </p>
                 <details>
                   <summary>Capture budgets</summary>
                   <label>
@@ -530,7 +617,7 @@ export function Wizard() {
               </Card>
             </>
           )}
-          {step === 2 && preview && (
+          {step === 3 && preview && (
             <Card title="Review">
               <p>
                 {name} · {preview.sample_target} requested keys · scoped rows{" "}
@@ -548,6 +635,22 @@ export function Wizard() {
               <p>
                 Preview counts are provisional. Execution validates key
                 uniqueness and freezes its own counts and selection.
+              </p>
+              <p>
+                Excluded columns A:{" "}
+                {preview.excluded_columns?.left?.join(", ") || "None"} · B:{" "}
+                {preview.excluded_columns?.right?.join(", ") || "None"}
+              </p>
+              <p>
+                Timestamp interpretation:{" "}
+                {Object.entries(preview.timestamp_timezones ?? {})
+                  .flatMap(([side, zones]) =>
+                    Object.entries(zones).map(
+                      ([column, zone]) =>
+                        `${side === "left" ? "A" : "B"}.${column}: ${zone}`,
+                    ),
+                  )
+                  .join(" · ") || "No explicit overrides"}
               </p>
               <JsonView value={preview} />
               <p>Save the definition or save and run now.</p>
@@ -567,13 +670,13 @@ export function Wizard() {
             <Button type="submit" disabled={busy}>
               {busy
                 ? "Working…"
-                : step === 2
+                : step === 3
                   ? "Save comparison"
-                  : step === 1
+                  : step === 2
                     ? "Review"
                     : "Next"}
             </Button>
-            {step === 2 && (
+            {step === 3 && (
               <Button
                 type="button"
                 disabled={busy}

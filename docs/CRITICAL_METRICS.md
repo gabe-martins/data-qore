@@ -48,6 +48,13 @@ limite da comparação, não de trabalho no servidor ou tráfego das chaves.
 | Column Match Rate | Valores iguais / posições avaliadas por par de colunas; ausências contam como diferença. |
 
 Taxas usam 0–100, numerador, denominador, total, não avaliados e cobertura.
+O resumo do resultado destaca correspondência por linha, cobertura e quantidade
+de linhas diferentes. As colunas com divergências ou valores desconhecidos
+aparecem primeiro. Diferença de volume de 0% significa contagens iguais; taxa de
+duplicidade de 0% significa ausência de excesso duplicado, e recebe indicação
+própria. Uma avaliação parcial exibe seu denominador e um aviso; uma seleção
+vazia permanece não avaliada. O cadastro também resume chave, exclusões, fusos,
+tolerâncias e semente sem exigir leitura do JSON técnico.
 Denominador zero não gera 100%. Valor desconhecido não é igualdade. Diferença
 comprovada em uma linha prevalece sobre outro campo desconhecido; sem diferença
 comprovada, a linha parcialmente desconhecida fica fora do denominador.
@@ -64,6 +71,34 @@ recebem aviso. Agrupamento completo de chaves textuais usa a collation da fonte
 e pode invalidar uma identidade de modo conservador.
 
 ## API e histórico
+
+O assistente inclui uma etapa **Columns and timezones**. Marque quais colunas
+participam em cada fonte e informe a zona IANA de cada timestamp sem fuso quando
+necessário (por exemplo, `America/Sao_Paulo` ou `UTC`). Não escolha o fuso pelo
+local do navegador: ele deve representar o significado dos valores armazenados.
+
+`comparison_options.excluded_columns` contém listas `left` e `right`. Exclusões
+são explícitas e não aparecem em Column Match Rate nem bloqueiam Row Match Rate.
+Contagens, filtros e integridade da identidade permanecem completos. Não se pode
+excluir uma chave de negócio selecionada ou a PK usada para sugerir identidade;
+pares manuais que apontem para uma coluna excluída são rejeitados. Para retirar um
+par completo, exclua a coluna de cada fonte. Uma coluna remanescente sem par
+continua sendo um impedimento. A captura deixa de materializar colunas excluídas.
+
+`comparison_options.timestamp_timezones` contém mapas `left` e `right`, de nome
+de coluna para zona IANA. Exemplo: `{"left":{"SaleDate":"America/Sao_Paulo"}}`.
+A opção aplica-se à comparação dos valores mesmo sem recorte temporal. Valores
+com offset mantêm o instante registrado; valores sem offset são interpretados na
+zona declarada e comparados em UTC, preservando a precisão fracionária. Horários
+locais ambíguos ou inexistentes ficam não avaliados. Sem configuração, o motor não
+presume equivalência entre timestamps com e sem fuso.
+
+Se a coluna também define o período, essa interpretação preenche o fuso ausente
+do recorte no enfileiramento; configurações conflitantes são rejeitadas. O fuso
+da janela continua independente da interpretação dos valores. Exclusões e zonas
+ficam congeladas na fila e no resultado histórico; editar uma definição não muda
+execuções já criadas. Nenhuma configuração ou resultado existente é alterado
+automaticamente por essa funcionalidade.
 
 `sampling_options` contém `method` (`rows` ou `percentage`), `rows` (padrão 1000),
 `percentage`, `seed`, `max_cells` e `max_sample_bytes`. Use percentual somente no
