@@ -102,6 +102,17 @@ export function App() {
   return (
     <NavigationDialog.Root open={menu} onOpenChange={setMenu}>
     <div className="app-shell" data-sidebar={sidebar}>
+      <header className="topbar">
+        <NavigationDialog.Trigger asChild>
+          <button type="button" className="icon-button mobile-menu" aria-label="Toggle navigation" aria-controls="mobile-navigation"><Menu /></button>
+        </NavigationDialog.Trigger>
+        <div className="product-title">
+          <BrandLogo className="wordmark" />
+        </div>
+        <NavLink to="/account" className="profile-link" aria-label="Account" title="Account">
+          <UserRound size={21} aria-hidden="true" />
+        </NavLink>
+      </header>
       <aside className="sidebar sidebar-desktop" data-compact={sidebar === 'collapsed'} aria-label="Desktop sidebar">
         <SidebarContent onNavigate={() => {}} onSignOut={() => { void signOut(); }} />
       </aside>
@@ -118,24 +129,6 @@ export function App() {
         </NavigationDialog.Content>
       </NavigationDialog.Portal>
       <div className="app-main">
-        <header className="topbar">
-          <NavigationDialog.Trigger asChild>
-            <button type="button" className="icon-button mobile-menu" aria-label="Toggle navigation" aria-controls="mobile-navigation"><Menu /></button>
-          </NavigationDialog.Trigger>
-          <div className="product-title">
-            <div className="brand-mark">
-              <img src="/branding/dataqore-symbol.svg" alt="" width="40" height="40" />
-            </div>
-            <strong>
-              ADQ <span>— Advanced Data Quality</span>
-            </strong>
-          </div>
-          <NavLink to="/account" className="profile-link">
-            <UserRound size={21} />
-            <span>{user.display_name}</span>
-          </NavLink>
-          <BrandLogo className="wordmark" />
-        </header>
         <main className="page">
           <Suspense fallback={<Loading />}>
             <Routes>
