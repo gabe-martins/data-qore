@@ -1,12 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { Database, GitCompareArrows, LayoutDashboard, Library, History, LogOut, UserRound, CalendarClock, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
+import { Database, GitCompareArrows, LayoutDashboard, Library, History, LogOut, CalendarClock, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { useAppearance } from '../lib/appearance';
 import { ThemeControl } from './ThemeControl';
 import { NavigationTip } from './NavigationTip';
 const links = [
   ['/', 'Overview', LayoutDashboard], ['/connections', 'Connections', Database], ['/catalog', 'Catalog', Library],
   ['/comparisons', 'Comparisons', GitCompareArrows], ['/schedules', 'Schedules', CalendarClock], ['/runs', 'Runs', History],
-  ['/account', 'Account', UserRound],
 ] as const;
 export function SidebarContent({ mobile = false, onNavigate, onSignOut }: { mobile?: boolean; onNavigate: () => void; onSignOut: () => void }) {
   const { sidebar, setSidebar } = useAppearance();
@@ -14,10 +13,6 @@ export function SidebarContent({ mobile = false, onNavigate, onSignOut }: { mobi
   const label = compact ? 'Expand sidebar' : 'Collapse sidebar';
   return <>
     <div className="sidebar-heading">
-      <NavLink to="/" className="sidebar-brand" aria-label="DataQore overview" onClick={onNavigate}>
-        <span className="brand-mark"><img src="/branding/dataqore-symbol.svg" alt="" width="45" height="45" /></span>
-        <strong className="sidebar-label">DataQore</strong>
-      </NavLink>
       {mobile ? <button type="button" className="sidebar-toggle" aria-label="Close navigation" onClick={onNavigate}><X size={21} /></button> :
         <NavigationTip enabled={compact} label={label}><button type="button" className="sidebar-toggle" aria-label={label} aria-expanded={!compact} aria-controls="desktop-navigation" onClick={() => setSidebar(compact ? 'expanded' : 'collapsed')}>
           {compact ? <PanelLeftOpen size={21} /> : <PanelLeftClose size={21} />}
