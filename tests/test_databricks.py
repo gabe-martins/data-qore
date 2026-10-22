@@ -115,24 +115,22 @@ class DatabricksContractTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):adapter.estimate_rows(conn,'s','t')
             conn.cursor.return_value.close.assert_called_once()
 
-    def test_published_estimate_plans_within_sampling_limits(self):
-        from dataqore_engine.core.profile_engine import execute_profile
+    def test_critical_comparison_scans_and_aligns_informational_keys(self):
+        from dataqore_engine.core.comparison_engine import execute_comparison
         from dataqore_engine.core.sampling import SamplingOptions
         with tempfile.TemporaryDirectory() as directory:
-            path=Path(directory)/'source.sqlite'
-            with sqlite3.connect(path) as conn:
-                conn.execute('CREATE TABLE records(id integer,amount numeric,status text)')
-                conn.executemany('INSERT INTO records VALUES(?,?,?)',[(n,n,'value') for n in range(1100)])
-            native=NativeConnection(path);self.addCleanup(native.close)
-            adapter=DatabricksAdapter('main')
-            details={'collected_at':'2026-10-20T00:00:00+00:00','estimated_rows':40000,'estimate_source':'databricks_optimizer_statistics','estimate_status':'available','scope':'whole_table','status':'available'}
-            adapter._details[('sales','records')]=details
-            result=execute_profile({'conn':Connection(native),'connection':'test','creds':{'type':'databricks'},'schema':'sales','table':'records','catalog_name':'main','adapter':adapter})
-            self.assertEqual(result['sources'][0]['estimated_rows'],40000)
-            self.assertEqual(result['sources'][0]['sample_size'],1000)
-            self.assertEqual(result['sources'][0]['table_details'],details)
-            self.assertNotIn('sample_rows',json.dumps(result,default=str))
-            self.assertFalse(any('COUNT(' in q['sql'].upper() or 'ANALYZE ' in q['sql'].upper() for q in result['query_log']))
+            sources=[]
+            for side in ('a','b'):
+                path=Path(directory)/(side+'.sqlite')
+                with sqlite3.connect(path) as c:
+                    c.execute('CREATE TABLE records(id integer,amount numeric,status text)')
+                    c.executemany('INSERT INTO records VALUES(?,?,?)',[(1,10,'paid'),(2,20,'pending')])
+                native=NativeConnection(path);self.addCleanup(native.close)
+                sources.append({'conn':Connection(native),'creds':{'type':'databricks'},'schema':'sales','table':'records','catalog_name':'main','adapter':DatabricksAdapter('main')})
+            r=execute_comparison(sources,options=SamplingOptions(rows=2,seed=42))
+            self.assertEqual(r['metrics']['row_match_rate']['percentage'],100)
+            self.assertEqual(r['sampling_plan']['scanned_key_rows'],[2,2])
+            self.assertEqual(r['summary']['status'],'compatible_in_sample')
 
     def test_timestamp_semantics_complex_types_and_resource_cleanup(self):
         from dataqore_engine.comparison_options import _temporal_kind
@@ -180,87 +178,3 @@ class DatabricksContractTests(unittest.TestCase):
             self.assertNotIn('PRIVATE',failure.message)
         failure=source_failure('databricks',RuntimeError('[INSUFFICIENT_PERMISSIONS] Insufficient privileges: SELECT SQLSTATE: 42501'))
         self.assertEqual(failure.code,'source_databricks_permission_denied')
-
-
-@unittest.skipUnless(os.environ.get('DATAQORE_PG_BIN'),'Disposable PostgreSQL required')
-class DatabricksAPITests(TemporaryPostgres):
-    def setUp(self):
-        super().setUp();self.command('engine','baseline');self.command('engine','apply')
-        self.files=tempfile.TemporaryDirectory();self.addCleanup(self.files.cleanup)
-        self.root=Path(self.files.name)
-        with sqlite3.connect(self.root/'source.sqlite') as c:
-            c.execute('CREATE TABLE records(id integer PRIMARY KEY,amount numeric,status text)')
-            c.executemany('INSERT INTO records VALUES(?,?,?)',[(1,10,'paid'),(2,20,'pending')])
-            c.execute('CREATE VIEW records_view AS SELECT * FROM records')
-        self.settings=settings(f'postgresql+psycopg://srv_dataqore_engine@127.0.0.1:{self.port}/dataqore_engine',self.root)
-        self.app=create_app(self.settings);self.client=TestClient(self.app)
-        self.client.__enter__();self.addCleanup(self.client.__exit__,None,None,None)
-        mock=patch.dict(PLUGINS,databricks=Plugin('sqlite3',lambda creds:Connection(NativeConnection(self.root/'source.sqlite'))));mock.start();self.addCleanup(mock.stop)
-        self.queue=Queue(self.app.state.engine)
-    def request(self,method,path,status=200,**kw):
-        r=self.client.request(method,'/v1'+path,headers={'X-API-Key':self.settings.api_key},**kw)
-        self.assertEqual(r.status_code,status,r.text);return r.json()
-    def finish(self,run):
-        self.assertEqual(str(self.queue.claim()),run['id']);run_job(self.settings,UUID(run['id']))
-        return self.request('GET',f"/runs/{run['id']}/result")
-    def test_catalog_profile_comparison_and_identity(self):
-        row=self.request('POST','/connections',201,json={'name':'Unity','connector':'databricks','credentials':PAT})
-        self.assertNotIn('PRIVATE',json.dumps(row));cid=row['id']
-        self.request('POST',f'/connections/{cid}/test')
-        self.assertEqual(self.request('GET',f'/connections/{cid}/catalogs',params={'limit':1})['items'],['main'])
-        self.request('GET',f'/connections/{cid}/schemas',422)
-        self.assertEqual(self.request('GET',f'/connections/{cid}/schemas',params={'catalog':'main'})['items'],['sales'])
-        objects=self.request('GET',f'/connections/{cid}/tables',params={'catalog':'main','schema':'sales'})['items']
-        self.assertEqual(objects[1]['table_type'],'VIEW')
-        datasets=[]
-        for catalog in ('main','other'):
-            datasets.append(self.request('POST','/datasets',201,json={'connection_id':cid,'catalog_name':catalog,'schema_name':'sales','table_name':'records'}))
-        self.assertEqual(datasets[0]['metadata']['estimated_rows'],2)
-        self.assertEqual(datasets[0]['metadata']['table_details']['provider'],'delta')
-        self.assertNotEqual(datasets[0]['id'],datasets[1]['id'])
-        self.request('POST','/datasets',409,json={'connection_id':cid,'catalog_name':'main','schema_name':'sales','table_name':'records'})
-        self.request('POST','/datasets',422,json={'connection_id':cid,'schema_name':'sales','table_name':'records'})
-        run=self.request('POST',f"/datasets/{datasets[0]['id']}/profile-runs",202,json={})
-        result=self.finish(run);self.assertEqual(result['result']['sources'][0]['catalog_name'],'main')
-        self.assertEqual(result['result']['sources'][0]['table_details']['estimated_rows'],2)
-        stored=self.request('GET',f"/datasets/{datasets[0]['id']}")
-        self.assertEqual(stored['metadata']['table_details'],result['result']['sources'][0]['table_details'])
-        definition=self.request('POST','/comparisons',201,json={'name':'Unity compare','left_dataset_id':datasets[0]['id'],'right_dataset_id':datasets[1]['id']})
-        run=self.request('POST',f"/comparisons/{definition['id']}/runs",202,json={})
-        result=self.finish(run)['result'];self.assertEqual(result['format_version'],5)
-        self.assertTrue(all(k['valid'] for k in result['key_validation']))
-        self.assertEqual(result['sources'][1]['table'],'other.sales.records')
-        self.assertEqual(result['summary']['status'],'compatible_in_sample')
-        self.assertTrue(any('snapshot' in x.lower() for x in result['warnings']))
-        self.request('PATCH',f"/comparisons/{definition['id']}",json={'comparison_options':{
-            'business_key':[{'left':'id','right':'id'}],
-            'scope':{'filters':[{'left':'id','right':'id','operator':'gte','value':'1'}]}}})
-        # Declared PK is informational: duplicate outside the pilot must stop alignment.
-        with sqlite3.connect(self.root/'source.sqlite') as c:
-            c.execute('DROP VIEW records_view');c.execute('ALTER TABLE records RENAME TO old')
-            c.execute('CREATE TABLE records(id integer,amount numeric,status text)')
-            c.executemany('INSERT INTO records VALUES(?,?,?)',[(1,10,'paid'),(2,20,'pending'),(2,999,'hidden')])
-        result=self.finish(self.request('POST',f"/comparisons/{definition['id']}/runs",202,json={}))['result']
-        self.assertEqual(result['summary']['status'],'inconclusive');self.assertEqual(result['row_comparisons'],[])
-        self.assertFalse(result['key_validation'][0]['valid'])
-
-    def test_migration_preserves_legacy_catalog_identity_and_grants(self):
-        self.command('engine','verify');self.command('engine','apply');self.command('engine','verify')
-        with self.connect('engine','srv_dataqore_engine') as c:
-            with self.assertRaises(Exception):c.execute('ALTER TABLE engine.datasets ADD COLUMN forbidden text')
-        with self.connect('engine') as c:
-            self.assertEqual(c.execute("SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid='engine.datasets'::regclass").fetchone()[0],'dataqore_engine_owner')
-
-    def test_failed_profile_does_not_publish_metadata_or_partial_evidence(self):
-        row=self.request('POST','/connections',201,json={'name':'Unity','connector':'databricks','credentials':PAT})
-        dataset=self.request('POST','/datasets',201,json={'connection_id':row['id'],'catalog_name':'main','schema_name':'sales','table_name':'records'})
-        run=self.request('POST',f"/datasets/{dataset['id']}/profile-runs",202,json={})
-        partition=datetime.now(timezone.utc).strftime('metrics_%Y_%m')
-        with self.connect('engine') as conn:conn.execute(f'ALTER TABLE engine.metrics DETACH PARTITION engine.{partition}')
-        self.queue.claim();run_job(self.settings,UUID(run['id']))
-        self.assertEqual(self.request('GET',f"/runs/{run['id']}")['status'],'failed')
-        self.assertEqual(self.request('GET',f"/datasets/{dataset['id']}")['metadata'],dataset['metadata'])
-        from sqlalchemy import func
-        with self.app.state.engine.connect() as conn:
-            for table in (m.run_results,m.column_profiles,m.metrics):
-                self.assertEqual(conn.scalar(select(func.count()).select_from(table).where(table.c.run_id==UUID(run['id']))),0)

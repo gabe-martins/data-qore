@@ -3,7 +3,7 @@
 from decimal import Decimal
 import sqlite3
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from dataqore_engine.connectors import PLUGINS
 DB_TYPES = tuple(PLUGINS)
@@ -15,7 +15,7 @@ class AdapterTests(unittest.TestCase):
     def mock_connection(self, fetches=()):
         conn = MagicMock()
         cursor = conn.cursor.return_value
-        cursor.fetchall.side_effect = list(fetches)
+        cursor.fetchall.side_effect = list(fetches)+[[]]
         cursor.fetchmany.return_value = []
         return conn, cursor
 
@@ -25,19 +25,26 @@ class AdapterTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             get_adapter('missing')
 
-    def test_random_queries_bind_limits_for_every_dialect(self):
-        for kind in SUPPORTED_DATABASES:
+    def test_streaming_keys_and_full_counts_use_bound_scope_for_six_dialects(self):
+        from dataqore_engine.databricks import DatabricksAdapter
+        import sys
+        for kind in (*SUPPORTED_DATABASES,'databricks'):
             with self.subTest(kind=kind):
-                conn, cursor = self.mock_connection()
-                get_adapter(kind).fetch_random(conn, 'schema', 'table', ['Id'], 64,
-                                               metadata={'Id': {'type': 'integer'}})
-                sql, params = cursor.execute.call_args.args
-                self.assertEqual(params, (64,))
-                self.assertNotIn('LIMIT 64', sql)
-                self.assertIn({'postgresql': 'RANDOM()', 'mysql': 'RAND()', 'sqlite': 'RANDOM()',
-                               'mssql': 'NEWID()', 'oracle': 'DBMS_RANDOM.VALUE'}[kind], sql)
-                self.assertEqual(cursor.fetchmany.call_args.args, (64,))
+                adapter=DatabricksAdapter('main') if kind=='databricks' else get_adapter(kind)
+                conn,cursor=self.mock_connection();cursor.fetchmany.side_effect=[[tuple([1,0]) if kind=="sqlite" else (1,)],[]]
+                cursor.fetchone.return_value=(7,)
+                with patch.dict(sys.modules,{'pymysql.cursors':MagicMock()}):
+                    values=list(adapter.iter_keys(conn,'s','table',['id'],{'id':{'type':'integer'}},[('batch','eq',['PRIVATE'])]))
+                self.assertEqual(values,[(1,)])
+                sql,params=cursor.execute.call_args.args
+                self.assertEqual(params,('PRIVATE',));self.assertNotIn('PRIVATE',sql)
+                self.assertNotIn('RANDOM',sql.upper());self.assertNotIn('RAND()',sql.upper())
+                self.assertEqual(cursor.fetchmany.call_args.args,(256,))
                 cursor.close.assert_called_once()
+                self.assertEqual(adapter.count_rows(conn,'s','table',[('batch','eq',['PRIVATE'])]),7)
+                cursor.fetchone.side_effect=[(7,1),(1,2)]
+                diagnostic=adapter.validate_key(conn,'s','table',['id'],[('batch','eq',['PRIVATE'])])
+                self.assertEqual((diagnostic['null_key_rows'],diagnostic['duplicate_excess_rows']),(1,2))
 
     def test_key_queries_quote_percent_and_parameterize_values(self):
         for kind in SUPPORTED_DATABASES:

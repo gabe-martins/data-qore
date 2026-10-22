@@ -196,24 +196,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/datasets/{identifier}/quality-rules": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Quality Rules */
-        get: operations["get_quality_rules_v1_datasets__identifier__quality_rules_get"];
-        put?: never;
-        /** Update Quality Rules */
-        post: operations["update_quality_rules_v1_datasets__identifier__quality_rules_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/datasets/{identifier}/dependencies": {
         parameters: {
             query?: never;
@@ -242,40 +224,6 @@ export interface paths {
         put?: never;
         /** Refresh Dataset */
         post: operations["refresh_dataset_v1_datasets__identifier__refresh_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/datasets/{identifier}/profile-runs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Profile Run */
-        post: operations["profile_run_v1_datasets__identifier__profile_runs_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/datasets/{identifier}/profiles": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Profiles */
-        get: operations["profiles_v1_datasets__identifier__profiles_get"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -421,32 +369,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/metrics": {
+    "/api/v1/overview/row-match-trend": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Metrics */
-        get: operations["metrics_v1_metrics_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/overview/quality-trend": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Quality Trend */
-        get: operations["quality_trend_v1_overview_quality_trend_get"];
+        /** Row Match Trend */
+        get: operations["row_match_trend_v1_overview_row_match_trend_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -735,122 +666,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/api/v1/environment-settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Environment settings */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["EnvironmentSettingsOut"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Invalid percentage */
-                422: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Settings unavailable */
-                503: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        comparison_target_percentage: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Environment settings */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["EnvironmentSettingsOut"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Invalid percentage */
-                422: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Settings unavailable */
-                503: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
         trace?: never;
     };
     "/api/v1/schedules/preview": {
@@ -1317,6 +1132,40 @@ export interface components {
             /** Name */
             name?: string | null;
         };
+        /** ColumnMatchRate */
+        ColumnMatchRate: {
+            /** Numerator */
+            numerator: number;
+            /** Denominator */
+            denominator: number;
+            /** Total */
+            total: number;
+            /** Not Evaluated */
+            not_evaluated: number;
+            /** Percentage */
+            percentage: string | null;
+            /** Coverage Percentage */
+            coverage_percentage: string | null;
+            /** Scope */
+            scope: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "available" | "partial" | "not_evaluated";
+            /** Reason */
+            reason: string | null;
+            /** Left Column */
+            left_column: string | null;
+            /** Right Column */
+            right_column: string | null;
+            /** Different Values */
+            different_values: number;
+            /** Unknown Values */
+            unknown_values: number;
+            /** Formula */
+            formula?: string | null;
+        };
         /** ColumnPair */
         ColumnPair: {
             /** Left */
@@ -1326,9 +1175,6 @@ export interface components {
         };
         /** ComparisonCreate */
         ComparisonCreate: {
-            sampling_options?: components["schemas"]["Sampling"];
-            /** Sample Size */
-            sample_size?: number | null;
             /** Name */
             name: string;
             /**
@@ -1341,12 +1187,7 @@ export interface components {
              * Format: uuid
              */
             right_dataset_id: string;
-            /**
-             * Mode
-             * @default auto
-             * @enum {string}
-             */
-            mode: "auto" | "matched_keys" | "independent_random";
+            sampling_options?: components["schemas"]["Sampling-Input"];
             /**
              * Absolute Tolerance
              * @default 0
@@ -1394,25 +1235,12 @@ export interface components {
             /** Can Delete */
             can_delete: boolean;
         };
-        /** ComparisonEvaluationOut */
-        ComparisonEvaluationOut: {
-            /** Column */
-            column: string;
-            /** Metrics */
-            metrics: {
-                [key: string]: components["schemas"]["EvaluationOut"];
-            };
-        };
         /** ComparisonHistoryCounts */
         ComparisonHistoryCounts: {
             /** Runs */
             runs: number;
             /** Results */
             results: number;
-            /** Column Profiles */
-            column_profiles: number;
-            /** Metrics */
-            metrics: number;
         };
         /** ComparisonOptions */
         ComparisonOptions: {
@@ -1421,12 +1249,11 @@ export interface components {
             mapping?: components["schemas"]["ColumnPair"][];
             /** Business Key */
             business_key?: components["schemas"]["ColumnPair"][];
+            excluded_columns?: components["schemas"]["ExcludedColumns"];
+            timestamp_timezones?: components["schemas"]["TimestampTimezones"];
         };
         /** ComparisonOut */
         ComparisonOut: {
-            sampling_options?: components["schemas"]["Sampling"];
-            /** Sample Size */
-            sample_size?: number | null;
             /** Name */
             name: string;
             /**
@@ -1439,12 +1266,7 @@ export interface components {
              * Format: uuid
              */
             right_dataset_id: string;
-            /**
-             * Mode
-             * @default auto
-             * @enum {string}
-             */
-            mode: "auto" | "matched_keys" | "independent_random";
+            sampling_options?: components["schemas"]["Sampling-Output"];
             /**
              * Absolute Tolerance
              * @default 0
@@ -1476,6 +1298,14 @@ export interface components {
         };
         /** ComparisonPreviewOut */
         ComparisonPreviewOut: {
+            /** Scope Counts */
+            scope_counts: number[];
+            /** Sample Target */
+            sample_target: number;
+            /** Suggested Business Key */
+            suggested_business_key: {
+                [key: string]: string;
+            }[];
             /** Mapping */
             mapping: {
                 [key: string]: string;
@@ -1494,9 +1324,80 @@ export interface components {
             };
             /** Key Validation */
             key_validation: string;
+            /** Excluded Columns */
+            excluded_columns?: {
+                [key: string]: string[];
+            };
+            /** Timestamp Timezones */
+            timestamp_timezones?: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
         };
-        /** ComparisonQualitySeries */
-        ComparisonQualitySeries: {
+        /** ComparisonResult */
+        ComparisonResult: {
+            /**
+             * Format Version
+             * @constant
+             */
+            format_version: 6;
+            /** Engine Version */
+            engine_version: string;
+            /**
+             * Execution Id
+             * Format: uuid
+             */
+            execution_id: string;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * Finished At
+             * Format: date-time
+             */
+            finished_at: string;
+            /** Sources */
+            sources: {
+                [key: string]: unknown;
+            }[];
+            /** Resolved Scope */
+            resolved_scope: {
+                [key: string]: unknown;
+            };
+            /** Column Mapping */
+            column_mapping: {
+                [key: string]: string;
+            }[];
+            /** Unmatched Columns */
+            unmatched_columns: {
+                [key: string]: string[];
+            };
+            comparison_options?: components["schemas"]["ComparisonOptions"];
+            /** Key Validation */
+            key_validation: {
+                [key: string]: unknown;
+            }[];
+            /** Sampling Plan */
+            sampling_plan: {
+                [key: string]: unknown;
+            };
+            metrics: components["schemas"]["CriticalMetrics"];
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            };
+            /** Warnings */
+            warnings: string[];
+            /** Query Log */
+            query_log: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** ComparisonRowMatchSeries */
+        ComparisonRowMatchSeries: {
             /**
              * Comparison Id
              * Format: uuid
@@ -1505,13 +1406,10 @@ export interface components {
             /** Name */
             name: string;
             /** Points */
-            points: components["schemas"]["DailyQualityPoint"][];
+            points: components["schemas"]["DailyRowMatchPoint"][];
         };
         /** ComparisonSummaryOut */
         ComparisonSummaryOut: {
-            sampling_options?: components["schemas"]["Sampling"];
-            /** Sample Size */
-            sample_size?: number | null;
             /** Name */
             name: string;
             /**
@@ -1524,12 +1422,7 @@ export interface components {
              * Format: uuid
              */
             right_dataset_id: string;
-            /**
-             * Mode
-             * @default auto
-             * @enum {string}
-             */
-            mode: "auto" | "matched_keys" | "independent_random";
+            sampling_options?: components["schemas"]["Sampling-Output"];
             /**
              * Absolute Tolerance
              * @default 0
@@ -1569,11 +1462,7 @@ export interface components {
             left_dataset_id?: string | null;
             /** Right Dataset Id */
             right_dataset_id?: string | null;
-            /** Mode */
-            mode?: ("auto" | "matched_keys" | "independent_random") | null;
-            sampling_options?: components["schemas"]["Sampling"] | null;
-            /** Sample Size */
-            sample_size?: number | null;
+            sampling_options?: components["schemas"]["Sampling-Input"] | null;
             /** Absolute Tolerance */
             absolute_tolerance?: number | string | null;
             /** Relative Tolerance */
@@ -1745,8 +1634,18 @@ export interface components {
              */
             trust_server_certificate: boolean;
         };
-        /** DailyQualityPoint */
-        DailyQualityPoint: {
+        /** CriticalMetrics */
+        CriticalMetrics: {
+            row_count_match: components["schemas"]["RowCountMatch"];
+            key_coverage: components["schemas"]["KeyCoverage"];
+            /** Duplicate Key Rate */
+            duplicate_key_rate: components["schemas"]["DuplicateKeyRate"][];
+            row_match_rate: components["schemas"]["RowMatchRate"];
+            /** Column Match Rate */
+            column_match_rate: components["schemas"]["ColumnMatchRate"][];
+        };
+        /** DailyRowMatchPoint */
+        DailyRowMatchPoint: {
             /** Passed */
             passed: number;
             /** Evaluated */
@@ -1863,11 +1762,8 @@ export interface components {
         DatasetDependenciesOut: {
             dataset: components["schemas"]["DatasetDeletionReference"];
             comparisons: components["schemas"]["Page_DatasetComparisonReference_"];
-            profile_history: components["schemas"]["ProfileHistoryCounts"];
-            /** Active Profile Runs */
-            active_profile_runs: number;
             /** Block Reasons */
-            block_reasons: ("dataset_in_use" | "dataset_busy")[];
+            block_reasons: "dataset_in_use"[];
             /** Can Delete */
             can_delete: boolean;
         };
@@ -1890,7 +1786,6 @@ export interface components {
             schema_name: string;
             /** Table Name */
             table_name: string;
-            quality_rules?: components["schemas"]["RuleConfiguration"];
             /**
              * Id
              * Format: uuid
@@ -1906,23 +1801,39 @@ export interface components {
              */
             discovered_at: string;
         };
-        /** DomainRule */
-        DomainRule: {
+        /** DuplicateKeyRate */
+        DuplicateKeyRate: {
+            /** Numerator */
+            numerator: number;
+            /** Denominator */
+            denominator: number;
+            /** Total */
+            total: number;
+            /** Not Evaluated */
+            not_evaluated: number;
+            /** Percentage */
+            percentage: string | null;
+            /** Coverage Percentage */
+            coverage_percentage: string | null;
+            /** Scope */
+            scope: string;
             /**
-             * Null Policy
-             * @default fail
+             * Status
              * @enum {string}
              */
-            null_policy: "fail" | "skip";
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "domain";
-            /** Values */
-            values: (string | number | boolean)[];
-            /** Timezone */
-            timezone?: string | null;
+            status: "available" | "partial" | "not_evaluated";
+            /** Reason */
+            reason: string | null;
+            /** Source */
+            source: number;
+            /** Duplicate Groups */
+            duplicate_groups: number | null;
+            /** Null Key Rows */
+            null_key_rows: number | null;
+            /** Columns */
+            columns: string[];
+            /** Formula */
+            formula: string;
         };
         /** ErrorOut */
         ErrorOut: {
@@ -1933,19 +1844,12 @@ export interface components {
             /** Request Id */
             request_id?: string | null;
         };
-        /** EvaluationOut */
-        EvaluationOut: {
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "available" | "partial" | "not_applicable" | "not_evaluated";
-            /** Reason */
-            reason?: ("metric_not_applicable_to_type" | "empty_sample" | "all_values_null" | "capture_unavailable" | "unsupported_type_or_values" | "non_finite_values" | "calculation_unavailable" | "historical_reason_unavailable" | "incomplete_evaluation" | "no_applicable_checks" | "single_source_profile" | "invalid_key" | "no_aligned_records" | "independent_sampling" | "no_safe_key_alignment" | "column_missing" | "incompatible_type_families" | "unavailable_or_invalid_values") | null;
-            /** Counts */
-            counts?: {
-                [key: string]: number;
-            };
+        /** ExcludedColumns */
+        ExcludedColumns: {
+            /** Left */
+            left?: string[];
+            /** Right */
+            right?: string[];
         };
         /** IndicatorOut */
         IndicatorOut: {
@@ -1959,6 +1863,23 @@ export interface components {
             percentage: string | null;
             /** Coverage Percentage */
             coverage_percentage: string | null;
+        };
+        /** KeyCoverage */
+        KeyCoverage: {
+            reference_to_target: components["schemas"]["MetricRate"];
+            target_to_reference: components["schemas"]["MetricRate"];
+            /** Selected Keys */
+            selected_keys: number;
+            /** Common Keys */
+            common_keys: number;
+            /** Missing In Reference */
+            missing_in_reference: number;
+            /** Missing In Target */
+            missing_in_target: number;
+            /** Unavailable In Both */
+            unavailable_in_both: number;
+            /** Scope */
+            scope: string;
         };
         /** LatestResultOut */
         LatestResultOut: {
@@ -1974,12 +1895,8 @@ export interface components {
              * Format: date-time
              */
             finished_at: string;
-            /** Agreement */
-            agreement: {
-                [key: string]: unknown;
-            } | null;
-            /** Quality */
-            quality: {
+            /** Row Match Rate */
+            row_match_rate: {
                 [key: string]: unknown;
             } | null;
         };
@@ -2002,53 +1919,35 @@ export interface components {
             /** Error Code */
             error_code: string | null;
         };
-        /** LinearTrendPoint */
-        LinearTrendPoint: {
-            /** Day */
-            day: string;
+        /** MetricRate */
+        MetricRate: {
+            /** Numerator */
+            numerator: number;
+            /** Denominator */
+            denominator: number;
+            /** Total */
+            total: number;
+            /** Not Evaluated */
+            not_evaluated: number;
             /** Percentage */
             percentage: string | null;
-        };
-        /** MetricOut */
-        MetricOut: {
+            /** Coverage Percentage */
+            coverage_percentage: string | null;
+            /** Scope */
+            scope: string;
             /**
-             * Id
-             * Format: uuid
+             * Status
+             * @enum {string}
              */
-            id: string;
-            /**
-             * Measured At
-             * Format: date-time
-             */
-            measured_at: string;
-            /**
-             * Run Id
-             * Format: uuid
-             */
-            run_id: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /** Column Name */
-            column_name: string | null;
-            /** Metric Name */
-            metric_name: string;
-            /** Value */
-            value: string | null;
-            /** Evaluated Count */
-            evaluated_count: number | null;
-            /** Applicable Count */
-            applicable_count: number | null;
-            evaluation?: components["schemas"]["EvaluationOut"] | null;
+            status: "available" | "partial" | "not_evaluated";
+            /** Reason */
+            reason: string | null;
         };
         /** OverviewOut */
         OverviewOut: {
             /** Active Comparisons */
             active_comparisons: number;
-            sample_quality: components["schemas"]["IndicatorOut"];
-            comparison_agreement: components["schemas"]["IndicatorOut"];
+            row_match_rate: components["schemas"]["IndicatorOut"];
             /** Evaluated Comparisons */
             evaluated_comparisons: number;
             /** Latest Conclusions */
@@ -2150,28 +2049,6 @@ export interface components {
             /** Offset */
             offset: number;
         };
-        /** Page[MetricOut] */
-        Page_MetricOut_: {
-            /** Items */
-            items: components["schemas"]["MetricOut"][];
-            /** Total */
-            total: number;
-            /** Limit */
-            limit: number;
-            /** Offset */
-            offset: number;
-        };
-        /** Page[ProfileOut] */
-        Page_ProfileOut_: {
-            /** Items */
-            items: components["schemas"]["ProfileOut"][];
-            /** Total */
-            total: number;
-            /** Limit */
-            limit: number;
-            /** Offset */
-            offset: number;
-        };
         /** Page[RunOut] */
         Page_RunOut_: {
             /** Items */
@@ -2226,10 +2103,16 @@ export interface components {
             /** End */
             end?: string | null;
             /**
-             * Days
+             * Unit
+             * @default days
+             * @enum {string}
+             */
+            unit: "hours" | "days" | "months";
+            /**
+             * Quantity
              * @default 1
              */
-            days: number;
+            quantity: number;
             /**
              * Safety Delay Minutes
              * @default 0
@@ -2240,58 +2123,113 @@ export interface components {
             /** Right Naive Timezone */
             right_naive_timezone?: string | null;
         };
-        /** ProfileHistoryCounts */
-        ProfileHistoryCounts: {
-            /** Runs */
-            runs: number;
-            /** Results */
-            results: number;
-            /** Column Profiles */
-            column_profiles: number;
-            /** Metrics */
-            metrics: number;
-        };
-        /** ProfileOut */
-        ProfileOut: {
+        /** RecentRunOut */
+        RecentRunOut: {
             /**
              * Id
              * Format: uuid
              */
             id: string;
+            /** Kind */
+            kind: string;
+            /** Status */
+            status: string;
+            /** Comparison Id */
+            comparison_id: string | null;
+            /**
+             * Requested At
+             * Format: date-time
+             */
+            requested_at: string;
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /** Error Code */
+            error_code: string | null;
+            /** Name */
+            name: string | null;
+            /** Conclusion */
+            conclusion: string | null;
+            /** Row Match Rate */
+            row_match_rate: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** ResultOut */
+        ResultOut: {
             /**
              * Run Id
              * Format: uuid
              */
             run_id: string;
+            /** Format Version */
+            format_version: number;
             /**
-             * Dataset Id
-             * Format: uuid
+             * Conclusion
+             * @enum {string}
              */
-            dataset_id: string;
-            /** Column Name */
-            column_name: string;
-            /** Profile */
-            profile: {
-                [key: string]: unknown;
-            };
+            conclusion: "compatible_in_sample" | "difference_observed" | "inconclusive";
+            result: components["schemas"]["ComparisonResult"];
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
-            /** Evaluation */
-            evaluation?: {
-                [key: string]: components["schemas"]["EvaluationOut"];
-            };
         };
-        /** ProfileRequest */
-        ProfileRequest: {
-            sampling_options?: components["schemas"]["Sampling"];
-            /** Sample Size */
-            sample_size?: number | null;
+        /** RowCountMatch */
+        RowCountMatch: {
+            /** Reference Count */
+            reference_count: number;
+            /** Target Count */
+            target_count: number;
+            /** Equal */
+            equal: boolean;
+            /** Signed Difference */
+            signed_difference: number;
+            /** Absolute Difference */
+            absolute_difference: number;
+            /** Percentage Difference */
+            percentage_difference: string | null;
+            /** Reason */
+            reason: string | null;
+            /** Scope */
+            scope: string;
         };
-        /** QualityTrendOut */
-        QualityTrendOut: {
+        /** RowMatchRate */
+        RowMatchRate: {
+            /** Numerator */
+            numerator: number;
+            /** Denominator */
+            denominator: number;
+            /** Total */
+            total: number;
+            /** Not Evaluated */
+            not_evaluated: number;
+            /** Percentage */
+            percentage: string | null;
+            /** Coverage Percentage */
+            coverage_percentage: string | null;
+            /** Scope */
+            scope: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "available" | "partial" | "not_evaluated";
+            /** Reason */
+            reason: string | null;
+            /** Different Rows */
+            different_rows: number;
+            /** Unknown Rows */
+            unknown_rows: number;
+            /** Missing Rows */
+            missing_rows: number;
+            /** Formula */
+            formula: string;
+        };
+        /** RowMatchTrendOut */
+        RowMatchTrendOut: {
             /**
              * Days
              * @enum {integer}
@@ -2309,216 +2247,12 @@ export interface components {
              */
             as_of: string;
             /** Series */
-            series: components["schemas"]["ComparisonQualitySeries"][];
-            /**
-             * Metric
-             * @default sample_quality
-             * @enum {string}
-             */
-            metric: "sample_quality" | "agreement";
+            series: components["schemas"]["ComparisonRowMatchSeries"][];
             /**
              * Overall
              * @default []
              */
             overall: components["schemas"]["TrendOut"][];
-            /**
-             * Linear Trend
-             * @default []
-             */
-            linear_trend: components["schemas"]["LinearTrendPoint"][];
-            /**
-             * Regression Observations
-             * @default 0
-             */
-            regression_observations: number;
-        };
-        /** RangeRule */
-        RangeRule: {
-            /**
-             * Null Policy
-             * @default fail
-             * @enum {string}
-             */
-            null_policy: "fail" | "skip";
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "range";
-            /** Minimum */
-            minimum?: string | null;
-            /** Maximum */
-            maximum?: string | null;
-            /**
-             * Include Minimum
-             * @default true
-             */
-            include_minimum: boolean;
-            /**
-             * Include Maximum
-             * @default true
-             */
-            include_maximum: boolean;
-            /** Timezone */
-            timezone?: string | null;
-        };
-        /** RecentRunOut */
-        RecentRunOut: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Kind */
-            kind: string;
-            /** Status */
-            status: string;
-            /** Comparison Id */
-            comparison_id: string | null;
-            /** Dataset Id */
-            dataset_id: string | null;
-            /**
-             * Requested At
-             * Format: date-time
-             */
-            requested_at: string;
-            /** Started At */
-            started_at: string | null;
-            /** Finished At */
-            finished_at: string | null;
-            /** Error Code */
-            error_code: string | null;
-            /** Name */
-            name: string | null;
-            /** Conclusion */
-            conclusion: string | null;
-            /** Agreement */
-            agreement: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** RequiredRule */
-        RequiredRule: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "required";
-            /**
-             * Reject Blank
-             * @default true
-             */
-            reject_blank: boolean;
-            /**
-             * Whitespace Blank
-             * @default false
-             */
-            whitespace_blank: boolean;
-        };
-        /** ResultEvaluationOut */
-        ResultEvaluationOut: {
-            /**
-             * Analysis Kind
-             * @enum {string}
-             */
-            analysis_kind: "profile" | "aligned" | "independent" | "invalid_key" | "unknown";
-            agreement: components["schemas"]["EvaluationOut"];
-            quality: components["schemas"]["EvaluationOut"];
-            /** Sources */
-            sources: components["schemas"]["SourceEvaluationOut"][];
-            /** Comparisons */
-            comparisons: components["schemas"]["ComparisonEvaluationOut"][];
-        };
-        /** ResultOut */
-        ResultOut: {
-            /**
-             * Run Id
-             * Format: uuid
-             */
-            run_id: string;
-            /** Format Version */
-            format_version: number;
-            /**
-             * Conclusion
-             * @enum {string}
-             */
-            conclusion: "compatible_in_sample" | "difference_observed" | "profile_only" | "inconclusive";
-            /** Result */
-            result: {
-                [key: string]: unknown;
-            };
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            evaluation?: components["schemas"]["ResultEvaluationOut"] | null;
-        };
-        /** RuleConfiguration */
-        RuleConfiguration: {
-            /**
-             * Revision
-             * @default 0
-             */
-            revision: number;
-            /** Rules */
-            rules?: components["schemas"]["RuleOut"][];
-        };
-        /** RuleInput */
-        RuleInput: {
-            /** Id */
-            id?: string | null;
-            /** Name */
-            name: string;
-            /** Column */
-            column: string;
-            /**
-             * Is Active
-             * @default true
-             */
-            is_active: boolean;
-            /** Definition */
-            definition: components["schemas"]["RequiredRule"] | components["schemas"]["DomainRule"] | components["schemas"]["RangeRule"] | components["schemas"]["TemporalOrderRule"];
-        };
-        /** RuleOut */
-        RuleOut: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Name */
-            name: string;
-            /** Column */
-            column: string;
-            /**
-             * Is Active
-             * @default true
-             */
-            is_active: boolean;
-            /** Definition */
-            definition: components["schemas"]["RequiredRule"] | components["schemas"]["DomainRule"] | components["schemas"]["RangeRule"] | components["schemas"]["TemporalOrderRule"];
-            /** Version */
-            version: number;
-        };
-        /** RuleSetOut */
-        RuleSetOut: {
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
-            /** Revision */
-            revision: number;
-            /** Rules */
-            rules: components["schemas"]["RuleOut"][];
-        };
-        /** RuleSetUpdate */
-        RuleSetUpdate: {
-            /** Expected Revision */
-            expected_revision: number;
-            /** Rules */
-            rules: components["schemas"]["RuleInput"][];
         };
         /** RunOut */
         RunOut: {
@@ -2529,13 +2263,11 @@ export interface components {
             id: string;
             /**
              * Kind
-             * @enum {string}
+             * @constant
              */
-            kind: "comparison" | "profile";
+            kind: "comparison";
             /** Comparison Id */
             comparison_id: string | null;
-            /** Dataset Id */
-            dataset_id: string | null;
             /**
              * Status
              * @enum {string}
@@ -2562,22 +2294,22 @@ export interface components {
             error_message: string | null;
         };
         /** Sampling */
-        Sampling: {
+        "Sampling-Input": {
             /**
-             * Pilot Rows
-             * @default 64
+             * Method
+             * @default rows
+             * @enum {string}
              */
-            pilot_rows: number;
+            method: "rows" | "percentage";
             /**
-             * Min Rows
-             * @default 64
-             */
-            min_rows: number;
-            /**
-             * Max Rows
+             * Rows
              * @default 1000
              */
-            max_rows: number;
+            rows: number;
+            /** Percentage */
+            percentage?: number | string | null;
+            /** Seed */
+            seed?: string | null;
             /**
              * Max Cells
              * @default 100000
@@ -2588,13 +2320,34 @@ export interface components {
              * @default 16777216
              */
             max_sample_bytes: number;
+        };
+        /** Sampling */
+        "Sampling-Output": {
             /**
-             * Proportion Margin
-             * @default 0.05
+             * Method
+             * @default rows
+             * @enum {string}
              */
-            proportion_margin: number;
+            method: "rows" | "percentage";
+            /**
+             * Rows
+             * @default 1000
+             */
+            rows: number;
+            /** Percentage */
+            percentage?: string | null;
             /** Seed */
-            seed?: number | null;
+            seed?: string | null;
+            /**
+             * Max Cells
+             * @default 100000
+             */
+            max_cells: number;
+            /**
+             * Max Sample Bytes
+             * @default 16777216
+             */
+            max_sample_bytes: number;
         };
         /** Scope */
         Scope: {
@@ -2616,15 +2369,6 @@ export interface components {
             /** Value */
             value?: string | number | boolean | (string | number | boolean)[] | null;
         };
-        /** SourceEvaluationOut */
-        SourceEvaluationOut: {
-            /** Columns */
-            columns: {
-                [key: string]: {
-                    [key: string]: components["schemas"]["EvaluationOut"];
-                };
-            };
-        };
         /** TableOut */
         TableOut: {
             /**
@@ -2642,30 +2386,6 @@ export interface components {
             /** Table Name */
             table_name: string;
         };
-        /** TemporalOrderRule */
-        TemporalOrderRule: {
-            /**
-             * Null Policy
-             * @default fail
-             * @enum {string}
-             */
-            null_policy: "fail" | "skip";
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "temporal_order";
-            /** Other Column */
-            other_column: string;
-            /**
-             * Operator
-             * @default lte
-             * @enum {string}
-             */
-            operator: "lt" | "lte" | "gt" | "gte";
-            /** Timezone */
-            timezone?: string | null;
-        };
         /** TestOut */
         TestOut: {
             /**
@@ -2674,6 +2394,17 @@ export interface components {
              * @constant
              */
             status: "ok";
+        };
+        /** TimestampTimezones */
+        TimestampTimezones: {
+            /** Left */
+            left?: {
+                [key: string]: string;
+            };
+            /** Right */
+            right?: {
+                [key: string]: string;
+            };
         };
         /** TrendOut */
         TrendOut: {
@@ -2732,11 +2463,6 @@ export interface components {
                 limit: number;
                 offset: number;
             };
-        };
-        EnvironmentSettingsOut: {
-            comparison_target_percentage: string;
-            /** Format: date-time */
-            updated_at: string;
         };
         ScheduleDispatchOut: {
             /** Format: uuid */
@@ -3866,144 +3592,6 @@ export interface operations {
             };
         };
     };
-    get_quality_rules_v1_datasets__identifier__quality_rules_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                identifier: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RuleSetOut"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Unprocessable Entity */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-        };
-    };
-    update_quality_rules_v1_datasets__identifier__quality_rules_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                identifier: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RuleSetUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RuleSetOut"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Unprocessable Entity */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-        };
-    };
     dataset_dependencies_v1_datasets__identifier__dependencies_get: {
         parameters: {
             query?: {
@@ -4092,150 +3680,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DatasetOut"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Unprocessable Entity */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-        };
-    };
-    profile_run_v1_datasets__identifier__profile_runs_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "Idempotency-Key"?: string | null;
-            };
-            path: {
-                identifier: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["ProfileRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RunOut"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Unprocessable Entity */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-        };
-    };
-    profiles_v1_datasets__identifier__profiles_get: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-                run_id?: string | null;
-            };
-            header?: never;
-            path: {
-                identifier: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Page_ProfileOut_"];
                 };
             };
             /** @description Unauthorized */
@@ -4842,7 +4286,6 @@ export interface operations {
                 limit?: number;
                 offset?: number;
                 comparison_id?: string | null;
-                dataset_id?: string | null;
                 status?: string | null;
             };
             header?: never;
@@ -5041,85 +4484,11 @@ export interface operations {
             };
         };
     };
-    metrics_v1_metrics_get: {
-        parameters: {
-            query: {
-                dataset_id: string;
-                limit?: number;
-                offset?: number;
-                column_name?: string | null;
-                metric_name?: string | null;
-                from_time?: string | null;
-                to_time?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Page_MetricOut_"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Unprocessable Entity */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-        };
-    };
-    quality_trend_v1_overview_quality_trend_get: {
+    row_match_trend_v1_overview_row_match_trend_get: {
         parameters: {
             query?: {
                 days?: 7 | 15 | 30;
                 timezone?: string;
-                metric?: "sample_quality" | "agreement";
             };
             header?: never;
             path?: never;
@@ -5133,7 +4502,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["QualityTrendOut"];
+                    "application/json": components["schemas"]["RowMatchTrendOut"];
                 };
             };
             /** @description Unauthorized */

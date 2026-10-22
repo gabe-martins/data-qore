@@ -30,7 +30,6 @@ import {
 const Overview = lazy(() =>
   import("./pages/Overview").then((m) => ({ default: m.Overview })),
 );
-const EnvironmentSettings = lazy(() => import("./pages/EnvironmentSettings").then(m => ({ default: m.EnvironmentSettings })));
 const Connections = lazy(() =>
   import("./pages/Connections").then((m) => ({ default: m.Connections })),
 );
@@ -38,8 +37,8 @@ const Schedules = lazy(() => import("./pages/Schedules").then(m => ({ default: m
 const Catalog = lazy(() =>
   import("./pages/Catalog").then((m) => ({ default: m.Catalog })),
 );
-const DatasetProfile = lazy(() =>
-  import("./pages/Catalog").then((m) => ({ default: m.DatasetProfile })),
+const DatasetDetail = lazy(() =>
+  import("./pages/Catalog").then((m) => ({ default: m.DatasetDetail })),
 );
 const Comparisons = lazy(() =>
   import("./pages/Comparisons").then((m) => ({ default: m.Comparisons })),
@@ -143,14 +142,13 @@ export function App() {
               <Route path="/" element={<Overview />} />
               <Route path="/connections" element={<Connections />} />
               <Route path="/catalog" element={<Catalog />} />
-              <Route path="/datasets/:id" element={<DatasetProfile />} />
+              <Route path="/datasets/:id" element={<DatasetDetail />} />
               <Route path="/comparisons" element={<Comparisons />} />
               <Route path="/schedules" element={<Schedules />} />
               <Route path="/comparisons/new" element={<Wizard />} />
               <Route path="/comparisons/:id/edit" element={<Wizard />} />
               <Route path="/comparisons/:id" element={<ComparisonDetail />} />
               <Route path="/runs" element={<Runs />} />
-              <Route path="/settings" element={<EnvironmentSettings />} />
               <Route path="/runs/:id" element={<RunResult />} />
               <Route
                 path="/runs/:id/differences"

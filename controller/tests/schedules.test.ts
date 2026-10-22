@@ -153,10 +153,13 @@ test("authenticated schedule API and real scheduled run use the engine queue", {
     assert.equal(resultResponse.status, 200);
     const resultBody = await resultResponse.json() as any;
     const result = resultBody.result;
-    assert.equal(result.format_version, 5);
-    assert.deepEqual(result.comparison_options.mapping, comparison.comparison_options.mapping);
-    assert.deepEqual(result.comparison_options.business_key, comparison.comparison_options.business_key);
-    assert.deepEqual(result.comparison_options.scope.filters, comparison.comparison_options.scope.filters);
+    assert.equal(result.format_version, 6);
+    const frozenResponse=await fetch(config.engineUrl+"/v1/runs/"+dispatch.runId,{headers:{"X-API-Key":config.engineKey}});
+    const frozen=await frozenResponse.json() as any;
+    assert.deepEqual(frozen.parameters.comparison_options.mapping, comparison.comparison_options.mapping);
+    assert.deepEqual(frozen.parameters.comparison_options.business_key, comparison.comparison_options.business_key);
+    assert.deepEqual(result.resolved_scope.filters, comparison.comparison_options.scope.filters);
+    assert.equal(Object.keys(result.metrics).length,5);
     assert.deepEqual(result.key_validation.map((v: any) => v.total_rows), [1, 1]);
     assert.ok(result.key_validation.every((v: any) => v.valid));
     const paused = await client("/schedules/" + id, { is_active: false }, token, "PATCH");
@@ -166,7 +169,15 @@ test("authenticated schedule API and real scheduled run use the engine queue", {
 
 test("Unity Catalog simulated source is preserved by a real scheduled dispatch", { skip: process.env.DATAQORE_ISOLATED_TEST !== "1" }, async () => {
   const config=loadConfig(), db=database(config.databaseUrl), auth=new Auth(db,config);
-  const schedule=await db.schedule.findFirstOrThrow({ where:{name:"Unity browser schedule"} });
+  async function engine(path:string,body:unknown){
+    const r=await fetch(config.engineUrl+"/v1"+path,{method:"POST",headers:{"X-API-Key":config.engineKey,"Content-Type":"application/json"},body:JSON.stringify(body)});
+    assert.ok(r.ok,await r.clone().text());return r.json() as any;
+  }
+  const connection=await engine("/connections",{name:"Unity scheduled critical",connector:"databricks",credentials:{hostname:"test.cloud.databricks.com",http_path:"/sql/1.0/warehouses/test",auth_type:"pat",access_token:"isolated-test-token"}});
+  const datasets=[];
+  for(const table of ["records_view","records"])datasets.push(await engine("/datasets",{connection_id:connection.id,catalog_name:"main",schema_name:"sales",table_name:table}));
+  const comparison=await engine("/comparisons",{name:"Unity scheduled critical",left_dataset_id:datasets[0].id,right_dataset_id:datasets[1].id,comparison_options:{business_key:[{left:"id",right:"id"}]}});
+  const schedule=await db.schedule.create({data:{name:"Unity scheduled critical",comparisonId:comparison.id,cronExpression:"0 * * * *",timezone:"America/Sao_Paulo",nextRunAt:new Date()}});
   try {
     const now=new Date();
     await db.schedule.update({where:{id:schedule.id},data:{isActive:true,nextRunAt:new Date(now.getTime()-60000)}});
@@ -182,7 +193,7 @@ test("Unity Catalog simulated source is preserved by a real scheduled dispatch",
     }
     const response=await fetch(config.engineUrl+"/v1/runs/"+dispatch.runId+"/result",{headers:{"X-API-Key":config.engineKey}});
     const body=await response.json() as any;
-    assert.equal(body.format_version,5);
+    assert.equal(body.format_version,6);
     assert.equal(body.result.sources[0].catalog_name,"main");
     assert.equal(body.result.sources[0].table,"main.sales.records_view");
     assert.ok(body.result.key_validation.every((v:any)=>v.valid));

@@ -14,7 +14,7 @@ helps you explore your data and follow up on differences with clear reports.
 
 - Connect your data sources and browse their tables.
 - Organize datasets in a shared catalog.
-- Run data profiles and review quality indicators.
+- Compare exact scoped row counts, key coverage and duplication, row and column match rates.
 - Compare datasets and review reported differences.
 - Track runs and revisit previous results.
 
@@ -74,7 +74,7 @@ Use this exact address for the local setup.
 ### 5. Explore your data
 
 Add a source in **Connections**, register a table in **Catalog**, and open the
-dataset to run a profile. Use **Comparisons** to compare datasets and **Runs**
+dataset to inspect its metadata. Use **Comparisons** to compare datasets and **Runs**
 to follow progress and review results.
 
 ## Everyday commands
@@ -97,6 +97,7 @@ for setup details and troubleshooting.
 | [Controller](controller/README.md) | Application configuration and account management |
 | [Engine](engine/README.md) | Service setup and optional connectors |
 | [Databricks](docs/DATABRICKS.md) | Unity Catalog, authentication and validation |
+| [Critical metrics](docs/CRITICAL_METRICS.md) | Five critical metrics, reproducible samples and the operational reset |
 | [Overview quality](docs/OVERVIEW_QUALITY.md) | Daily comparison quality and period filters |
 | [Appearance and navigation](docs/APPEARANCE.md) | Light/Dark/System themes and responsive expandable sidebar |
 | [Database](database/README.md) | Initial provisioning and database maintenance |

@@ -169,7 +169,7 @@ export function RunsTable({ runs }: { runs: any[] }) {
       <table>
         <thead>
           <tr>
-            <th>Comparison / dataset</th>
+            <th>Comparison</th>
             <th>Requested</th>
             <th>Duration</th>
             <th>State</th>

@@ -6,7 +6,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from .comparison_options import ComparisonOptions
-from .business_rules import RuleConfiguration
 
 
 class Model(BaseModel):
@@ -15,7 +14,6 @@ class Model(BaseModel):
 
 Name=Annotated[str,Field(min_length=1,max_length=255,pattern=r"\S")]
 Connector=Literal["postgresql","mysql","mssql","oracle","sqlite","databricks"]
-Mode=Literal["auto","matched_keys","independent_random"]
 
 
 class Credentials(Model):
@@ -112,38 +110,33 @@ class DatasetCreate(Model):
 
 
 class DatasetOut(DatasetCreate):
-    quality_rules: RuleConfiguration = Field(default_factory=RuleConfiguration)
     id: UUID
     metadata: dict[str,Any]
     discovered_at: datetime
 
 
 class Sampling(Model):
-    pilot_rows: Annotated[int,Field(strict=True,ge=1,le=10000)]=64
-    min_rows: Annotated[int,Field(strict=True,ge=1,le=10000)]=64
-    max_rows: Annotated[int,Field(strict=True,ge=1,le=10000)]=1000
-    max_cells: Annotated[int,Field(strict=True,ge=1)]=100000
-    max_sample_bytes: Annotated[int,Field(strict=True,ge=1)]=16777216
-    proportion_margin: Annotated[float,Field(gt=0,lt=1,allow_inf_nan=False)]=0.05
-    seed: Annotated[int,Field(strict=True,ge=0,le=2**64-1)] | None=None
-
-
-class ProfileRequest(Model):
-    sampling_options: Sampling=Field(default_factory=Sampling)
-    sample_size: Annotated[int,Field(strict=True,ge=1,le=10000)] | None=None
+    method: Literal["rows", "percentage"] = "rows"
+    rows: Annotated[int, Field(strict=True, ge=1, le=10000)] = 1000
+    percentage: Annotated[Decimal, Field(gt=0, le=100, allow_inf_nan=False)] | None = None
+    seed: Annotated[str, Field(pattern=r"^[0-9]{1,20}$")] | None = None
+    max_cells: Annotated[int, Field(strict=True, ge=1)] = 100000
+    max_sample_bytes: Annotated[int, Field(strict=True, ge=1)] = 16777216
 
     @model_validator(mode="after")
-    def sample_budget(self):
-        if self.sample_size and self.sample_size>self.sampling_options.max_rows:
-            raise ValueError("sample_size excede max_rows.")
+    def selection(self):
+        if self.seed is not None and int(self.seed) >= 2**64:
+            raise ValueError("Seed exceeds unsigned 64-bit range")
+        if (self.method == "percentage") != (self.percentage is not None):
+            raise ValueError("Select rows or a percentage")
         return self
 
 
-class ComparisonCreate(ProfileRequest):
+class ComparisonCreate(Model):
     name: Name
     left_dataset_id: UUID
     right_dataset_id: UUID
-    mode: Mode="auto"
+    sampling_options: Sampling = Field(default_factory=Sampling)
     absolute_tolerance: Annotated[Decimal,Field(ge=0,allow_inf_nan=False)]=Decimal(0)
     relative_tolerance: Annotated[Decimal,Field(ge=0,allow_inf_nan=False)]=Decimal(0)
     comparison_options: ComparisonOptions=Field(default_factory=ComparisonOptions)
@@ -151,9 +144,7 @@ class ComparisonCreate(ProfileRequest):
     @model_validator(mode="after")
     def distinct_sources(self):
         if self.left_dataset_id==self.right_dataset_id:
-            raise ValueError("Selecione dois datasets distintos.")
-        if self.mode=="independent_random" and self.comparison_options.business_key:
-            raise ValueError("Business keys require key alignment.")
+            raise ValueError("Select two different datasets")
         return self
 
 
@@ -168,9 +159,7 @@ class ComparisonUpdate(Model):
     name: Name | None=None
     left_dataset_id: UUID | None=None
     right_dataset_id: UUID | None=None
-    mode: Mode | None=None
     sampling_options: Sampling | None=None
-    sample_size: Annotated[int,Field(strict=True,ge=1,le=10000)] | None=None
     absolute_tolerance: Annotated[Decimal,Field(ge=0,allow_inf_nan=False)] | None=None
     relative_tolerance: Annotated[Decimal,Field(ge=0,allow_inf_nan=False)] | None=None
     is_active: bool | None=None
@@ -178,24 +167,28 @@ class ComparisonUpdate(Model):
 
     @model_validator(mode="after")
     def nonempty(self):
-        if not self.model_fields_set or any(getattr(self,k) is None for k in self.model_fields_set if k!="sample_size"):
+        if not self.model_fields_set or any(getattr(self,k) is None for k in self.model_fields_set):
             raise ValueError("Informe campos válidos para atualização.")
         return self
 
 
 class ComparisonPreviewOut(Model):
+    scope_counts: list[int]
+    sample_target: int
+    suggested_business_key: list[dict[str,str]]
     mapping: list[dict[str,str]]
     unmatched_columns: dict[str,list[str]]
     business_key: list[dict[str,str]]
     resolved_scope: dict[str,Any]
     key_validation: str
+    excluded_columns: dict[str,list[str]] = Field(default_factory=dict)
+    timestamp_timezones: dict[str,dict[str,str]] = Field(default_factory=dict)
 
 
 class RunOut(Model):
     id: UUID
-    kind: Literal["comparison","profile"]
+    kind: Literal["comparison"]
     comparison_id: UUID | None
-    dataset_id: UUID | None
     status: Literal["queued","running","succeeded","failed"]
     parameters: dict[str,Any]
     requested_at: datetime
@@ -206,64 +199,96 @@ class RunOut(Model):
     error_message: str | None
 
 
-class EvaluationOut(Model):
-    status: Literal["available", "partial", "not_applicable", "not_evaluated"]
-    reason: Literal["metric_not_applicable_to_type", "empty_sample", "all_values_null",
-        "capture_unavailable", "unsupported_type_or_values", "non_finite_values",
-        "calculation_unavailable", "historical_reason_unavailable", "incomplete_evaluation",
-        "no_applicable_checks", "single_source_profile", "invalid_key", "no_aligned_records",
-        "independent_sampling", "no_safe_key_alignment", "column_missing",
-        "incompatible_type_families", "unavailable_or_invalid_values"] | None = None
-    counts: dict[str, int] = Field(default_factory=dict)
+class MetricRate(Model):
+    numerator: int
+    denominator: int
+    total: int
+    not_evaluated: int
+    percentage: Decimal | None
+    coverage_percentage: Decimal | None
+    scope: str
+    status: Literal["available", "partial", "not_evaluated"]
+    reason: str | None
 
 
-class SourceEvaluationOut(Model):
-    columns: dict[str, dict[str, EvaluationOut]]
+class RowCountMatch(Model):
+    reference_count: int
+    target_count: int
+    equal: bool
+    signed_difference: int
+    absolute_difference: int
+    percentage_difference: Decimal | None
+    reason: str | None
+    scope: str
 
 
-class ComparisonEvaluationOut(Model):
-    column: str
-    metrics: dict[str, EvaluationOut]
+class KeyCoverage(Model):
+    reference_to_target: MetricRate
+    target_to_reference: MetricRate
+    selected_keys: int
+    common_keys: int
+    missing_in_reference: int
+    missing_in_target: int
+    unavailable_in_both: int
+    scope: str
 
 
-class ResultEvaluationOut(Model):
-    analysis_kind: Literal["profile", "aligned", "independent", "invalid_key", "unknown"]
-    agreement: EvaluationOut
-    quality: EvaluationOut
-    sources: list[SourceEvaluationOut]
-    comparisons: list[ComparisonEvaluationOut]
+class DuplicateKeyRate(MetricRate):
+    source: int
+    duplicate_groups: int | None
+    null_key_rows: int | None
+    columns: list[str]
+    formula: str
+
+
+class RowMatchRate(MetricRate):
+    different_rows: int
+    unknown_rows: int
+    missing_rows: int
+    formula: str
+
+
+class ColumnMatchRate(MetricRate):
+    left_column: str | None
+    right_column: str | None
+    different_values: int
+    unknown_values: int
+    formula: str | None = None
+
+
+class CriticalMetrics(Model):
+    row_count_match: RowCountMatch
+    key_coverage: KeyCoverage
+    duplicate_key_rate: list[DuplicateKeyRate]
+    row_match_rate: RowMatchRate
+    column_match_rate: list[ColumnMatchRate]
+
+
+class ComparisonResult(Model):
+    format_version: Literal[6]
+    engine_version: str
+    execution_id: UUID
+    started_at: datetime
+    finished_at: datetime
+    sources: list[dict[str,Any]]
+    resolved_scope: dict[str,Any]
+    column_mapping: list[dict[str,str]]
+    unmatched_columns: dict[str,list[str]]
+    comparison_options: ComparisonOptions = Field(default_factory=ComparisonOptions)
+    key_validation: list[dict[str,Any]]
+    sampling_plan: dict[str,Any]
+    metrics: CriticalMetrics
+    summary: dict[str,Any]
+    warnings: list[str]
+    query_log: list[dict[str,Any]]
 
 
 class ResultOut(Model):
     run_id: UUID
     format_version: int
-    conclusion: Literal["compatible_in_sample","difference_observed","profile_only","inconclusive"]
-    result: dict[str,Any]
+    conclusion: Literal["compatible_in_sample","difference_observed","inconclusive"]
+    result: ComparisonResult
     created_at: datetime
-    evaluation: ResultEvaluationOut | None = None
-
-
-class ProfileOut(Model):
-    id: UUID
-    run_id: UUID
-    dataset_id: UUID
-    column_name: str
-    profile: dict[str,Any]
-    created_at: datetime
-    evaluation: dict[str, EvaluationOut] = Field(default_factory=dict)
-
-
-class MetricOut(Model):
-    id: UUID
-    measured_at: datetime
-    run_id: UUID
-    dataset_id: UUID
-    column_name: str | None
-    metric_name: str
-    value: Decimal | None
-    evaluated_count: int | None
-    applicable_count: int | None
-    evaluation: EvaluationOut | None = None
 
 
 T=TypeVar("T")
@@ -315,19 +340,10 @@ class DatasetComparisonReference(Model):
     historical: bool
 
 
-class ProfileHistoryCounts(Model):
-    runs: int
-    results: int
-    column_profiles: int
-    metrics: int
-
-
 class DatasetDependenciesOut(Model):
     dataset: DatasetDeletionReference
     comparisons: Page[DatasetComparisonReference]
-    profile_history: ProfileHistoryCounts
-    active_profile_runs: int
-    block_reasons: list[Literal["dataset_in_use", "dataset_busy"]]
+    block_reasons: list[Literal["dataset_in_use"]]
     can_delete: bool
 
 
@@ -345,8 +361,6 @@ class ComparisonDeletionReference(Model):
 class ComparisonHistoryCounts(Model):
     runs: int
     results: int
-    column_profiles: int
-    metrics: int
 
 
 class ComparisonDependenciesOut(Model):
@@ -386,8 +400,7 @@ class LatestResultOut(Model):
     run_id:UUID
     conclusion:str
     finished_at:datetime
-    agreement:dict[str,Any] | None
-    quality:dict[str,Any] | None
+    row_match_rate:dict[str,Any] | None
 
 
 class ComparisonSummaryOut(ComparisonOut):
@@ -399,35 +412,27 @@ class TrendOut(IndicatorOut):
     day:str
 
 
-class DailyQualityPoint(TrendOut):
+class DailyRowMatchPoint(TrendOut):
     run_id:UUID | None
     status:Literal["succeeded","failed"] | None
     finished_at:datetime | None
     conclusion:str | None=None
 
 
-class ComparisonQualitySeries(Model):
+class ComparisonRowMatchSeries(Model):
     comparison_id:UUID
     name:str
-    points:list[DailyQualityPoint]
+    points:list[DailyRowMatchPoint]
 
 
-class LinearTrendPoint(Model):
-    day:str
-    percentage:str | None
-
-
-class QualityTrendOut(Model):
+class RowMatchTrendOut(Model):
     days:Literal[7,15,30]
     timezone:str
     start_day:str
     end_day:str
     as_of:datetime
-    series:list[ComparisonQualitySeries]
-    metric:Literal['sample_quality','agreement']='sample_quality'
+    series:list[ComparisonRowMatchSeries]
     overall:list[TrendOut]=[]
-    linear_trend:list[LinearTrendPoint]=[]
-    regression_observations:int=0
 
 
 class RecentRunOut(Model):
@@ -435,14 +440,13 @@ class RecentRunOut(Model):
     kind:str
     status:str
     comparison_id:UUID | None
-    dataset_id:UUID | None
     requested_at:datetime
     started_at:datetime | None
     finished_at:datetime | None
     error_code:str | None
     name:str | None
     conclusion:str | None
-    agreement:dict[str,Any] | None
+    row_match_rate:dict[str,Any] | None
 
 
 class AttentionOut(Model):
@@ -453,8 +457,7 @@ class AttentionOut(Model):
 
 class OverviewOut(Model):
     active_comparisons:int
-    sample_quality:IndicatorOut
-    comparison_agreement:IndicatorOut
+    row_match_rate:IndicatorOut
     evaluated_comparisons:int
     latest_conclusions:dict[str,int]
     run_counts:dict[str,int]

@@ -101,7 +101,7 @@ Referência: [privilégios do Unity Catalog](https://docs.databricks.com/aws/en/
    legado `hive_metastore` não é oferecido nesta entrega. Tabelas
    gerenciadas/externas e seus shallow clones, além de views SQL comuns, são
    suportadas; os outros tipos não entram na listagem.
-5. Abra o dataset, atualize metadados quando necessário e use **Run profile**.
+5. Abra o dataset, atualize metadados quando necessário e configure uma comparação em **Comparisons**.
 6. Crie uma comparação com outro dataset, inclusive PostgreSQL, SQL Server ou
    SQLite. O assistente mostra a identidade qualificada do objeto. Em views sem
    PK declarada, escolha uma chave de negócio para alinhar registros; sem chave

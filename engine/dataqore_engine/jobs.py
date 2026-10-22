@@ -5,6 +5,7 @@ from decimal import Decimal
 import hashlib
 import json
 import logging
+import secrets
 from uuid import UUID
 
 from sqlalchemy import func,select,text
@@ -12,7 +13,6 @@ from sqlalchemy import func,select,text
 from . import models as m
 from .connectors import SourceManager
 from .core.comparison_engine import execute_comparison
-from .core.profile_engine import execute_profile
 from .core.sampling import SamplingOptions
 from .comparison_options import compact_options, metadata_signature, resolve_scope, validate_options
 from .storage import DomainError,Repository,database_engine,json_safe
@@ -26,6 +26,7 @@ class Queue:
         self.repository=Repository(engine)
 
     def enqueue(self,kind,target,options=None,key=None):
+        if kind != "comparison":raise DomainError(422,"validation_error","Only comparison runs are supported.")
         request={"kind":kind,"target":str(target),"options":json_safe(options or {})}
         fingerprint=hashlib.sha256(json.dumps(request,sort_keys=True,separators=(",",":")).encode()).hexdigest()
         with self.engine.begin() as conn:
@@ -45,15 +46,14 @@ class Queue:
                 if row is None:
                     raise DomainError(404,"not_found","Recurso não encontrado.")
                 return dict(row)
-            if kind=="comparison":
-                definition=get(m.comparison_definitions,target)
-                if not definition["is_active"]:
-                    raise DomainError(409,"comparison_inactive","A comparação está desativada.")
-                identifiers=[definition["left_dataset_id"],definition["right_dataset_id"]]
-                parameters={k:definition[k] for k in ("mode","sampling_options","sample_size","absolute_tolerance","relative_tolerance","comparison_options")}
-            else:
-                identifiers=[target]
-                parameters=dict(options)
+            definition=get(m.comparison_definitions,target)
+            if not definition["is_active"]:
+                raise DomainError(409,"comparison_inactive","Comparison is inactive.")
+            identifiers=[definition["left_dataset_id"],definition["right_dataset_id"]]
+            parameters={k:definition[k] for k in ("sampling_options","absolute_tolerance","relative_tolerance","comparison_options")}
+            parameters["sampling_options"]=dict(parameters["sampling_options"])
+            if parameters["sampling_options"].get("seed") is None:
+                parameters["sampling_options"]["seed"]=str(secrets.randbits(64))
             # Coordinate frozen comparison sources with dataset deletion, even
             # when the definition changes before the run is inserted.
             datasets={}
@@ -73,16 +73,12 @@ class Queue:
                 if not connection["is_active"]:
                     raise DomainError(409,"connection_inactive","Uma conexão está desativada.")
                 has_databricks |= connection["connector"]=="databricks"
-                sources.append({k:dataset[k] for k in ("connection_id","catalog_name","schema_name","table_name")}|{"dataset_id":identifier,"quality_rules":dataset["quality_rules"]})
-            if kind=="comparison" and (compact_options(parameters["comparison_options"]) or has_databricks):
-                at=datetime.now(timezone.utc)
-                parameters["resolved_scope"]=resolve_scope(parameters["comparison_options"],at)
-                validate_options(parameters["comparison_options"],columns,parameters["mode"],parameters["resolved_scope"])
-                for source,metadata in zip(sources,columns):
-                    source["expected_columns"]=metadata_signature(metadata)
+                sources.append({k:dataset[k] for k in ("connection_id","catalog_name","schema_name","table_name")}|{"dataset_id":identifier})
+            parameters["resolved_scope"]=resolve_scope(parameters["comparison_options"],datetime.now(timezone.utc))
+            validate_options(parameters["comparison_options"],columns,resolved=parameters["resolved_scope"])
+            for source,metadata in zip(sources,columns):source["expected_columns"]=metadata_signature(metadata)
             parameters.update(sources=sources,request_fingerprint=fingerprint)
-            values={"kind":kind,"comparison_id":target if kind=="comparison" else None,
-                "dataset_id":target if kind=="profile" else None,"parameters":json_safe(parameters),"idempotency_key":key}
+            values={"kind":kind,"comparison_id":target,"parameters":json_safe(parameters),"idempotency_key":key}
             return dict(conn.execute(m.runs.insert().values(**values).returning(m.runs)).mappings().one())
 
     def claim(self):
@@ -118,45 +114,10 @@ class Queue:
                 return False
             if str(result["execution_id"])!=str(identifier) or len(result["sources"])!=len(source_ids):
                 raise ValueError("Resultado não corresponde à execução.")
-            public=json_safe(result)
-            measured=datetime.fromisoformat(result["finished_at"])
+            from .schemas import ComparisonResult
+            public=json_safe(ComparisonResult.model_validate(result).model_dump())
             conn.execute(m.run_results.insert().values(run_id=identifier,format_version=result["format_version"],
                 conclusion=result["summary"]["status"],result=public))
-            profiles,series=[],[]
-            for dataset_id,source in zip(source_ids,result["sources"]):
-                if run['kind']=='profile' and source.get('table_details'):
-                    # Publish the profile's metadata in the same transaction as its
-                    # evidence. Do not replace newer metadata refreshed meanwhile.
-                    current=conn.execute(select(m.datasets.c.metadata).where(m.datasets.c.id==dataset_id).with_for_update()).scalar_one()
-                    details=source['table_details']
-                    if current.get('table_details',{}).get('collected_at','')<=details['collected_at']:
-                        metadata={**current,'columns':source['columns'],'estimated_rows':source['estimated_rows'],'table_details':details}
-                        if details.get('type'):metadata['table_type']=details['type']
-                        conn.execute(m.datasets.update().where(m.datasets.c.id==dataset_id).values(metadata=json_safe(metadata)))
-                for column,metric in source["metrics"].items():
-                    profiles.append({"run_id":identifier,"dataset_id":dataset_id,"column_name":column,
-                        "profile":json_safe({"metadata":source["columns"][column],"metrics":metric,
-                            "sample_size":source["sample_size"],
-                            "sampling_scope":"sample within frozen scope" if result.get("resolved_scope") else "all rows obtained for this source",
-                            **({"resolved_scope":result["resolved_scope"]} if result.get("resolved_scope") else {})})})
-                    for name,value in metric.items():
-                        if isinstance(value,bool) or value is not None and not isinstance(value,(int,float,Decimal)):
-                            continue
-                        # NULL só é série quando é uma métrica numérica conhecida.
-                        if value is None and name not in {"min","max","mean","median","q25","q75","stddev","null_rate","blank_rate","distinct_rate","duplicate_rate"}:
-                            continue
-                        number=Decimal(str(value)) if value is not None else None
-                        if number is not None and not number.is_finite():
-                            number=None
-                        denominator={"null_rate":"null_denominator","blank_rate":"blank_denominator",
-                            "distinct_rate":"distinct_denominator","duplicate_rate":"distinct_denominator"}.get(name)
-                        series.append({"measured_at":measured,"run_id":identifier,"dataset_id":dataset_id,
-                            "column_name":column,"metric_name":name,"value":number,
-                            "evaluated_count":metric.get(denominator) if denominator else None,
-                            "applicable_count":metric.get(denominator) if denominator else None})
-            for table,rows in ((m.column_profiles,profiles),(m.metrics,series)):
-                for offset in range(0,len(rows),500):
-                    conn.execute(table.insert(),rows[offset:offset+500])
             conn.execute(m.runs.update().where(m.runs.c.id==identifier)
                 .values(status="succeeded",finished_at=func.now(),heartbeat_at=func.now(),error_code=None,error_message=None))
             return True
@@ -173,7 +134,7 @@ def run_job(settings,identifier):
         parameters=run["parameters"]
         manager=SourceManager(settings)
         selected=[]
-        consistent_comparison=run["kind"]=="comparison" and (bool(compact_options(parameters.get("comparison_options"))) or any(s.get("catalog_name") for s in parameters["sources"]))
+        consistent_comparison=True
         with ExitStack() as stack:
             for frozen in parameters["sources"]:
                 row=queue.repository.get(m.connections,UUID(frozen["connection_id"]))
@@ -184,16 +145,11 @@ def run_job(settings,identifier):
                 if (schema,table) not in tables:
                     raise DomainError(404,"source_table_not_found","A tabela não está no catálogo atual.")
                 selected.append({**source,"schema":schema,"table":table,"dataset_id":frozen["dataset_id"],
-                    "quality_rules":frozen.get("quality_rules", {"revision":0,"rules":[]}),
                     **({"expected_columns":frozen["expected_columns"]} if "expected_columns" in frozen else {})})
             options=SamplingOptions(**parameters["sampling_options"])
-            if run["kind"]=="comparison":
-                result=execute_comparison(selected,mode=parameters["mode"],options=options,
-                    sample_size=parameters.get("sample_size"),absolute_tolerance=Decimal(parameters["absolute_tolerance"]),
-                    relative_tolerance=Decimal(parameters["relative_tolerance"]),preview_limit=0,execution_id=identifier,
-                    comparison_options=parameters.get("comparison_options"),resolved_scope=parameters.get("resolved_scope"))
-            else:
-                result=execute_profile(selected[0],options=options,sample_size=parameters.get("sample_size"),execution_id=identifier)
+            result=execute_comparison(selected,options=options,
+                absolute_tolerance=Decimal(parameters["absolute_tolerance"]),relative_tolerance=Decimal(parameters["relative_tolerance"]),
+                execution_id=identifier,comparison_options=parameters.get("comparison_options"),resolved_scope=parameters.get("resolved_scope"))
         queue.publish(identifier,result,[UUID(s["dataset_id"]) for s in parameters["sources"]])
     except Exception as error:
         code=error.code if isinstance(error,DomainError) else "execution_failed"

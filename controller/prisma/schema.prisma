@@ -8,15 +8,6 @@ datasource db {
   schemas  = ["app"]
 }
 
-model EnvironmentSettings {
-  id                         Boolean  @id @default(true)
-  comparisonTargetPercentage Decimal  @default(95) @map("comparison_target_percentage") @db.Decimal(7, 4)
-  updatedAt                  DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  @@map("environment_settings")
-  @@schema("app")
-}
-
 // CHECKs, grants e índice por lower(email) ficam no SQL versionado.
 model User {
   id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid

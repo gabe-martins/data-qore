@@ -53,7 +53,8 @@ class Period(ColumnPair):
     timezone: str = "America/Sao_Paulo"
     start: str | None = None
     end: str | None = None
-    days: Annotated[int, Field(strict=True, ge=1, le=3660)] = 1
+    unit: Literal["hours", "days", "months"] = "days"
+    quantity: Annotated[int, Field(strict=True, ge=1, le=100000)] = 1
     safety_delay_minutes: Annotated[int, Field(strict=True, ge=0, le=525600)] = 0
     left_naive_timezone: str | None = None
     right_naive_timezone: str | None = None
@@ -78,10 +79,31 @@ class Scope(OptionModel):
     filters: Annotated[list[ScopeFilter], Field(max_length=20)] = Field(default_factory=list)
 
 
+class ExcludedColumns(OptionModel):
+    left: Annotated[list[ColumnName], Field(max_length=500)] = Field(default_factory=list)
+    right: Annotated[list[ColumnName], Field(max_length=500)] = Field(default_factory=list)
+
+
+class TimestampTimezones(OptionModel):
+    left: dict[ColumnName, str] = Field(default_factory=dict, max_length=500)
+    right: dict[ColumnName, str] = Field(default_factory=dict, max_length=500)
+
+    @model_validator(mode="after")
+    def valid_zones(self):
+        for zone in (*self.left.values(), *self.right.values()):
+            try:
+                ZoneInfo(zone)
+            except (ZoneInfoNotFoundError, ValueError):
+                raise ValueError("Use a valid IANA timezone") from None
+        return self
+
+
 class ComparisonOptions(OptionModel):
     scope: Scope | None = None
     mapping: Annotated[list[ColumnPair], Field(max_length=500)] = Field(default_factory=list)
     business_key: Annotated[list[ColumnPair], Field(max_length=32)] = Field(default_factory=list)
+    excluded_columns: ExcludedColumns = Field(default_factory=ExcludedColumns)
+    timestamp_timezones: TimestampTimezones = Field(default_factory=TimestampTimezones)
 
 
 def compact_options(value):
@@ -104,6 +126,8 @@ def compatible(a, b):
 
 def effective_mapping(columns, options):
     """Manual exact names first; only unique casefold names are auto-paired."""
+    excluded = [set(options.excluded_columns.left), set(options.excluded_columns.right)]
+    columns = [{n: v for n, v in cols.items() if n not in excluded[i]} for i, cols in enumerate(columns)]
     result, used = [], [set(), set()]
     for pair in options.mapping:
         for i, name in enumerate((pair.left, pair.right)):
@@ -164,16 +188,34 @@ def resolve_scope(value, at=None):
     result = {"filters": [f.model_dump() for f in scope.filters]} if scope else {"filters": []}
     if not scope or scope.period is None:
         return result
-    p = scope.period
+    p = scope.period.model_copy(deep=True)
+    for side in ("left", "right"):
+        name = getattr(p, side)
+        configured = getattr(options.timestamp_timezones, side).get(name)
+        current = getattr(p, side + "_naive_timezone")
+        if configured and current and configured != current:
+            raise invalid("conflicting_timestamp_timezone")
+        if configured and not current:
+            setattr(p, side + "_naive_timezone", configured)
     zone = ZoneInfo(p.timezone)
     at = at or datetime.now(timezone.utc)
     if at.tzinfo is None:
         raise invalid("invalid_scope_period")
     at = at.astimezone(timezone.utc)
     if p.kind == "relative":
-        end_day = (at - timedelta(minutes=p.safety_delay_minutes)).astimezone(zone).date()
-        start = _local_boundary(end_day - timedelta(days=p.days), zone)
-        end = _local_boundary(end_day, zone)
+        local = (at - timedelta(minutes=p.safety_delay_minutes)).astimezone(zone)
+        if p.unit == "hours":
+            end = local.replace(minute=0, second=0, microsecond=0).astimezone(timezone.utc)
+            start = end - timedelta(hours=p.quantity)
+        elif p.unit == "days":
+            end = _local_boundary(local.date(), zone)
+            start = _local_boundary(local.date() - timedelta(days=p.quantity), zone)
+        else:
+            end = _local_boundary(local.date().replace(day=1), zone)
+            month_index = local.year * 12 + local.month - 1 - p.quantity
+            year, month = divmod(month_index, 12)
+            if year < 1:raise invalid("invalid_scope_period")
+            start = _local_boundary(date(year, month + 1, 1), zone)
     else:
         start, end = _fixed_bound(p.start, zone), _fixed_bound(p.end, zone)
     if start >= end:
@@ -229,27 +271,31 @@ def typed_value(value, info, operator):
     raise invalid("invalid_scope_value")
 
 
-def validate_options(value, columns, mode="auto", resolved=None):
+def validate_options(value, columns, resolved=None):
     options = ComparisonOptions.model_validate(value or {})
+    for i, side in enumerate(("left", "right")):
+        excluded = getattr(options.excluded_columns, side)
+        if len(excluded) != len(set(excluded)) or any(n not in columns[i] for n in excluded):
+            raise invalid("invalid_excluded_columns")
+        if any((columns[i][n].get("primary_key") and not options.business_key) or any(getattr(k, side) == n for k in options.business_key) for n in excluded):
+            raise invalid("comparison_key_excluded")
+        for name, zone in getattr(options.timestamp_timezones, side).items():
+            if name not in columns[i] or _temporal_kind(columns[i][name]) != "naive":
+                raise invalid("invalid_timestamp_timezone")
+            if columns[i][name].get("comparison_timezone") == "UTC" and zone not in {"UTC", "Etc/UTC"}:
+                raise invalid("source_timezone_required")
     pairs, unmatched = effective_mapping(columns, options)
+    if not pairs and not (unmatched["left"] or unmatched["right"]):
+        raise invalid("no_comparable_columns")
     effective = {(p["left"], p["right"]) for p in pairs}
     seen = [set(), set()]
     for key in options.business_key:
-        if (key.left, key.right) not in effective or mode == "independent_random":
+        if (key.left, key.right) not in effective:
             raise invalid("invalid_business_key")
         for i, name in enumerate((key.left, key.right)):
             if name in seen[i] or family(columns[i][name]) not in {"integer", "decimal", "text", "binary", "uuid", "uniqueidentifier"}:
                 raise invalid("invalid_business_key")
             seen[i].add(name)
-    if mode == "matched_keys" and not options.business_key:
-        from .core.comparison_engine import common_comparison_key
-        sources=[]
-        for i, side in enumerate(("left", "right")):
-            names={f"pair_{j}": pair[side] for j,pair in enumerate(pairs)}
-            names.update({f"unpaired_{side}_{j}": name for j,name in enumerate(unmatched[side])})
-            sources.append({"columns":columns[i],"names":names})
-        if not common_comparison_key(sources)[0]:
-            raise invalid("comparison_key_unavailable")
     resolved = resolved if resolved is not None else resolve_scope(value)
     predicates = [[], []]
     for condition in resolved.get("filters", []):
@@ -278,6 +324,7 @@ def validate_options(value, columns, mode="auto", resolved=None):
             kinds.append(kind)
             bounds = [start, end]
             if kind == "date":
+                if period.get("unit") == "hours":raise invalid("invalid_scope_type")
                 days = [x.astimezone(zone).date() for x in bounds]
                 if any(_local_boundary(d, zone) != x for d, x in zip(days, bounds)):
                     raise invalid("invalid_scope_period")
@@ -307,10 +354,11 @@ def validate_options(value, columns, mode="auto", resolved=None):
     if any(sum(len(term[2]) for term in terms) > 800 for terms in predicates):
         raise invalid("scope_parameter_budget_exceeded")
     return {"mapping": pairs, "unmatched_columns": unmatched, "business_key": [p.model_dump() for p in options.business_key],
+        "excluded_columns": options.excluded_columns.model_dump(), "timestamp_timezones": options.timestamp_timezones.model_dump(),
         "resolved_scope": resolved, "predicates": predicates,
         "key_validation": "Full-scope null and duplicate validation runs during execution, not preview."}
 
 
 def metadata_signature(columns):
-    return {name: {k: info.get(k) for k in ("type", "family", "precision", "scale", "datetime_precision", "length", "collation", "comparison_timezone")}
+    return {name: {k: info.get(k) for k in ("type", "family", "precision", "scale", "datetime_precision", "length", "collation", "comparison_timezone", "nullable", "primary_key", "primary_key_order", "unique_groups", "unique_orders")}
             for name, info in columns.items()}

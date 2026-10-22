@@ -69,7 +69,6 @@ test('expanded and compact desktop navigation, dark charts and draft preservatio
   await expect(page.locator('.wordmark')).toHaveAttribute('src', '/branding/dataqore-logo-inverse.svg');
   await readableColors(page);
   await expect(page.locator('.recharts-cartesian-axis-tick-value').first()).toHaveCSS('fill', 'rgb(210, 224, 232)');
-  await expect(page.locator('.quality-target-label')).toHaveCSS('fill', 'rgb(223, 198, 148)');
   await page.screenshot({ path: 'test-results/sidebar-expanded-dark.png', fullPage: true });
   await page.getByRole('button', { name: 'Collapse sidebar' }).click();
   await expect(page.locator('.sidebar-desktop')).toHaveCSS('width', '80px');

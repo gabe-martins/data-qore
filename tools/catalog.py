@@ -130,7 +130,7 @@ def _verify(connection, service):
         with connection.cursor() as cur:
             cur.execute("SELECT to_regclass('app._prisma_migrations')")
             if cur.fetchone()[0] is not None:
-                cur.execute("SELECT migration_name FROM app._prisma_migrations WHERE migration_name IN ('1_schedules','2_environment_settings') AND finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY migration_name DESC LIMIT 1")
+                cur.execute("SELECT migration_name FROM app._prisma_migrations WHERE migration_name IN ('1_schedules','2_environment_settings','3_critical_metrics') AND finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY migration_name DESC LIMIT 1")
                 row=cur.fetchone()
                 if row:version='app_'+row[0]
     path = Path(__file__).with_name("baselines") / f"{version}.json"
@@ -138,7 +138,9 @@ def _verify(connection, service):
         exists = connection.execute("SELECT to_regclass('engine.alembic_version')").fetchone()[0]
         if exists:
             versions = connection.execute("SELECT version_num FROM engine.alembic_version").fetchall()
-            if versions == [("0004_quality_rules",)]:
+            if versions == [("0005_critical_metrics",)]:
+                path = path.with_name("engine_0005_critical_metrics.json")
+            elif versions == [("0004_quality_rules",)]:
                 path = path.with_name("engine_0004_quality_rules.json")
             elif versions == [("0003_databricks",)]:
                 path = path.with_name("engine_0003_databricks.json")
@@ -147,7 +149,7 @@ def _verify(connection, service):
     expected = json.loads(path.read_text())
     actual = snapshot(connection, service)
     problems = differences(expected, actual)
-    if service == "engine":
+    if service == "engine" and connection.execute("SELECT to_regclass('engine.metrics')").fetchone()[0] is not None:
         with connection.cursor() as cur:
             cur.execute("""SELECT c.relname, pg_get_userbyid(c.relowner),
                 pg_get_expr(c.relpartbound,c.oid) FROM pg_class c JOIN pg_inherits i ON i.inhrelid=c.oid
