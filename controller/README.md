@@ -56,8 +56,9 @@ npm run admin:reset-password --prefix controller
 
 These interactive commands prompt for email and password without echoing the
 password. Creation also asks for a name. Use a password of 12–128 characters.
-Only one administrator is supported; there is no public registration or default
-password. Resetting the password revokes existing sessions.
+The initial administrator can create users and groups in the web interface. There is no public registration or default password. Resetting a password revokes existing sessions and requires the user to choose a different password on next access. The local recovery command accepts platform administrator accounts only.
+
+See [access control](../docs/ACCESS_CONTROL.md) for profiles, permissions and upgrades.
 
 ## Run locally
 

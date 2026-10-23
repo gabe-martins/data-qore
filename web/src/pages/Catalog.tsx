@@ -1,3 +1,4 @@
+import { Allowed, useCan } from "../lib/access";
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
@@ -17,6 +18,15 @@ import {
   Stat,
 } from "../components/common";
 export function Catalog() {
+  const canExplore = useCan("catalog.read");
+  return canExplore ? <LiveCatalog /> : <RegisteredDatasets />;
+}
+function RegisteredDatasets() {
+  const [offset, setOffset] = useState(0);
+  const q = useQuery({ queryKey: ["registered-datasets", offset], queryFn: () => api<Page<Model<"DatasetOut">>>("/datasets?limit=20&offset=" + offset) });
+  return <><PageTitle title="Catalog" subtitle="Registered datasets available for comparison." /><ErrorBox error={q.error} />{q.isPending ? <Loading /> : <Card title="Registered datasets">{q.data?.items.map(d => <p key={d.id}><Link to={`/datasets/${d.id}`}>{[d.catalog_name, d.schema_name, d.table_name].filter(Boolean).join(".")}</Link></p>)}<Pagination total={q.data?.total ?? 0} offset={offset} setOffset={setOffset} /></Card>}</>;
+}
+function LiveCatalog() {
   const [connection, setConnection] = useState("");
   const [catalog, setCatalog] = useState("");
   const [schema, setSchema] = useState("");
@@ -324,7 +334,7 @@ export function DatasetDetail() {
         title={d?.table_name ?? "Dataset"}
         subtitle="Source metadata and comparison identity."
         action={
-          <Button
+          <Allowed permission="datasets.manage"><Button
             disabled={busy}
             onClick={async () => {
               setBusy(true);
@@ -340,7 +350,7 @@ export function DatasetDetail() {
             }}
           >
             <RefreshCw size={16} /> Refresh metadata
-          </Button>
+          </Button></Allowed>
         }
       />
       <ErrorBox error={error || q.error} />

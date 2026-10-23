@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { root } from "./config.js";
 import { z } from "zod";
+import { groupSchema, groupPatchSchema, userSchema, userPatchSchema, resetSchema } from "./access.js";
+import { profiles, profilePermissions, routePermission } from "./permissions.js";
 import { loginSchema, changeSchema } from "./auth.js";
 import { cronSchema, scheduleSchema, schedulePatchBaseSchema, scheduleOutSchema, dispatchOutSchema } from "./schedules.js";
 export const engineSpec = JSON.parse(
@@ -9,12 +11,15 @@ export const engineSpec = JSON.parse(
 );
 const user = {
   type: "object",
-  required: ["id", "email", "display_name", "role"],
+  required: ["id", "email", "display_name", "group", "profile", "permissions", "must_change_password"],
   properties: {
     id: { type: "string" },
     email: { type: "string" },
     display_name: { type: "string" },
-    role: { type: "string" },
+    group: { type: "object", required: ["id", "name"], properties: { id: { type: "string", format: "uuid" }, name: { type: "string" } } },
+    profile: { type: "string", enum: profiles },
+    permissions: { type: "array", items: { type: "string", enum: [...new Set(Object.values(profilePermissions).flat())] } },
+    must_change_password: { type: "boolean" },
   },
 };
 const token = {
@@ -117,6 +122,41 @@ export function openapi() {
       responses: { [status]: { description: "Success", content: { "application/json": { schema: response } } },
         "401": { description: "Unauthorized" }, "404": { description: "Not found" }, "409": { description: "Conflict" }, "422": { description: "Invalid expression or payload" }, "503": { description: "Engine unavailable" } },
     };
+  }
+
+  const groupOutput = { type: "object", required: ["id", "name", "description", "profile", "permissions"], properties: {
+    id: { type: "string", format: "uuid" }, name: { type: "string" }, description: { type: "string" },
+    profile: { type: "string", enum: profiles }, profile_label: { type: "string" }, permissions: { type: "array", items: { type: "string" } }, user_count: { type: "integer" } } };
+  const userOutput = { type: "object", required: ["id", "email", "display_name", "group_id", "group", "is_active", "must_change_password", "created_at", "updated_at"], properties: {
+    id: { type: "string", format: "uuid" }, email: { type: "string", format: "email" }, display_name: { type: "string" }, group_id: { type: "string", format: "uuid" },
+    group: groupOutput, is_active: { type: "boolean" }, must_change_password: { type: "boolean" }, created_at: { type: "string", format: "date-time" }, updated_at: { type: "string", format: "date-time" } } };
+  const auditOutput = { type: "object", required: ["id", "action", "outcome", "resource_type", "created_at"], properties: {
+    id: { type: "string" }, actor_user_id: { type: ["string", "null"] }, action: { type: "string" }, resource_type: { type: "string" }, resource_id: { type: ["string", "null"] }, request_id: { type: ["string", "null"] }, outcome: { type: "string", enum: ["success", "failure"] }, created_at: { type: "string", format: "date-time" } } };
+  spec.components.schemas.User = user;
+  spec.components.schemas.AccessGroup = groupOutput;
+  spec.components.schemas.ManagedUser = userOutput;
+  spec.components.schemas.SecurityAudit = auditOutput;
+  for (const [path, method, body, response, status] of [
+    ["/users", "get", null, page("ManagedUser"), "200"], ["/users", "post", userSchema, userOutput, "201"],
+    ["/users/{id}", "patch", userPatchSchema, userOutput, "200"],
+    ["/users/{id}/reset-password", "post", resetSchema, { type: "object" }, "200"],
+    ["/users/{id}/revoke-sessions", "post", null, { type: "object" }, "200"],
+    ["/groups", "get", null, page("AccessGroup"), "200"], ["/groups", "post", groupSchema, groupOutput, "201"],
+    ["/groups/{id}", "patch", groupPatchSchema, groupOutput, "200"], ["/groups/{id}", "delete", null, { type: "object" }, "200"],
+    ["/audit-log", "get", null, page("SecurityAudit"), "200"],
+  ] as const) {
+    const parameters: any[] = path.includes("{id}") ? [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }] : [];
+    if (method === "get") parameters.push(query("limit"), query("offset"), query("search", "string"));
+    spec.paths["/api/v1" + path] ??= {};
+    spec.paths["/api/v1" + path][method] = { tags: ["access"], security: [{ bearerAuth: [] }], parameters,
+      ...(body ? { requestBody: { required: true, content: { "application/json": { schema: z.toJSONSchema(body, { io: "input" }) } } } } : {}),
+      responses: { [status]: { description: "Success", content: { "application/json": { schema: response } } }, "401": { description: "Unauthorized" }, "403": { description: "Forbidden or password change required" }, "404": { description: "Not found" }, "409": { description: "Resource conflict or last administrator" }, "422": { description: "Invalid input" } } };
+  }
+  for (const [path, methods] of Object.entries(spec.paths) as [string, any][]) {
+    for (const [method, operation] of Object.entries(methods) as [string, any][]) {
+      const permission = routePermission(method, path);
+      if (permission) { operation["x-required-permission"] = permission; operation.responses["403"] = { description: "Forbidden or password change required" }; }
+    }
   }
   return spec;
 }

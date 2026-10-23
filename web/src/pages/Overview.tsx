@@ -1,3 +1,4 @@
+import { Allowed, useCan } from "../lib/access";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -24,6 +25,7 @@ import {
   Stat,
 } from "../components/common";
 export function Overview() {
+  const canReadComparisons = useCan("comparisons.read");
   const [days, setDays] = useState(7);
   const q = useQuery({
     queryKey: ["overview"],
@@ -45,9 +47,9 @@ export function Overview() {
         title="Overview"
         subtitle="Critical comparison metrics and latest execution outcomes."
         action={
-          <Button asChild>
+          <Allowed permission="comparisons.manage"><Button asChild>
             <Link to="/comparisons/new">New comparison</Link>
-          </Button>
+          </Button></Allowed>
         }
       />
       <ErrorBox error={q.error || trend.error} />
@@ -152,7 +154,7 @@ export function Overview() {
               {d.attention.length ? (
                 d.attention.map((a) => (
                   <p key={a.comparison_id}>
-                    <Link to={`/comparisons/${a.comparison_id}`}>{a.name}</Link>{" "}
+                    {canReadComparisons ? <Link to={`/comparisons/${a.comparison_id}`}>{a.name}</Link> : a.name}{" "}
                     <Badge value={a.state} />
                   </p>
                 ))

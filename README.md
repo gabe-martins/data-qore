@@ -111,3 +111,5 @@ The scheduler runs inside the controller. See the [scheduling guide](docs/SCHEDU
 <p align="center">
   <img src="web/public/branding/dataqore-symbol.svg" alt="DataQore symbol" width="64">
 </p>
+
+User and group permissions are described in [Access control](docs/ACCESS_CONTROL.md).

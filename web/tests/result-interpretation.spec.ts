@@ -1,3 +1,4 @@
+import { adminUser } from "./access-fixture";
 import { test, expect, type Page } from "@playwright/test";
 
 async function resultFixture(
@@ -85,7 +86,7 @@ async function resultFixture(
             id: "test",
             display_name: "Presentation",
             email: "test@example.com",
-            role: "admin",
+            ...adminUser,
           },
         },
       });

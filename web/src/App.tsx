@@ -1,3 +1,4 @@
+import { AccessContext, Protected, profileLabels } from "./lib/access";
 import { lazy, Suspense, useEffect, useState } from "react";
 import {
   NavLink,
@@ -17,6 +18,7 @@ import {
   logout,
   refresh,
   onSessionExpired,
+  onSessionChanged,
   post,
   type User,
 } from "./api";
@@ -27,6 +29,7 @@ import {
   Loading,
   PageTitle,
 } from "./components/common";
+const AccessManagement = lazy(() => import("./pages/AccessManagement").then(m => ({ default: m.AccessManagement })));
 const Overview = lazy(() =>
   import("./pages/Overview").then((m) => ({ default: m.Overview })),
 );
@@ -74,6 +77,7 @@ export function App() {
   }
   useEffect(() => {
     let active = true;
+    onSessionChanged(u => { if (active) setUser(u); });
     onSessionExpired(() => {
       if (active) expire();
     });
@@ -100,7 +104,7 @@ export function App() {
     );
   async function signOut() { setMenu(false); await logout(); expire(); }
   return (
-    <NavigationDialog.Root open={menu} onOpenChange={setMenu}>
+    <AccessContext.Provider value={user}><NavigationDialog.Root open={menu} onOpenChange={setMenu}>
     <div className="app-shell" data-sidebar={sidebar}>
       <header className="topbar">
         <NavigationDialog.Trigger asChild>
@@ -132,25 +136,28 @@ export function App() {
         <main className="page">
           <Suspense fallback={<Loading />}>
             <Routes>
-              <Route path="/" element={<Overview />} />
-              <Route path="/connections" element={<Connections />} />
-              <Route path="/catalog" element={<Catalog />} />
-              <Route path="/datasets/:id" element={<DatasetDetail />} />
-              <Route path="/comparisons" element={<Comparisons />} />
-              <Route path="/schedules" element={<Schedules />} />
-              <Route path="/comparisons/new" element={<Wizard />} />
-              <Route path="/comparisons/:id/edit" element={<Wizard />} />
-              <Route path="/comparisons/:id" element={<ComparisonDetail />} />
-              <Route path="/runs" element={<Runs />} />
-              <Route path="/runs/:id" element={<RunResult />} />
+              <Route path="/" element={<Protected permission="dashboard.read"><Overview /></Protected>} />
+              <Route path="/connections" element={<Protected permission="connections.read"><Connections /></Protected>} />
+              <Route path="/catalog" element={<Protected permission="datasets.read"><Catalog /></Protected>} />
+              <Route path="/datasets/:id" element={<Protected permission="datasets.read"><DatasetDetail /></Protected>} />
+              <Route path="/comparisons" element={<Protected permission="comparisons.read"><Comparisons /></Protected>} />
+              <Route path="/schedules" element={<Protected permission="schedules.read"><Schedules /></Protected>} />
+              <Route path="/comparisons/new" element={<Protected permission="comparisons.manage"><Wizard /></Protected>} />
+              <Route path="/comparisons/:id/edit" element={<Protected permission="comparisons.manage"><Wizard /></Protected>} />
+              <Route path="/comparisons/:id" element={<Protected permission="comparisons.read"><ComparisonDetail /></Protected>} />
+              <Route path="/runs" element={<Protected permission="results.read"><Runs /></Protected>} />
+              <Route path="/runs/:id" element={<Protected permission="results.read"><RunResult /></Protected>} />
               <Route
                 path="/runs/:id/differences"
-                element={<RunResult differences />}
+                element={<Protected permission="results.read"><RunResult differences /></Protected>}
               />
               <Route
                 path="/account"
                 element={<Account user={user} onChanged={expire} />}
               />
+              <Route path="/access/users" element={<Protected permission="access.manage"><AccessManagement view="users" /></Protected>} />
+              <Route path="/access/groups" element={<Protected permission="access.manage"><AccessManagement view="groups" /></Protected>} />
+              <Route path="/access/audit" element={<Protected permission="audit.read"><AccessManagement view="audit" /></Protected>} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </Suspense>
@@ -160,7 +167,7 @@ export function App() {
         </footer>
       </div>
     </div>
-    </NavigationDialog.Root>
+    </NavigationDialog.Root></AccessContext.Provider>
   );
 }
 function Login({ onLogin }: { onLogin: (u: User) => void }) {
@@ -243,8 +250,9 @@ function Account({ user, onChanged }: { user: User; onChanged: () => void }) {
     <>
       <PageTitle
         title="Account"
-        subtitle="Manage your local administrator credentials."
+        subtitle="Manage your account credentials."
       />
+      {user.must_change_password && <p className="notice" role="alert">Change your temporary password before accessing the application.</p>}
       <div className="two-columns">
         <Card title="Profile">
           <dl>
@@ -253,7 +261,8 @@ function Account({ user, onChanged }: { user: User; onChanged: () => void }) {
             <dt>Email</dt>
             <dd>{user.email}</dd>
             <dt>Role</dt>
-            <dd>Administrator</dd>
+            <dd>{profileLabels[user.profile] ?? user.profile}</dd>
+            <dt>Group</dt><dd>{user.group.name}</dd>
           </dl>
         </Card>
         <Card

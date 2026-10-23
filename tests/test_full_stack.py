@@ -103,6 +103,10 @@ class FullStackTests(TemporaryPostgres):
         admin_cli('create')
         admin_cli('create',1)
         admin_cli('reset-password')
+        with self.connect('app') as c:
+            self.assertTrue(c.execute("SELECT must_change_password FROM app.users WHERE email='admin@dataqore.test'").fetchone()[0])
+            # This fixture reuses its seeded password; lifecycle enforcement is tested separately.
+            c.execute("UPDATE app.users SET must_change_password=false WHERE email='admin@dataqore.test'")
         handles=[]
         def start(command,environment,cwd,name):
             log=open(self.directory/(name+'.log'),'w+');p=subprocess.Popen(command,cwd=cwd,env=environment,stdout=log,stderr=subprocess.STDOUT)
@@ -137,7 +141,9 @@ class FullStackTests(TemporaryPostgres):
         commands=[(['node','--import','tsx','--test','tests/controller.test.ts','tests/diagnostics.test.ts'],ROOT/'controller'),
             (['node','node_modules/@playwright/test/cli.js','test','critical-metrics.spec.ts','comparison-animation.spec.ts','result-interpretation.spec.ts','--output','test-results/critical-artifacts'],ROOT/'web'),
             (['node','node_modules/@playwright/test/cli.js','test','ui-appearance.spec.ts','--output','test-results/appearance-artifacts'],ROOT/'web'),
-            (['node','--import','tsx','--test','tests/comparison-delete.test.ts','tests/schedules.test.ts'],ROOT/'controller')]
+            (['node','--import','tsx','--test','tests/comparison-delete.test.ts','tests/schedules.test.ts'],ROOT/'controller'),
+            (['node','--import','tsx','--test','tests/access.test.ts'],ROOT/'controller'),
+            (['node','node_modules/@playwright/test/cli.js','test','access-control.spec.ts','navigation-branding.spec.ts','--output','test-results/access-artifacts'],ROOT/'web')]
         for group,(cmd,cwd) in enumerate(commands):
             if group:
                 # Each suite gets fresh process-local rate limits; database sessions

@@ -1,12 +1,11 @@
+import { adminUser } from "./access-fixture";
 import { test, expect, type Page, type Locator } from "@playwright/test";
 
 async function setup(page: Page) {
   await page.route("**/api/v1/**", async route => {
     const path = new URL(route.request().url()).pathname;
     if (path === "/api/v1/auth/refresh") {
-      return route.fulfill({ json: { access_token: "test", user: {
-        id: "designer", display_name: "DataQore Administrator", email: "admin@example.test", role: "admin",
-      } } });
+      return route.fulfill({ json: { access_token: "test", user: adminUser } });
     }
     if (path === "/api/v1/runs") return route.fulfill({ json: { items: [], total: 0, limit: 20, offset: 0 } });
     throw new Error(`Unexpected request: ${path}`);
@@ -17,7 +16,7 @@ async function cleanNavigation(sidebar: Locator) {
   await expect(sidebar.locator("img")).toHaveCount(0);
   await expect(sidebar.getByText("DataQore", { exact: true })).toHaveCount(0);
   await expect(sidebar.getByRole("link", { name: "Account", exact: true })).toHaveCount(0);
-  await expect(sidebar.locator("nav a")).toHaveCount(6);
+  await expect(sidebar.locator("nav a")).toHaveCount(9);
   await expect(sidebar.getByRole("link", { name: "Runs", exact: true })).toBeVisible();
 }
 

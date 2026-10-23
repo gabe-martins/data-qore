@@ -1,3 +1,4 @@
+import { adminUser } from "./access-fixture";
 import { test, expect, type Page } from "@playwright/test";
 
 // Controlled states keep coverage independent of source data or worker speed.
@@ -28,7 +29,7 @@ async function fixture(page: Page) {
   await page.route("**/api/v1/**", async route => {
     const path = new URL(route.request().url()).pathname.replace("/api/v1", "");
     const json = (body: unknown, status = 200) => route.fulfill({ status, json: body });
-    if (path === "/auth/refresh") return json({ access_token: "test", user: { id: "user", display_name: "Designer", email: "test@example.com", role: "admin" } });
+    if (path === "/auth/refresh") return json({ access_token: "test", user: adminUser });
     if (path === `/comparisons/${comparison.id}/runs`) {
       requests++;
       const fail = await new Promise<boolean>(resolve => { completeStart = (fail = false) => resolve(fail); });
