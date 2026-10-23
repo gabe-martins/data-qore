@@ -1,17 +1,15 @@
 import { useAccess } from "../lib/access";
 import { NavLink } from 'react-router-dom';
-import { Database, GitCompareArrows, LayoutDashboard, Library, History, LogOut, CalendarClock, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
+import { Database, GitCompareArrows, LayoutDashboard, Library, History, CalendarClock, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { useAppearance } from '../lib/appearance';
-import { ThemeControl } from './ThemeControl';
 import { NavigationTip } from './NavigationTip';
 const links = [
   ['/', 'Overview', LayoutDashboard], ['/connections', 'Connections', Database], ['/catalog', 'Catalog', Library],
   ['/comparisons', 'Comparisons', GitCompareArrows], ['/schedules', 'Schedules', CalendarClock], ['/runs', 'Runs', History],
-  ['/access/users', 'Users', Library], ['/access/groups', 'Groups', Library], ['/access/audit', 'Security audit', History],
 ] as const;
-export function SidebarContent({ mobile = false, onNavigate, onSignOut }: { mobile?: boolean; onNavigate: () => void; onSignOut: () => void }) {
+export function SidebarContent({ mobile = false, onNavigate }: { mobile?: boolean; onNavigate: () => void }) {
   const user = useAccess();
-  const permissions: Record<string, string> = { "/": "dashboard.read", "/connections": "connections.read", "/catalog": "datasets.read", "/comparisons": "comparisons.read", "/schedules": "schedules.read", "/runs": "results.read", "/access/users": "access.manage", "/access/groups": "access.manage", "/access/audit": "audit.read" };
+  const permissions: Record<string, string> = { "/": "dashboard.read", "/connections": "connections.read", "/catalog": "datasets.read", "/comparisons": "comparisons.read", "/schedules": "schedules.read", "/runs": "results.read" };
   const visibleLinks = links.filter(([to]) => !user?.must_change_password && user?.permissions.includes(permissions[to]));
   const { sidebar, setSidebar } = useAppearance();
   const compact = !mobile && sidebar === 'collapsed';
@@ -28,11 +26,5 @@ export function SidebarContent({ mobile = false, onNavigate, onSignOut }: { mobi
         <Icon size={23} aria-hidden="true" /><span className="sidebar-label">{name}</span>
       </NavLink></NavigationTip>
     )}</nav>
-    <div className="sidebar-footer">
-      <ThemeControl compact={compact} />
-      <NavigationTip enabled={compact} label="Sign out"><button type="button" className="nav-item logout" aria-label="Sign out" onClick={onSignOut}>
-        <LogOut size={22} aria-hidden="true" /><span className="sidebar-label">Sign out</span>
-      </button></NavigationTip>
-    </div>
   </>;
 }

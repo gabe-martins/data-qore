@@ -60,9 +60,11 @@ test("dependencies include inactive comparisons once, paginate independently and
   await page.screenshot({path:"test-results/delete-dependencies-desktop.png",fullPage:true});
   await page.keyboard.press("Escape");
   await expect(trigger).toBeFocused();
-  await page.getByRole("button",{name:"Theme",exact:true}).click();
+  const previous = new URL(page.url()).pathname;
+  await page.goto("/settings/appearance");
   await page.getByRole("radio",{name:"Dark",exact:true}).check();
-  await page.keyboard.press("Escape");
+  await page.goto(previous);
+  await page.getByLabel("Search connections").fill(connection.name);
   await trigger.click();
   await page.setViewportSize({width:390,height:844});
   await expect(dialog.getByRole("heading",{name:"Delete connection",exact:true})).toBeVisible();

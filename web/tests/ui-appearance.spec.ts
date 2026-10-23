@@ -1,9 +1,16 @@
 import { test, expect, type Page } from '@playwright/test';
 test.skip(process.env.DATAQORE_ISOLATED_TEST !== '1', 'Use the disposable full-stack fixture.');
 async function theme(page: Page, value: 'Light' | 'Dark' | 'System') {
-  await page.getByRole('button', { name: 'Theme', exact: true }).click();
-  await page.getByRole('radio', { name: value, exact: true }).check();
-  await page.keyboard.press('Escape');
+  if (await page.getByRole('button', { name: 'User menu', exact: true }).count()) {
+    const previous = new URL(page.url()).pathname;
+    await page.goto('/settings/appearance');
+    await page.getByRole('radio', { name: value, exact: true }).check();
+    await page.goto(previous);
+  } else {
+    await page.getByRole('button', { name: 'Theme', exact: true }).click();
+    await page.getByRole('radio', { name: value, exact: true }).check();
+    await page.keyboard.press('Escape');
+  }
 }
 async function login(page: Page) {
   await page.goto('/');
@@ -133,8 +140,8 @@ test('mobile navigation traps focus, closes and restores desktop preference', as
   await page.getByRole('button', { name: 'Expand sidebar' }).click();
   await page.setViewportSize({ width: 390, height: 500 });
   await trigger.click();
-  await expect(drawer.getByRole('button', { name: 'Theme', exact: true })).toBeVisible();
-  await expect(drawer.getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
+  await expect(drawer.getByRole('button', { name: 'Theme', exact: true })).toHaveCount(0);
+  await expect(drawer.getByRole('button', { name: 'Sign out', exact: true })).toHaveCount(0);
   await page.setViewportSize({ width: 1440, height: 1100 });
   await expect(drawer).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Collapse sidebar' })).toBeFocused();

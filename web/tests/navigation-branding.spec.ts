@@ -16,7 +16,7 @@ async function cleanNavigation(sidebar: Locator) {
   await expect(sidebar.locator("img")).toHaveCount(0);
   await expect(sidebar.getByText("DataQore", { exact: true })).toHaveCount(0);
   await expect(sidebar.getByRole("link", { name: "Account", exact: true })).toHaveCount(0);
-  await expect(sidebar.locator("nav a")).toHaveCount(9);
+  await expect(sidebar.locator("nav a")).toHaveCount(6);
   await expect(sidebar.getByRole("link", { name: "Runs", exact: true })).toBeVisible();
 }
 
@@ -54,7 +54,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(header).not.toContainText("ADQ");
     await expect(header).not.toContainText("DataQore Administrator");
     await expect(header.locator(".profile-link span")).toHaveCount(0);
-    const account = header.getByRole("link", { name: "Account", exact: true });
+    const account = header.getByRole("button", { name: "User menu", exact: true });
     await expect(account).toHaveCSS("width", "40px");
     await expect(account).toHaveCSS("height", "40px");
     await expect(account).toHaveCSS("border-radius", "50%");
@@ -88,8 +88,9 @@ for (const theme of ["light", "dark"] as const) {
     await expect(account).toBeFocused();
     await expect(account).toHaveCSS("outline-style", "solid");
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/\/account$/);
-    await expect(page.getByRole("heading", { name: "Account", exact: true })).toBeVisible();
+    await page.getByRole("link", { name: "Settings", exact: true }).click();
+    await expect(page).toHaveURL(/\/settings\/profile$/);
+    await expect(page.getByRole("heading", { name: "Profile", exact: true })).toBeVisible();
     await expect(page.getByText("DataQore Administrator", { exact: true })).toBeVisible();
   });
 
@@ -111,8 +112,8 @@ for (const theme of ["light", "dark"] as const) {
     await toggle.click();
     const drawer = page.getByRole("dialog", { name: "Main navigation", exact: true });
     await cleanNavigation(drawer);
-    await expect(drawer.getByRole("button", { name: "Theme", exact: true })).toBeVisible();
-    await expect(drawer.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
+    await expect(drawer.getByRole("button", { name: "Theme", exact: true })).toHaveCount(0);
+    await expect(drawer.getByRole("button", { name: "Sign out", exact: true })).toHaveCount(0);
     await page.screenshot({ path: `test-results/navigation-branding-${theme}-drawer.png`, fullPage: true });
     await drawer.getByRole("button", { name: "Close navigation", exact: true }).click();
     await expect(drawer).toHaveCount(0);
@@ -122,10 +123,11 @@ for (const theme of ["light", "dark"] as const) {
     await expect(drawer).toHaveCount(0);
     await expect(toggle).toBeFocused();
     await page.keyboard.press("Tab");
-    const account = header.getByRole("link", { name: "Account", exact: true });
+    const account = header.getByRole("button", { name: "User menu", exact: true });
     await expect(account).toBeFocused();
     await page.keyboard.press("Enter");
-    await expect(page.getByRole("heading", { name: "Account", exact: true })).toBeVisible();
+    await page.getByRole("link", { name: "Settings", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Profile", exact: true })).toBeVisible();
     await noOverflow(page);
   });
 }
