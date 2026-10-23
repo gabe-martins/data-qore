@@ -1,3 +1,4 @@
+import { Allowed } from "../lib/access";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -102,9 +103,9 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
               <Badge value={run.data.status} />
               {run.data.comparison_id && (
                 <p>
-                  <Link to={`/comparisons/${run.data.comparison_id}`}>
+                  <Allowed permission="comparisons.read"><Link to={`/comparisons/${run.data.comparison_id}`}>
                     Open comparison
-                  </Link>
+                  </Link></Allowed>
                 </p>
               )}
               {run.data.status === "failed" && (

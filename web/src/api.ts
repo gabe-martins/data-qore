@@ -11,11 +11,16 @@ export type User = {
   id: string;
   email: string;
   display_name: string;
-  role: string;
+  group: { id: string; name: string };
+  profile: string;
+  permissions: string[];
+  must_change_password: boolean;
 };
 let accessToken: string | null = null;
 let refreshPromise: Promise<User | null> | null = null;
 let onExpired: () => void = () => {};
+let onChanged: (user: User) => void = () => {};
+export function onSessionChanged(fn: (user: User) => void) { onChanged = fn; }
 export function onSessionExpired(fn: () => void) {
   onExpired = fn;
 }
@@ -60,6 +65,7 @@ export async function refresh(): Promise<User | null> {
           }),
         );
         accessToken = data.access_token;
+        onChanged(data.user);
         return data.user;
       } catch {
         accessToken = null;

@@ -14,7 +14,9 @@ model User {
   email        String        @db.Text
   displayName  String        @map("display_name") @db.Text
   passwordHash String        @map("password_hash") @db.Text
-  role         String        @default("admin") @db.Text
+  groupId      String        @map("group_id") @db.Uuid
+  group        AccessGroup   @relation(fields: [groupId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  mustChangePassword Boolean @default(false) @map("must_change_password")
   isActive     Boolean       @default(true) @map("is_active")
   createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime      @default(now()) @map("updated_at") @db.Timestamptz(6)
@@ -22,6 +24,7 @@ model User {
   auditLog     AuditLog[]
   schedules    Schedule[]
 
+  @@index([groupId], map: "users_group_idx")
   @@map("users")
   @@schema("app")
 }
@@ -99,5 +102,18 @@ model AuditLog {
   @@index([createdAt(sort: Desc)], map: "audit_log_created_idx")
   @@index([actorUserId, createdAt(sort: Desc)], map: "audit_log_actor_idx")
   @@map("audit_log")
+  @@schema("app")
+}
+
+model AccessGroup {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name String @db.Text
+  description String @default("") @db.Text
+  profile String @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  users User[]
+
+  @@map("access_groups")
   @@schema("app")
 }

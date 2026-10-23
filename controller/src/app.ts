@@ -27,6 +27,8 @@ import type {
 } from "./engine-api.js";
 import { engineSpec, openapi } from "./openapi.js";
 import { z } from "zod";
+import { accessOperations } from "./access.js";
+import { routePermission, selfServicePaths, publicPaths } from "./permissions.js";
 import { lockComparisons } from "./comparison-lock.js";
 import { Schedules, cronSchema, nextDates, scheduleOut, dispatchOut } from "./schedules.js";
 const COOKIE = "dataqore_refresh";
@@ -168,37 +170,34 @@ export async function createApp(config: Config, db: DB) {
     res.clearCookie(COOKIE, { path: "/api/v1/auth" });
   }
   const operations: [string, string, (req: any, res: any) => Promise<any>][] = [
+    ...accessOperations(db),
     ["post", "/api/v1/schedules/preview", async (req, res) => {
-      await auth.authorize(req.headers.authorization);
       const v = cronSchema.parse(req.body);
       res.status(200);
       return { cron_expression: v.cron_expression, timezone: v.timezone, next_runs: nextDates(v.cron_expression, v.timezone).map(d => d.toISOString()) };
     }],
     ["get", "/api/v1/schedules", async (req) => {
-      await auth.authorize(req.headers.authorization);
       const q = z.object({ limit: z.coerce.number().int().min(1).max(200).default(20), offset: z.coerce.number().int().min(0).default(0), comparison_id: z.uuid().optional(), search: z.string().max(255).default("") }).strict().parse(req.query);
       const where = { ...(q.comparison_id ? { comparisonId: q.comparison_id } : {}), name: { contains: q.search, mode: "insensitive" as const } };
       const [items, total] = await db.$transaction([db.schedule.findMany({ where, take: q.limit, skip: q.offset, orderBy: [{ createdAt: "desc" }, { id: "asc" }] }), db.schedule.count({ where })]);
       return { items: items.map(scheduleOut), total, limit: q.limit, offset: q.offset };
     }],
     ["post", "/api/v1/schedules", async (req, res) => {
-      const session = await auth.authorize(req.headers.authorization);
+      const session = req.access;
       const row = await schedules.create(req.body, session.user.id, req.id);
       res.status(201); return row;
     }],
     ["get", "/api/v1/schedules/:id", async req => {
-      await auth.authorize(req.headers.authorization);
       const id = z.uuid().parse(req.params.id);
       const row = await db.schedule.findUnique({ where: { id } });
       if (!row) throw new PublicError(404, "not_found", "Schedule not found.");
       return scheduleOut(row);
     }],
     ["patch", "/api/v1/schedules/:id", async req => {
-      const session = await auth.authorize(req.headers.authorization);
+      const session = req.access;
       return schedules.update(z.uuid().parse(req.params.id), req.body, session.user.id, req.id);
     }],
     ["get", "/api/v1/schedules/:id/dispatches", async req => {
-      await auth.authorize(req.headers.authorization);
       const scheduleId = z.uuid().parse(req.params.id);
       if (!(await db.schedule.findUnique({ where: { id: scheduleId } }))) throw new PublicError(404, "not_found", "Schedule not found.");
       const q = z.object({ limit: z.coerce.number().int().min(1).max(200).default(20), offset: z.coerce.number().int().min(0).default(0) }).strict().parse(req.query);
@@ -233,7 +232,7 @@ export async function createApp(config: Config, db: DB) {
       "get",
       "/api/v1/auth/me",
       async (req) => {
-        return (await auth.authorize(req.headers.authorization)).user;
+        return req.access.user;
       },
     ],
     [
@@ -241,7 +240,7 @@ export async function createApp(config: Config, db: DB) {
       "/api/v1/auth/logout",
       async (req, res) => {
         await auth.logout(
-          await auth.authorize(req.headers.authorization),
+          req.access,
           req.id,
         );
         clearCookie(res);
@@ -253,7 +252,7 @@ export async function createApp(config: Config, db: DB) {
       "/api/v1/auth/change-password",
       async (req, res) => {
         await auth.change(
-          await auth.authorize(req.headers.authorization),
+          req.access,
           req.body,
           req.id,
         );
@@ -273,7 +272,7 @@ export async function createApp(config: Config, db: DB) {
         method,
         "/api" + path.replace(/\{([^}]+)\}/g, ":$1"),
         async (req, res) => {
-          const session = await auth.authorize(req.headers.authorization);
+          const session = req.access;
           const headers: Record<string, string> = {
             "X-API-Key": config.engineKey,
             "Content-Type": "application/json",
@@ -384,7 +383,19 @@ export async function createApp(config: Config, db: DB) {
     const name = "route" + i;
     Object.defineProperty(Api.prototype, name, {
       value: async function (req: any, res: any) {
-        if (path.startsWith("/api/v1/auth/")) res.status(200);
+        const operation = `${method.toLowerCase()} ${path}`;
+        if (!publicPaths.has(operation)) {
+          const access = await auth.authorize(req.headers.authorization);
+          req.access = access;
+          const permission = routePermission(method, path);
+          const passwordRequired = access.user.must_change_password && !selfServicePaths.has(operation);
+          if (passwordRequired || (!selfServicePaths.has(operation) && (!permission || !access.user.permissions.includes(permission)))) {
+            await auth.audit(`denied:${method}:${path}`, "failure", access.user.id, req.id, "authorization");
+            throw new PublicError(403, passwordRequired ? "password_change_required" : "forbidden",
+              passwordRequired ? "Change your temporary password before continuing." : "You do not have permission for this operation.");
+          }
+        }
+        res.status(200);
         return handler(req, res);
       },
     });
@@ -417,6 +428,7 @@ export async function createApp(config: Config, db: DB) {
     const status =
       error instanceof PublicError
         ? error.status
+        : ["P2002", "P2003"].includes(error.code) ? 409
         : error instanceof ZodError
           ? 422
           : error.statusCode === 429
@@ -432,6 +444,7 @@ export async function createApp(config: Config, db: DB) {
         code:
           error instanceof PublicError
             ? error.code
+            : status === 409 ? "resource_conflict"
             : status === 422 || status === 400
               ? "validation_error"
               : status === 429
@@ -442,6 +455,7 @@ export async function createApp(config: Config, db: DB) {
         message:
           error instanceof PublicError
             ? error.publicMessage
+            : status === 409 ? "Duplicate resource or conflicting references."
             : status === 422 || status === 400
               ? "Invalid payload or parameters."
               : status === 429

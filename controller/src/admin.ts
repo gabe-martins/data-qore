@@ -73,20 +73,21 @@ try {
   await db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(80420,1)`;
     const existing = await tx.user.findFirst({
-      where: { email: { equals: email, mode: "insensitive" } },
+      where: { email: { equals: email, mode: "insensitive" }, group: { profile: "platform_admin" } },
     });
     let user;
     if (command === "create") {
       if (await tx.user.count())
         throw Error("An administrator already exists.");
-      user = await tx.user.create({
-        data: { email, displayName: name, passwordHash },
-      });
+      let group = await tx.accessGroup.findFirst({ where: { profile: "platform_admin" }, orderBy: { createdAt: "asc" } });
+      if (!group) group = await tx.accessGroup.create({ data: { name: "Platform Administrators", profile: "platform_admin" } });
+      user = await tx.user.create({ data: { email, displayName: name, passwordHash, groupId: group.id } });
     } else {
       if (!existing) throw Error("Administrator not found.");
+      await tx.$queryRaw`SELECT id FROM app.users WHERE id=${existing.id}::uuid FOR UPDATE`;
       user = await tx.user.update({
         where: { id: existing.id },
-        data: { passwordHash, updatedAt: new Date() },
+        data: { passwordHash, mustChangePassword: true, updatedAt: new Date() },
       });
       await tx.authSession.updateMany({
         where: { userId: user.id, revokedAt: null },

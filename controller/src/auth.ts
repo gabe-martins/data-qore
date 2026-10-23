@@ -4,6 +4,7 @@ import argon2 from "argon2";
 import { z } from "zod";
 import type { DB } from "./db.js";
 import type { Config } from "./config.js";
+import { permissionsFor } from "./permissions.js";
 export class PublicError extends Error {
   constructor(
     public status: number,
@@ -31,12 +32,12 @@ export const hashPassword = (p: string) =>
     parallelism: 1,
   });
 const digest = (s: string) => createHash("sha256").update(s).digest("hex");
-const safeUser = (u: {
-  id: string;
-  email: string;
-  displayName: string;
-  role: string;
-}) => ({ id: u.id, email: u.email, display_name: u.displayName, role: u.role });
+export const safeUser = (u: {
+  id: string; email: string; displayName: string; mustChangePassword: boolean;
+  group: { id: string; name: string; profile: string };
+}) => ({ id: u.id, email: u.email, display_name: u.displayName,
+  group: { id: u.group.id, name: u.group.name }, profile: u.group.profile,
+  permissions: permissionsFor(u.group.profile), must_change_password: u.mustChangePassword });
 const unauthorized = () =>
   new PublicError(
     401,
@@ -99,6 +100,7 @@ export class Auth {
     const { email, password } = loginSchema.parse(input);
     const user = await this.db.user.findFirst({
       where: { email: { equals: email.trim(), mode: "insensitive" } },
+      include: { group: true },
     });
     const valid = await argon2.verify(
       user?.passwordHash ?? (await this.dummy),
@@ -111,20 +113,21 @@ export class Auth {
     const refresh = randomBytes(48).toString("base64url");
     const session = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM app.users WHERE id=${user.id}::uuid FOR UPDATE`;
-      const current = await tx.user.findUnique({ where: { id: user.id } });
+      const current = await tx.user.findUnique({ where: { id: user.id }, include: { group: true } });
       if (!current?.isActive || current.passwordHash !== user.passwordHash)
         throw unauthorized();
-      return tx.authSession.create({
+      const created = await tx.authSession.create({
         data: {
           userId: user.id,
           refreshTokenHash: digest(refresh),
           expiresAt: new Date(Date.now() + this.config.refreshSeconds * 1000),
         },
       });
+      return { ...created, user: current };
     });
     await this.audit("login", "success", user.id, requestId);
     return {
-      body: await this.token(user, session.id),
+      body: await this.token(session.user, session.id),
       refresh,
       expires: session.expiresAt,
     };
@@ -143,7 +146,7 @@ export class Auth {
       await tx.$queryRaw`SELECT id FROM app.auth_sessions WHERE refresh_token_hash=${tokenHash} FOR UPDATE`;
       const old = await tx.authSession.findUnique({
         where: { refreshTokenHash: tokenHash },
-        include: { user: true },
+        include: { user: { include: { group: true } } },
       });
       if (!old) return { invalid: true } as const;
       if (old.revokedAt) {
@@ -194,7 +197,7 @@ export class Auth {
       throw unauthorized();
     const session = await this.db.authSession.findUnique({
       where: { id: payload.sid },
-      include: { user: true },
+      include: { user: { include: { group: true } } },
     });
     if (
       !session ||
@@ -227,6 +230,8 @@ export class Auth {
     });
     if (!(await argon2.verify(u.passwordHash, p.current_password)))
       throw unauthorized();
+    if (await argon2.verify(u.passwordHash, p.new_password))
+      throw new PublicError(422, "password_unchanged", "Choose a different password.");
     const hash = await hashPassword(p.new_password);
     await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM app.users WHERE id=${u.id}::uuid FOR UPDATE`;
@@ -235,7 +240,7 @@ export class Auth {
         throw unauthorized();
       await tx.user.update({
         where: { id: u.id },
-        data: { passwordHash: hash, updatedAt: new Date() },
+        data: { passwordHash: hash, mustChangePassword: false, updatedAt: new Date() },
       });
       await tx.authSession.updateMany({
         where: { userId: u.id, revokedAt: null },

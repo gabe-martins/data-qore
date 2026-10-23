@@ -11,6 +11,7 @@ if (!(await db.user.count()))
     data: {
       email: "admin@dataqore.test",
       displayName: "Test Administrator",
+      groupId: (await db.accessGroup.findFirstOrThrow({ where: { profile: "platform_admin" } })).id,
       passwordHash: await hashPassword("DataQore-test-password-2026"),
     },
   });

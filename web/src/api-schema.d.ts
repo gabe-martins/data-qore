@@ -459,7 +459,15 @@ export interface paths {
                                 id: string;
                                 email: string;
                                 display_name: string;
-                                role: string;
+                                group: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                };
+                                /** @enum {string} */
+                                profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
+                                permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
+                                must_change_password: boolean;
                             };
                         };
                     };
@@ -510,7 +518,15 @@ export interface paths {
                                 id: string;
                                 email: string;
                                 display_name: string;
-                                role: string;
+                                group: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                };
+                                /** @enum {string} */
+                                profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
+                                permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
+                                must_change_password: boolean;
                             };
                         };
                     };
@@ -598,7 +614,15 @@ export interface paths {
                             id: string;
                             email: string;
                             display_name: string;
-                            role: string;
+                            group: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            /** @enum {string} */
+                            profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
+                            permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
+                            must_change_password: boolean;
                         };
                     };
                 };
@@ -714,6 +738,13 @@ export interface paths {
                     };
                     content?: never;
                 };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Not found */
                 404: {
                     headers: {
@@ -792,6 +823,13 @@ export interface paths {
                     };
                     content?: never;
                 };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Not found */
                 404: {
                     headers: {
@@ -856,6 +894,13 @@ export interface paths {
                 };
                 /** @description Unauthorized */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden or password change required */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -931,6 +976,13 @@ export interface paths {
                     };
                     content?: never;
                 };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Not found */
                 404: {
                     headers: {
@@ -999,6 +1051,13 @@ export interface paths {
                 };
                 /** @description Unauthorized */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden or password change required */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1078,6 +1137,13 @@ export interface paths {
                     };
                     content?: never;
                 };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Not found */
                 404: {
                     headers: {
@@ -1101,6 +1167,814 @@ export interface paths {
                 };
                 /** @description Engine unavailable */
                 503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                    search?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["ManagedUser"][];
+                            total: number;
+                            limit: number;
+                            offset: number;
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Resource conflict or last administrator */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid input */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: email */
+                        email: string;
+                        display_name: string;
+                        /** Format: uuid */
+                        group_id: string;
+                        temporary_password: string;
+                        /** @default true */
+                        is_active?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: email */
+                            email: string;
+                            display_name: string;
+                            /** Format: uuid */
+                            group_id: string;
+                            group: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                description: string;
+                                /** @enum {string} */
+                                profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
+                                profile_label?: string;
+                                permissions: string[];
+                                user_count?: number;
+                            };
+                            is_active: boolean;
+                            must_change_password: boolean;
+                            /** Format: date-time */
+                            created_at: string;
+                            /** Format: date-time */
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Resource conflict or last administrator */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid input */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: email */
+                        email?: string;
+                        display_name?: string;
+                        /** Format: uuid */
+                        group_id?: string;
+                        is_active?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: email */
+                            email: string;
+                            display_name: string;
+                            /** Format: uuid */
+                            group_id: string;
+                            group: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                description: string;
+                                /** @enum {string} */
+                                profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
+                                profile_label?: string;
+                                permissions: string[];
+                                user_count?: number;
+                            };
+                            is_active: boolean;
+                            must_change_password: boolean;
+                            /** Format: date-time */
+                            created_at: string;
+                            /** Format: date-time */
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Resource conflict or last administrator */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid input */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/users/{id}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        temporary_password: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": Record<string, never>;
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Resource conflict or last administrator */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid input */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{id}/revoke-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": Record<string, never>;
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Resource conflict or last administrator */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid input */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                    search?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["AccessGroup"][];
+                            total: number;
+                            limit: number;
+                            offset: number;
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Resource conflict or last administrator */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid input */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        /** @default  */
+                        description?: string;
+                        /** @enum {string} */
+                        profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            description: string;
+                            /** @enum {string} */
+                            profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
+                            profile_label?: string;
+                            permissions: string[];
+                            user_count?: number;
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Resource conflict or last administrator */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid input */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": Record<string, never>;
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Resource conflict or last administrator */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid input */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        description?: string;
+                        /** @enum {string} */
+                        profile?: "viewer" | "quality_manager" | "developer" | "platform_admin";
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            description: string;
+                            /** @enum {string} */
+                            profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
+                            profile_label?: string;
+                            permissions: string[];
+                            user_count?: number;
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Resource conflict or last administrator */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid input */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/audit-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                    search?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["SecurityAudit"][];
+                            total: number;
+                            limit: number;
+                            offset: number;
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Resource conflict or last administrator */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid input */
+                422: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2482,6 +3356,69 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        User: {
+            id: string;
+            email: string;
+            display_name: string;
+            group: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+            };
+            /** @enum {string} */
+            profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
+            permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
+            must_change_password: boolean;
+        };
+        AccessGroup: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description: string;
+            /** @enum {string} */
+            profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
+            profile_label?: string;
+            permissions: string[];
+            user_count?: number;
+        };
+        ManagedUser: {
+            /** Format: uuid */
+            id: string;
+            /** Format: email */
+            email: string;
+            display_name: string;
+            /** Format: uuid */
+            group_id: string;
+            group: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+                description: string;
+                /** @enum {string} */
+                profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
+                profile_label?: string;
+                permissions: string[];
+                user_count?: number;
+            };
+            is_active: boolean;
+            must_change_password: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        SecurityAudit: {
+            id: string;
+            actor_user_id?: string | null;
+            action: string;
+            resource_type: string;
+            resource_id?: string | null;
+            request_id?: string | null;
+            /** @enum {string} */
+            outcome: "success" | "failure";
+            /** Format: date-time */
+            created_at: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -2517,6 +3454,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {
@@ -2587,6 +3531,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
             };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -2655,6 +3606,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {
@@ -2725,6 +3683,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
             };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -2792,6 +3757,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
             };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -2858,6 +3830,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {
@@ -2929,6 +3908,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {
@@ -3002,6 +3988,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
             };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -3068,6 +4061,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {
@@ -3139,6 +4139,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
             };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -3209,6 +4216,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {
@@ -3282,6 +4296,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
             };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -3350,6 +4371,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {
@@ -3420,6 +4448,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
             };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -3487,6 +4522,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
             };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -3553,6 +4595,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {
@@ -3624,6 +4673,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
             };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -3690,6 +4746,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {
@@ -3760,6 +4823,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
             };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -3828,6 +4898,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {
@@ -3898,6 +4975,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
             };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -3965,6 +5049,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
             };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -4031,6 +5122,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {
@@ -4103,6 +5201,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
             };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -4173,6 +5278,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
             };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -4241,6 +5353,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {
@@ -4312,6 +5431,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
             };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -4378,6 +5504,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {
@@ -4446,6 +5579,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
             };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -4513,6 +5653,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {
@@ -4583,6 +5730,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
             };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -4647,6 +5801,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorOut"];
                 };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {
