@@ -11,6 +11,8 @@ async function setup(page: Page, user = adminUser) {
     if (path === "/auth/logout" || path === "/auth/change-password") { signedOut = true; return route.fulfill({ json: { status: "ok" } }); }
     if (["/runs", "/users", "/groups", "/audit-log"].includes(path)) return route.fulfill({ json: { items: [], total: 0, limit: 20, offset: 0 } });
     if (path === "/overview") return route.fulfill({ json: { row_match_rate: { passed: 0, evaluated: 0 }, active_comparisons: 0, latest_conclusions: {}, attention: [], recent_runs: [] } });
+    if (path === "/settings/quality") return route.fulfill({json:{row_match_target_percentage:"95",updated_at:"2026-10-24T12:00:00Z",metric:"row_match_rate"}});
+    if (path === "/overview/comparisons") return route.fulfill({json:{items:[],total:0,limit:25,offset:0}});
     if (path === "/overview/row-match-trend") return route.fulfill({ json: { overall: [] } });
     throw Error(`Unexpected request ${path}`);
   });

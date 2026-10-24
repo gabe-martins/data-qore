@@ -117,3 +117,12 @@ model AccessGroup {
   @@map("access_groups")
   @@schema("app")
 }
+
+model QualitySettings {
+  id Boolean @id @default(true)
+  rowMatchTargetPercentage Decimal? @default(95) @map("row_match_target_percentage") @db.Decimal(7,4)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("quality_settings")
+  @@schema("app")
+}

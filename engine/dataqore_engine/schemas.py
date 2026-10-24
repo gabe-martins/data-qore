@@ -517,3 +517,64 @@ class OverviewOut(Model):
     attention:list[AttentionOut]
     as_of:datetime
     scope:str
+
+
+class OverviewColumnPair(Model):
+    left_column: str | None
+    right_column: str | None
+
+
+class OverviewComparisonOut(Model):
+    comparison_id: UUID
+    name: str
+    source_table: str
+    target_table: str
+    run_id: UUID | None
+    status: str | None
+    execution_status: str | None
+    finished_at: datetime | None
+    conclusion: str | None
+    metrics: CriticalMetrics | None
+    summary: dict[str,Any] | None
+    points: list[DailyRowMatchPoint]
+    column_pairs: list[OverviewColumnPair]
+
+
+class OverviewComparisonsOut(Page[OverviewComparisonOut]):
+    days: Literal[7,15,30]
+    timezone: str
+    start_day: str
+    end_day: str
+    as_of: datetime
+
+
+class TrendMetricValue(Model):
+    label: str
+    percentage: Decimal | None
+    numerator: int
+    denominator: int
+    total: int | None
+    not_evaluated: int
+    scope: str
+    reason: str | None = None
+
+    model_config = ConfigDict(extra='ignore')
+
+
+class MetricTrendPoint(Model):
+    day: str
+    run_id: UUID | None
+    status: str | None
+    values: list[TrendMetricValue]
+
+
+class MetricTrendOut(Model):
+    comparison_id: UUID
+    name: str
+    metric: str
+    days: Literal[7,15,30]
+    timezone: str
+    start_day: str
+    end_day: str
+    as_of: datetime
+    points: list[MetricTrendPoint]

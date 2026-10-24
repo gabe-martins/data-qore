@@ -13,6 +13,7 @@ import * as NavigationDialog from "@radix-ui/react-dialog";
 import { SettingsSidebar } from "./components/SettingsSidebar";
 import { UserMenu } from "./components/UserMenu";
 import { Appearance } from "./pages/Appearance";
+import { QualitySettings } from "./pages/QualitySettings";
 import { SidebarContent } from "./components/Sidebar";
 import { ThemeControl } from "./components/ThemeControl";
 import { useAppearance, BrandLogo } from "./lib/appearance";
@@ -302,6 +303,7 @@ export function App() {
                     element={<Navigate to="/settings/profile" replace />}
                   />
                   <Route path="/settings/appearance" element={<Appearance />} />
+                  <Route path="/settings/quality" element={<Protected permission="dashboard.read"><QualitySettings /></Protected>} />
                   <Route
                     path="/account"
                     element={<Navigate to="/settings/profile" replace />}

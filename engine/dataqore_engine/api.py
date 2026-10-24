@@ -393,5 +393,7 @@ def create_app(settings=None):
 
     from .read_api import register_read_api
     register_read_api(router,engine)
+    from .overview_metrics import register_overview_metrics
+    register_overview_metrics(router,engine)
     app.include_router(router)
     return app

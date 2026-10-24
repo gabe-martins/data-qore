@@ -8,6 +8,7 @@ try {
   if(identity[0]?.current_user!=='srv_dataqore_app'||identity[0]?.current_database!=='dataqore_app')throw Error('Restricted runtime account required.');
   const count=await db.user.count();
   await db.schedule.count();
+  await db.qualitySettings.findUniqueOrThrow({ where: { id: true } });
   console.log('Runtime database access verified. Administrator records: '+count+'.');
 } catch(error) {
   console.error(databaseFailure(error));process.exitCode=1;

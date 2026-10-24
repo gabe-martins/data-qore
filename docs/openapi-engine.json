@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "DataQore — ADQ Engine",
+    "title": "DataQore \u2014 ADQ Engine",
     "description": "API interna de Advanced Data Quality. Requer X-API-Key em /v1.",
     "version": "1.0.0"
   },
@@ -3809,6 +3809,299 @@
           }
         ]
       }
+    },
+    "/v1/overview/comparisons": {
+      "get": {
+        "tags": [
+          "overview"
+        ],
+        "summary": "Comparisons",
+        "operationId": "comparisons_v1_overview_comparisons_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 7,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "timezone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100,
+              "default": "America/Sao_Paulo",
+              "title": "Timezone"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 255,
+              "default": "",
+              "title": "Search"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewComparisonsOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/overview/metric-trend": {
+      "get": {
+        "tags": [
+          "overview"
+        ],
+        "summary": "Metric Trend",
+        "operationId": "metric_trend_v1_overview_metric_trend_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "comparison_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Comparison Id"
+            }
+          },
+          {
+            "name": "metric",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "row_count_match",
+                "key_coverage",
+                "duplicate_key_rate",
+                "row_match_rate",
+                "column_match_rate"
+              ],
+              "type": "string",
+              "default": "row_match_rate",
+              "title": "Metric"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 7,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "timezone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100,
+              "default": "America/Sao_Paulo",
+              "title": "Timezone"
+            }
+          },
+          {
+            "name": "left_column",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Left Column"
+            }
+          },
+          {
+            "name": "right_column",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Right Column"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricTrendOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6068,6 +6361,345 @@
         ],
         "title": "MetricRate"
       },
+      "MetricTrendOut": {
+        "properties": {
+          "comparison_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Comparison Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "days": {
+            "type": "integer",
+            "enum": [
+              7,
+              15,
+              30
+            ],
+            "title": "Days"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          },
+          "start_day": {
+            "type": "string",
+            "title": "Start Day"
+          },
+          "end_day": {
+            "type": "string",
+            "title": "End Day"
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/MetricTrendPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "comparison_id",
+          "name",
+          "metric",
+          "days",
+          "timezone",
+          "start_day",
+          "end_day",
+          "as_of",
+          "points"
+        ],
+        "title": "MetricTrendOut"
+      },
+      "MetricTrendPoint": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "title": "Day"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/TrendMetricValue"
+            },
+            "type": "array",
+            "title": "Values"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "day",
+          "run_id",
+          "status",
+          "values"
+        ],
+        "title": "MetricTrendPoint"
+      },
+      "OverviewColumnPair": {
+        "properties": {
+          "left_column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Column"
+          },
+          "right_column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Right Column"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "left_column",
+          "right_column"
+        ],
+        "title": "OverviewColumnPair"
+      },
+      "OverviewComparisonOut": {
+        "properties": {
+          "comparison_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Comparison Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "source_table": {
+            "type": "string",
+            "title": "Source Table"
+          },
+          "target_table": {
+            "type": "string",
+            "title": "Target Table"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "execution_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Status"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "conclusion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conclusion"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CriticalMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/DailyRowMatchPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "column_pairs": {
+            "items": {
+              "$ref": "#/components/schemas/OverviewColumnPair"
+            },
+            "type": "array",
+            "title": "Column Pairs"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "comparison_id",
+          "name",
+          "source_table",
+          "target_table",
+          "run_id",
+          "status",
+          "execution_status",
+          "finished_at",
+          "conclusion",
+          "metrics",
+          "summary",
+          "points",
+          "column_pairs"
+        ],
+        "title": "OverviewComparisonOut"
+      },
+      "OverviewComparisonsOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OverviewComparisonOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "days": {
+            "type": "integer",
+            "enum": [
+              7,
+              15,
+              30
+            ],
+            "title": "Days"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          },
+          "start_day": {
+            "type": "string",
+            "title": "Start Day"
+          },
+          "end_day": {
+            "type": "string",
+            "title": "End Day"
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset",
+          "days",
+          "timezone",
+          "start_day",
+          "end_day",
+          "as_of"
+        ],
+        "title": "OverviewComparisonsOut"
+      },
       "OverviewOut": {
         "properties": {
           "active_comparisons": {
@@ -7673,6 +8305,74 @@
         "additionalProperties": false,
         "type": "object",
         "title": "TimestampTimezones"
+      },
+      "TrendMetricValue": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentage"
+          },
+          "numerator": {
+            "type": "integer",
+            "title": "Numerator"
+          },
+          "denominator": {
+            "type": "integer",
+            "title": "Denominator"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "not_evaluated": {
+            "type": "integer",
+            "title": "Not Evaluated"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "percentage",
+          "numerator",
+          "denominator",
+          "total",
+          "not_evaluated",
+          "scope"
+        ],
+        "title": "TrendMetricValue"
       },
       "TrendOut": {
         "properties": {

@@ -1,5 +1,5 @@
 import { NavLink, Link } from "react-router-dom";
-import { ArrowLeft, ShieldCheck, UserRound, X } from "lucide-react";
+import { ArrowLeft, ShieldCheck, UserRound, Target, X } from "lucide-react";
 import { useAccess } from "../lib/access";
 
 export function SettingsSidebar({ mobile = false, onNavigate }: { mobile?: boolean; onNavigate: () => void }) {
@@ -17,6 +17,10 @@ export function SettingsSidebar({ mobile = false, onNavigate }: { mobile?: boole
       {administration.length > 0 && <section aria-label="Administration">
         <h3 className="settings-nav-category"><ShieldCheck size={17} aria-hidden="true" />Administration</h3>
         {administration.map(item => <NavLink key={item.to} to={`/settings/${item.to}`} className="settings-nav-link" onClick={onNavigate}>{item.label}</NavLink>)}
+      </section>}
+      {!user?.must_change_password && user?.permissions.includes("dashboard.read") && <section aria-label="Quality">
+        <h3 className="settings-nav-category"><Target size={17} aria-hidden="true" />Quality</h3>
+        <NavLink to="/settings/quality" className="settings-nav-link" onClick={onNavigate}>Quality target</NavLink>
       </section>}
       <section aria-label="Personal">
         <h3 className="settings-nav-category"><UserRound size={17} aria-hidden="true" />Personal</h3>

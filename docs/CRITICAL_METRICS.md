@@ -235,3 +235,51 @@ The manifest lists comparison/run identities and a historical run per comparison
 This acceptance path performs only GET requests and never creates source data,
 connections, datasets or comparisons. Its authentication preview is simulated;
 all displayed metrics and record values come from the selected saved executions.
+
+## Overview daily curves and target — 24/10/2026
+
+Overview now presents a paginated comparison table with the five approved metrics,
+Row Match Rate sparklines, analytical conclusions and separate target attainment.
+Choose a comparison and 7, 15 or 30 calendar days in America/Sao_Paulo. The main
+chart can switch between each of the five metrics. Column Match Rate charts one
+named column pair; it never creates an average cell-agreement indicator. Key
+Coverage and Duplicate Key Rate retain both directions/sources. Count difference
+uses its original denominator A, can exceed 100%, and is unavailable when that
+calculation is undefined. Lower duplicate/count-difference rates are better.
+
+Only the last terminal execution per comparison/day is used. A later failure
+masks an earlier success that day. Missing days and unavailable rates are gaps,
+never zeros or interpolated points. Pending executions do not erase the last
+terminal result. Daily values expose the saved numerators and denominators and
+link to that execution. Historical column pairs remain selectable when the
+latest run fails. No source queries or new runs are triggered by the Overview.
+
+Settings > Quality > Quality target stores a global minimum Row Match Rate in
+`app.quality_settings`, added by forward migration `5_quality_target`. The initial
+value is 95%, consistent with the previous target setting; values from 0 through
+100 (four decimals) or disabling the target are supported. All dashboard readers
+can see the target; Quality Managers, Data Developers and Platform Administrators
+can change it through `quality_settings.manage`. Changes and the setting update
+commit in the same transaction with an audit entry. Users, passwords and existing
+operational data are preserved.
+
+The target is a reporting reference, not a new analytical metric or conclusion.
+Meeting it does not waive volume, key or column discrepancies. Partial evaluation
+cannot be labeled Target met. The Overview aggregate remains weighted by evaluated
+row denominators. The chart's dashed line applies the **current** target to the
+entire displayed period; past target versions are not reconstructed or implied.
+
+Additional read-only engine resources: `/v1/overview/comparisons` (paged latest
+metrics and daily row curves) and `/v1/overview/metric-trend` (one comparison and
+metric). The controller exposes `GET` and `PATCH /api/v1/settings/quality` for the
+setting; the engine does not receive target values or change metric formulas.
+
+Validation for this change: seven targeted Python projection/API/migration tests,
+including a later failure hiding an earlier success, passed against disposable
+PostgreSQL. Four quality-target controller tests passed with the isolated database
+(including persistence, RBAC and transactional audit). The ordinary controller
+suite passed nine tests; its other integration tests were not rerun. Fourteen
+browser flows passed: eleven Settings/theme checks and three read-only Overview
+checks against existing comparison results and the actual saved target. Controller
+and web builds passed. No source data, comparisons or runs were created by this
+Overview change.

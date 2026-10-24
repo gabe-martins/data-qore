@@ -505,6 +505,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/overview/comparisons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Comparisons */
+        get: operations["comparisons_v1_overview_comparisons_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/overview/metric-trend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Metric Trend */
+        get: operations["metric_trend_v1_overview_metric_trend_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -551,7 +585,7 @@ export interface paths {
                                 };
                                 /** @enum {string} */
                                 profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
-                                permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
+                                permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "quality_settings.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
                                 must_change_password: boolean;
                             };
                         };
@@ -610,7 +644,7 @@ export interface paths {
                                 };
                                 /** @enum {string} */
                                 profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
-                                permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
+                                permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "quality_settings.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
                                 must_change_password: boolean;
                             };
                         };
@@ -706,7 +740,7 @@ export interface paths {
                             };
                             /** @enum {string} */
                             profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
-                            permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
+                            permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "quality_settings.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
                             must_change_password: boolean;
                         };
                     };
@@ -1265,6 +1299,108 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/quality": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Current Row Match Rate target */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QualitySettingsOut"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid target */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        row_match_target_percentage: number | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Current Row Match Rate target */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QualitySettingsOut"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid target */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         trace?: never;
     };
     "/api/v1/users": {
@@ -2923,6 +3059,114 @@ export interface components {
             /** Reason */
             reason: string | null;
         };
+        /** MetricTrendOut */
+        MetricTrendOut: {
+            /**
+             * Comparison Id
+             * Format: uuid
+             */
+            comparison_id: string;
+            /** Name */
+            name: string;
+            /** Metric */
+            metric: string;
+            /**
+             * Days
+             * @enum {integer}
+             */
+            days: 7 | 15 | 30;
+            /** Timezone */
+            timezone: string;
+            /** Start Day */
+            start_day: string;
+            /** End Day */
+            end_day: string;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Points */
+            points: components["schemas"]["MetricTrendPoint"][];
+        };
+        /** MetricTrendPoint */
+        MetricTrendPoint: {
+            /** Day */
+            day: string;
+            /** Run Id */
+            run_id: string | null;
+            /** Status */
+            status: string | null;
+            /** Values */
+            values: components["schemas"]["TrendMetricValue"][];
+        };
+        /** OverviewColumnPair */
+        OverviewColumnPair: {
+            /** Left Column */
+            left_column: string | null;
+            /** Right Column */
+            right_column: string | null;
+        };
+        /** OverviewComparisonOut */
+        OverviewComparisonOut: {
+            /**
+             * Comparison Id
+             * Format: uuid
+             */
+            comparison_id: string;
+            /** Name */
+            name: string;
+            /** Source Table */
+            source_table: string;
+            /** Target Table */
+            target_table: string;
+            /** Run Id */
+            run_id: string | null;
+            /** Status */
+            status: string | null;
+            /** Execution Status */
+            execution_status: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /** Conclusion */
+            conclusion: string | null;
+            metrics: components["schemas"]["CriticalMetrics"] | null;
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            } | null;
+            /** Points */
+            points: components["schemas"]["DailyRowMatchPoint"][];
+            /** Column Pairs */
+            column_pairs: components["schemas"]["OverviewColumnPair"][];
+        };
+        /** OverviewComparisonsOut */
+        OverviewComparisonsOut: {
+            /** Items */
+            items: components["schemas"]["OverviewComparisonOut"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /**
+             * Days
+             * @enum {integer}
+             */
+            days: 7 | 15 | 30;
+            /** Timezone */
+            timezone: string;
+            /** Start Day */
+            start_day: string;
+            /** End Day */
+            end_day: string;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+        };
         /** OverviewOut */
         OverviewOut: {
             /** Active Comparisons */
@@ -3496,6 +3740,25 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /** TrendMetricValue */
+        TrendMetricValue: {
+            /** Label */
+            label: string;
+            /** Percentage */
+            percentage: string | null;
+            /** Numerator */
+            numerator: number;
+            /** Denominator */
+            denominator: number;
+            /** Total */
+            total: number | null;
+            /** Not Evaluated */
+            not_evaluated: number;
+            /** Scope */
+            scope: string;
+            /** Reason */
+            reason?: string | null;
+        };
         /** TrendOut */
         TrendOut: {
             /** Passed */
@@ -3583,8 +3846,15 @@ export interface components {
             };
             /** @enum {string} */
             profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
-            permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
+            permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "quality_settings.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
             must_change_password: boolean;
+        };
+        QualitySettingsOut: {
+            row_match_target_percentage: string | null;
+            /** Format: date-time */
+            updated_at: string;
+            /** @constant */
+            metric: "row_match_rate";
         };
         AccessGroup: {
             /** Format: uuid */
@@ -6396,6 +6666,163 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OverviewOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    comparisons_v1_overview_comparisons_get: {
+        parameters: {
+            query?: {
+                days?: number;
+                timezone?: string;
+                limit?: number;
+                offset?: number;
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverviewComparisonsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    metric_trend_v1_overview_metric_trend_get: {
+        parameters: {
+            query: {
+                comparison_id: string;
+                metric?: "row_count_match" | "key_coverage" | "duplicate_key_rate" | "row_match_rate" | "column_match_rate";
+                days?: number;
+                timezone?: string;
+                left_column?: string | null;
+                right_column?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricTrendOut"];
                 };
             };
             /** @description Unauthorized */

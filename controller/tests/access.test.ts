@@ -68,7 +68,7 @@ test("real database: role matrix, upstream isolation, identity lifecycle and las
     const admin = accounts.platform_admin;
     await t.test("all engine methods deny unauthenticated access and enforce all four profiles before forwarding", async () => {
       const manager = ["/v1/comparison-summaries", "/v1/datasets", "/v1/datasets/{identifier}", "/v1/datasets/{identifier}/dependencies", "/v1/comparisons", "/v1/comparisons/{identifier}", "/v1/comparisons/{identifier}/dependencies"];
-      const readOnly = ["/v1/overview", "/v1/overview/row-match-trend", "/v1/runs", "/v1/runs/{identifier}", "/v1/runs/{identifier}/result"];
+      const readOnly = ["/v1/overview", "/v1/overview/row-match-trend", "/v1/overview/comparisons", "/v1/overview/metric-trend", "/v1/runs", "/v1/runs/{identifier}", "/v1/runs/{identifier}/result"];
       for (const [path, operations] of Object.entries(engineSpec.paths) as [string, any][]) {
         if (!path.startsWith("/v1/")) continue;
         for (const method of Object.keys(operations)) {
@@ -78,7 +78,7 @@ test("real database: role matrix, upstream isolation, identity lifecycle and las
           assert.equal((await request(null, method, url, method === "get" ? undefined : {})).statusCode, 401);
           assert.equal(forwarded, before);
           for (const profile of profiles) {
-            const allowed = profile === "platform_admin" || profile === "developer" || (method === "get" && readOnly.includes(path)) || profile === "quality_manager" && (method === "get" && manager.includes(path) || method !== "get" && path.startsWith("/v1/comparisons"));
+            const allowed = profile === "platform_admin" || profile === "developer" || (method === "get" && (readOnly.includes(path) || path.startsWith("/v1/runs/{identifier}/quality"))) || profile === "quality_manager" && (method === "get" && manager.includes(path) || method !== "get" && path.startsWith("/v1/comparisons"));
             before = forwarded;
             const res = await request(accounts[profile].token, method, url, method === "get" ? undefined : {});
             assert.equal(res.statusCode, allowed ? 200 : 403, `${profile} ${method} ${path}: ${res.body}`);
