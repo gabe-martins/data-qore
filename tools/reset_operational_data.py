@@ -16,6 +16,7 @@ TABLES = {
     "engine": (
         "metrics",
         "column_profiles",
+        "run_record_evidence",
         "run_results",
         "runs",
         "comparison_definitions",

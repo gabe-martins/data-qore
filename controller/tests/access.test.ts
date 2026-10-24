@@ -8,7 +8,7 @@ import { createApp } from "../src/app.js";
 import { userPatchSchema, groupPatchSchema } from "../src/access.js";
 import { Auth, hashPassword } from "../src/auth.js";
 import { engineSpec } from "../src/openapi.js";
-import { profiles, routePermission } from "../src/permissions.js";
+import { profiles, routePermission, permissionsFor } from "../src/permissions.js";
 const isolated = process.env.DATAQORE_ISOLATED_TEST === "1";
 const db = isolated ? database(loadConfig().databaseUrl) : null;
 after(async () => { await db?.$disconnect(); });
@@ -30,6 +30,16 @@ test("every engine and local operation has an explicit authorization policy", ()
   }
   assert.equal(routePermission("post", "/api/v1/future-resource"), undefined);
   assert.equal(routePermission("get", "/api/v1/users/:id"), undefined);
+});
+
+test("all result readers may inspect evidence, without gaining management permissions", () => {
+  for (const suffix of ["", "/columns", "/records", "/records/{ordinal}", "/export"]) {
+    assert.equal(routePermission("get", "/api/v1/runs/{identifier}/quality"+suffix), "results.read");
+  }
+  for (const profile of profiles) assert.ok(permissionsFor(profile).includes("results.read"));
+  assert.ok(!permissionsFor("viewer").includes("comparisons.manage"));
+  assert.ok(!permissionsFor("viewer").includes("connections.read"));
+  assert.equal(routePermission("post", "/api/v1/runs/{identifier}/quality/records"), undefined);
 });
 
 test("real database: role matrix, upstream isolation, identity lifecycle and last administrator", { skip: !isolated }, async t => {

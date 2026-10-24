@@ -249,7 +249,7 @@ class APITests(TemporaryPostgres):
         preview=self.request('POST','/comparisons/preview',json=payload)
         self.assertEqual((preview['scope_counts'],preview['sample_target']),([2,2],1))
         run,result=self.finish(c)
-        self.assertEqual(result['format_version'],6)
+        self.assertEqual(result['format_version'],7)
         self.assertEqual(len(result['result']['metrics']),5)
         self.assertNotIn('PRIVATE_VALUE',json.dumps(result))
         self.assertEqual(result['result']['sampling_plan']['seed'],'18446744073709551615')

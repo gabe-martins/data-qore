@@ -110,6 +110,9 @@ const messages: Record<string, string> = {
   encryption_key_version_unavailable:
     "The original encryption key version is unavailable.",
   result_not_ready: "This run has no completed result.",
+  evidence_expired: "Individual record evidence expired after 30 days. Aggregated results remain available.",
+  evidence_not_captured: "This execution has no available record evidence. Historical results are not reconstructed from current source data.",
+  evidence_unavailable: "Record evidence is unavailable. Check the evidence encryption key configuration.",
   storage_unavailable: "Engine storage is unavailable.",
   source_table_not_found: "Table not found in the current catalog.",
 };
@@ -338,6 +341,10 @@ export async function createApp(config: Config, db: DB) {
               "invalid_engine_response",
               "Invalid engine response.",
             );
+          }
+          if (method === "get" && path.startsWith("/v1/runs/") && (path.includes("/quality/records") || path.endsWith("/quality/export"))) {
+            await auth.audit(path.endsWith("/export") ? "evidence:export" : "evidence:read", response.ok ? "success" : "failure", session.user.id, req.id, "run", req.params.identifier);
+            res.header("Cache-Control", "no-store");
           }
           if (preview && response.ok) {
             const schedules = await db.$transaction(async tx => {

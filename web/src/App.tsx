@@ -32,14 +32,20 @@ import {
   Loading,
   PageTitle,
 } from "./components/common";
-const AccessManagement = lazy(() => import("./pages/AccessManagement").then(m => ({ default: m.AccessManagement })));
+const AccessManagement = lazy(() =>
+  import("./pages/AccessManagement").then((m) => ({
+    default: m.AccessManagement,
+  })),
+);
 const Overview = lazy(() =>
   import("./pages/Overview").then((m) => ({ default: m.Overview })),
 );
 const Connections = lazy(() =>
   import("./pages/Connections").then((m) => ({ default: m.Connections })),
 );
-const Schedules = lazy(() => import("./pages/Schedules").then(m => ({ default: m.Schedules })));
+const Schedules = lazy(() =>
+  import("./pages/Schedules").then((m) => ({ default: m.Schedules })),
+);
 const Catalog = lazy(() =>
   import("./pages/Catalog").then((m) => ({ default: m.Catalog })),
 );
@@ -67,12 +73,16 @@ export function App() {
   const [menu, setMenu] = useState(false);
   const { sidebar } = useAppearance();
   const location = useLocation();
-  const settings = location.pathname === "/settings" || location.pathname.startsWith("/settings/");
+  const settings =
+    location.pathname === "/settings" ||
+    location.pathname.startsWith("/settings/");
   useEffect(() => {
-    const desktop = matchMedia('(min-width: 851px)');
-    const changed = () => { if (desktop.matches) setMenu(false); };
-    desktop.addEventListener('change', changed);
-    return () => desktop.removeEventListener('change', changed);
+    const desktop = matchMedia("(min-width: 851px)");
+    const changed = () => {
+      if (desktop.matches) setMenu(false);
+    };
+    desktop.addEventListener("change", changed);
+    return () => desktop.removeEventListener("change", changed);
   }, []);
   const cache = useQueryClient();
   const navigate = useNavigate();
@@ -82,7 +92,9 @@ export function App() {
   }
   useEffect(() => {
     let active = true;
-    onSessionChanged(u => { if (active) setUser(u); });
+    onSessionChanged((u) => {
+      if (active) setUser(u);
+    });
     onSessionExpired(() => {
       if (active) expire();
     });
@@ -107,76 +119,240 @@ export function App() {
         }}
       />
     );
-  async function signOut() { setMenu(false); await logout(); expire(); }
+  async function signOut() {
+    setMenu(false);
+    await logout();
+    expire();
+  }
   return (
-    <AccessContext.Provider value={user}><NavigationDialog.Root open={menu} onOpenChange={setMenu}>
-    <div className="app-shell" data-sidebar={sidebar} data-settings={settings}>
-      <header className="topbar">
-        <NavigationDialog.Trigger asChild>
-          <button type="button" className="icon-button mobile-menu" aria-label="Toggle navigation" aria-controls="mobile-navigation"><Menu /></button>
-        </NavigationDialog.Trigger>
-        <div className="product-title">
-          <BrandLogo className="wordmark" />
+    <AccessContext.Provider value={user}>
+      <NavigationDialog.Root open={menu} onOpenChange={setMenu}>
+        <div
+          className="app-shell"
+          data-sidebar={sidebar}
+          data-settings={settings}
+        >
+          <header className="topbar">
+            <NavigationDialog.Trigger asChild>
+              <button
+                type="button"
+                className="icon-button mobile-menu"
+                aria-label="Toggle navigation"
+                aria-controls="mobile-navigation"
+              >
+                <Menu />
+              </button>
+            </NavigationDialog.Trigger>
+            <div className="product-title">
+              <BrandLogo className="wordmark" />
+            </div>
+            <UserMenu user={user} onSignOut={signOut} />
+          </header>
+          <aside
+            className={
+              "sidebar sidebar-desktop" + (settings ? " settings-sidebar" : "")
+            }
+            data-compact={!settings && sidebar === "collapsed"}
+            aria-label="Desktop sidebar"
+          >
+            {settings ? (
+              <SettingsSidebar onNavigate={() => {}} />
+            ) : (
+              <SidebarContent onNavigate={() => {}} />
+            )}
+          </aside>
+          <NavigationDialog.Portal>
+            <NavigationDialog.Overlay className="navigation-overlay" />
+            <NavigationDialog.Content
+              className={
+                "sidebar navigation-drawer" +
+                (settings ? " settings-sidebar" : "")
+              }
+              id="mobile-navigation"
+              onCloseAutoFocus={(event) => {
+                if (matchMedia("(min-width: 851px)").matches) {
+                  event.preventDefault();
+                  document
+                    .querySelector<HTMLElement>(
+                      ".sidebar-desktop .sidebar-toggle, .sidebar-desktop .settings-nav-link",
+                    )
+                    ?.focus();
+                }
+              }}
+            >
+              <NavigationDialog.Title className="sr-only">
+                Main navigation
+              </NavigationDialog.Title>
+              <NavigationDialog.Description className="sr-only">
+                Choose a page.
+              </NavigationDialog.Description>
+              {settings ? (
+                <SettingsSidebar mobile onNavigate={() => setMenu(false)} />
+              ) : (
+                <SidebarContent mobile onNavigate={() => setMenu(false)} />
+              )}
+            </NavigationDialog.Content>
+          </NavigationDialog.Portal>
+          <div className="app-main">
+            <main className={"page" + (settings ? " settings-page" : "")}>
+              <Suspense fallback={<Loading />}>
+                <Routes>
+                  <Route
+                    path="/"
+                    element={
+                      <Protected permission="dashboard.read">
+                        <Overview />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="/connections"
+                    element={
+                      <Protected permission="connections.read">
+                        <Connections />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="/catalog"
+                    element={
+                      <Protected permission="datasets.read">
+                        <Catalog />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="/datasets/:id"
+                    element={
+                      <Protected permission="datasets.read">
+                        <DatasetDetail />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="/comparisons"
+                    element={
+                      <Protected permission="comparisons.read">
+                        <Comparisons />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="/schedules"
+                    element={
+                      <Protected permission="schedules.read">
+                        <Schedules />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="/comparisons/new"
+                    element={
+                      <Protected permission="comparisons.manage">
+                        <Wizard />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="/comparisons/:id/edit"
+                    element={
+                      <Protected permission="comparisons.manage">
+                        <Wizard />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="/comparisons/:id"
+                    element={
+                      <Protected permission="results.read">
+                        <ComparisonDetail />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="/runs"
+                    element={
+                      <Protected permission="results.read">
+                        <Runs />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="/runs/:id"
+                    element={
+                      <Protected permission="results.read">
+                        <RunResult />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="/runs/:id/differences"
+                    element={
+                      <Protected permission="results.read">
+                        <RunResult differences />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="/settings/profile"
+                    element={<Account user={user} onChanged={expire} />}
+                  />
+                  <Route
+                    path="/settings"
+                    element={<Navigate to="/settings/profile" replace />}
+                  />
+                  <Route path="/settings/appearance" element={<Appearance />} />
+                  <Route
+                    path="/account"
+                    element={<Navigate to="/settings/profile" replace />}
+                  />
+                  <Route
+                    path="/access/users"
+                    element={<Navigate to="/settings/users" replace />}
+                  />
+                  <Route
+                    path="/access/groups"
+                    element={<Navigate to="/settings/groups" replace />}
+                  />
+                  <Route
+                    path="/access/audit"
+                    element={<Navigate to="/settings/audit" replace />}
+                  />
+                  <Route
+                    path="/settings/users"
+                    element={
+                      <Protected permission="access.manage">
+                        <AccessManagement view="users" />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="/settings/groups"
+                    element={
+                      <Protected permission="access.manage">
+                        <AccessManagement view="groups" />
+                      </Protected>
+                    }
+                  />
+                  <Route
+                    path="/settings/audit"
+                    element={
+                      <Protected permission="audit.read">
+                        <AccessManagement view="audit" />
+                      </Protected>
+                    }
+                  />
+                  <Route path="*" element={<Navigate to="/" />} />
+                </Routes>
+              </Suspense>
+            </main>
+            <footer className="app-footer">
+              DataQore · ADQ · Sample-based evidence, with context and coverage.
+            </footer>
+          </div>
         </div>
-        <UserMenu user={user} onSignOut={signOut} />
-      </header>
-      <aside className={"sidebar sidebar-desktop" + (settings ? " settings-sidebar" : "")} data-compact={!settings && sidebar === 'collapsed'} aria-label="Desktop sidebar">
-        {settings ? <SettingsSidebar onNavigate={() => {}} /> : <SidebarContent onNavigate={() => {}} />}
-      </aside>
-      <NavigationDialog.Portal>
-        <NavigationDialog.Overlay className="navigation-overlay" />
-        <NavigationDialog.Content className={"sidebar navigation-drawer" + (settings ? " settings-sidebar" : "")} id="mobile-navigation" onCloseAutoFocus={event => {
-          if (matchMedia('(min-width: 851px)').matches) {
-            event.preventDefault(); document.querySelector<HTMLElement>('.sidebar-desktop .sidebar-toggle, .sidebar-desktop .settings-nav-link')?.focus();
-          }
-        }}>
-          <NavigationDialog.Title className="sr-only">Main navigation</NavigationDialog.Title>
-          <NavigationDialog.Description className="sr-only">Choose a page.</NavigationDialog.Description>
-          {settings ? <SettingsSidebar mobile onNavigate={() => setMenu(false)} /> : <SidebarContent mobile onNavigate={() => setMenu(false)} />}
-        </NavigationDialog.Content>
-      </NavigationDialog.Portal>
-      <div className="app-main">
-        <main className={"page" + (settings ? " settings-page" : "")}>
-          <Suspense fallback={<Loading />}>
-            <Routes>
-              <Route path="/" element={<Protected permission="dashboard.read"><Overview /></Protected>} />
-              <Route path="/connections" element={<Protected permission="connections.read"><Connections /></Protected>} />
-              <Route path="/catalog" element={<Protected permission="datasets.read"><Catalog /></Protected>} />
-              <Route path="/datasets/:id" element={<Protected permission="datasets.read"><DatasetDetail /></Protected>} />
-              <Route path="/comparisons" element={<Protected permission="comparisons.read"><Comparisons /></Protected>} />
-              <Route path="/schedules" element={<Protected permission="schedules.read"><Schedules /></Protected>} />
-              <Route path="/comparisons/new" element={<Protected permission="comparisons.manage"><Wizard /></Protected>} />
-              <Route path="/comparisons/:id/edit" element={<Protected permission="comparisons.manage"><Wizard /></Protected>} />
-              <Route path="/comparisons/:id" element={<Protected permission="comparisons.read"><ComparisonDetail /></Protected>} />
-              <Route path="/runs" element={<Protected permission="results.read"><Runs /></Protected>} />
-              <Route path="/runs/:id" element={<Protected permission="results.read"><RunResult /></Protected>} />
-              <Route
-                path="/runs/:id/differences"
-                element={<Protected permission="results.read"><RunResult differences /></Protected>}
-              />
-              <Route
-                path="/settings/profile"
-                element={<Account user={user} onChanged={expire} />}
-              />
-              <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
-              <Route path="/settings/appearance" element={<Appearance />} />
-              <Route path="/account" element={<Navigate to="/settings/profile" replace />} />
-              <Route path="/access/users" element={<Navigate to="/settings/users" replace />} />
-              <Route path="/access/groups" element={<Navigate to="/settings/groups" replace />} />
-              <Route path="/access/audit" element={<Navigate to="/settings/audit" replace />} />
-              <Route path="/settings/users" element={<Protected permission="access.manage"><AccessManagement view="users" /></Protected>} />
-              <Route path="/settings/groups" element={<Protected permission="access.manage"><AccessManagement view="groups" /></Protected>} />
-              <Route path="/settings/audit" element={<Protected permission="audit.read"><AccessManagement view="audit" /></Protected>} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-          </Suspense>
-        </main>
-        <footer className="app-footer">
-          DataQore · ADQ · Sample-based evidence, with context and coverage.
-        </footer>
-      </div>
-    </div>
-    </NavigationDialog.Root></AccessContext.Provider>
+      </NavigationDialog.Root>
+    </AccessContext.Provider>
   );
 }
 function Login({ onLogin }: { onLogin: (u: User) => void }) {
@@ -186,7 +362,12 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
     <div className="login-screen">
       <section className="login-brand">
         <div className="login-logo">
-          <img src="/branding/dataqore-logo.svg" alt="DataQore" width="276" height="60" />
+          <img
+            src="/branding/dataqore-logo.svg"
+            alt="DataQore"
+            width="276"
+            height="60"
+          />
         </div>
         <p className="eyebrow">DATAQORE / ADQ</p>
         <h1>Trust your data.</h1>
@@ -204,7 +385,9 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
         </div>
       </section>
       <section className="login-panel">
-        <div className="login-theme"><ThemeControl login /></div>
+        <div className="login-theme">
+          <ThemeControl login />
+        </div>
         <form
           className="login-form"
           onSubmit={async (e) => {
@@ -257,11 +440,12 @@ function Account({ user, onChanged }: { user: User; onChanged: () => void }) {
   const [error, setError] = useState<unknown>(null);
   return (
     <>
-      <PageTitle
-        title="Profile"
-        subtitle="Manage your account credentials."
-      />
-      {user.must_change_password && <p className="notice" role="alert">Change your temporary password before accessing the application.</p>}
+      <PageTitle title="Profile" subtitle="Manage your account credentials." />
+      {user.must_change_password && (
+        <p className="notice" role="alert">
+          Change your temporary password before accessing the application.
+        </p>
+      )}
       <div className="two-columns settings-profile">
         <Card title="Account details">
           <dl>
@@ -271,7 +455,8 @@ function Account({ user, onChanged }: { user: User; onChanged: () => void }) {
             <dd>{user.email}</dd>
             <dt>Role</dt>
             <dd>{profileLabels[user.profile] ?? user.profile}</dd>
-            <dt>Group</dt><dd>{user.group.name}</dd>
+            <dt>Group</dt>
+            <dd>{user.group.name}</dd>
           </dl>
         </Card>
         <Card

@@ -28,6 +28,9 @@ class Worker:
             if not self.leader.scalar(text("SELECT pg_try_advisory_lock(80419,1)")):
                 raise DomainError(409,"worker_already_running","Já existe um worker ativo.")
             self.queue.recover_interrupted()
+            from .evidence import purge_expired
+            purge_expired(self.engine)
+            self._last_purge=time.monotonic()
         except BaseException:
             self.leader.close()
             self.leader=None
@@ -43,6 +46,10 @@ class Worker:
             raise RuntimeError("O worker precisa adquirir a liderança antes de executar jobs.")
         # Falha da sessão que mantém o lock encerra o worker antes de coletar outro job.
         self.leader.execute(text("SELECT 1"))
+        if time.monotonic()-self._last_purge >= 60:
+            from .evidence import purge_expired
+            purge_expired(self.engine)
+            self._last_purge=time.monotonic()
         identifier=self.queue.claim()
         if identifier is None:
             return False

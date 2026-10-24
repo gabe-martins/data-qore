@@ -78,6 +78,7 @@ class Queue:
             validate_options(parameters["comparison_options"],columns,resolved=parameters["resolved_scope"])
             for source,metadata in zip(sources,columns):source["expected_columns"]=metadata_signature(metadata)
             parameters.update(sources=sources,request_fingerprint=fingerprint)
+            parameters["evidence_capture"]={"enabled":True,"retention_days":30,"max_positions":10000,"max_bytes":33554432}
             values={"kind":kind,"comparison_id":target,"parameters":json_safe(parameters),"idempotency_key":key}
             return dict(conn.execute(m.runs.insert().values(**values).returning(m.runs)).mappings().one())
 
@@ -115,9 +116,14 @@ class Queue:
             if str(result["execution_id"])!=str(identifier) or len(result["sources"])!=len(source_ids):
                 raise ValueError("Resultado não corresponde à execução.")
             from .schemas import ComparisonResult
+            evidence_rows=result.pop("_evidence_rows",[])
             public=json_safe(ComparisonResult.model_validate(result).model_dump())
             conn.execute(m.run_results.insert().values(run_id=identifier,format_version=result["format_version"],
                 conclusion=result["summary"]["status"],result=public))
+            if evidence_rows:
+                expires=result["evidence"]["expires_at"]
+                for offset in range(0,len(evidence_rows),100):
+                    conn.execute(m.run_record_evidence.insert(),[{**r,"expires_at":datetime.fromisoformat(expires)} for r in evidence_rows[offset:offset+100]])
             conn.execute(m.runs.update().where(m.runs.c.id==identifier)
                 .values(status="succeeded",finished_at=func.now(),heartbeat_at=func.now(),error_code=None,error_message=None))
             return True
@@ -147,7 +153,11 @@ def run_job(settings,identifier):
                 selected.append({**source,"schema":schema,"table":table,"dataset_id":frozen["dataset_id"],
                     **({"expected_columns":frozen["expected_columns"]} if "expected_columns" in frozen else {})})
             options=SamplingOptions(**parameters["sampling_options"])
-            result=execute_comparison(selected,options=options,
+            from .evidence import EvidenceCapture
+            frozen_capture=parameters.get("evidence_capture",{})
+            capture=EvidenceCapture(settings.evidence_encryption_key if frozen_capture.get("enabled",True) else "",identifier,
+                max_bytes=frozen_capture.get("max_bytes",33554432),max_positions=frozen_capture.get("max_positions",10000))
+            result=execute_comparison(selected,options=options,evidence_capture=capture,
                 absolute_tolerance=Decimal(parameters["absolute_tolerance"]),relative_tolerance=Decimal(parameters["relative_tolerance"]),
                 execution_id=identifier,comparison_options=parameters.get("comparison_options"),resolved_scope=parameters.get("resolved_scope"))
         queue.publish(identifier,result,[UUID(s["dataset_id"]) for s in parameters["sources"]])

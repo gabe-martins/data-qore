@@ -19,7 +19,7 @@ SERVICES={
     'worker':(ROOT,[str(PYTHON),'-m','dataqore_engine','worker'],None,None,'engine.env'),
     'web':(ROOT/'web',['node',str(ROOT/'web/node_modules/vite/bin/vite.js'),'--host','127.0.0.1','--port','5173','--strictPort'],5173,'/',None),
 }
-CLEAN_ENV=('DATABASE_URL','MIGRATION_DATABASE_URL','DATAQORE_ENV_FILE','ENGINE_API_KEY','CONNECTIONS_ENCRYPTION_KEY',
+CLEAN_ENV=('DATABASE_URL','MIGRATION_DATABASE_URL','DATAQORE_ENV_FILE','ENGINE_API_KEY','CONNECTIONS_ENCRYPTION_KEY','EVIDENCE_ENCRYPTION_KEY',
     'CONNECTIONS_ENCRYPTION_KEY_VERSION','SQLITE_ALLOWED_ROOT','WORKER_HEARTBEAT_SECONDS','WORKER_JOB_TIMEOUT_SECONDS',
     'WORKER_POLL_SECONDS','ENGINE_API_URL','JWT_SECRET','WEB_ORIGIN','ACCESS_TOKEN_SECONDS','REFRESH_TOKEN_SECONDS','DATAQORE_CONTROLLER_URL')
 
@@ -78,6 +78,14 @@ def configure():
                     raise RuntimeError('Há conexões salvas. Recupere a chave Fernet original antes de iniciar.')
         finally:db_engine.dispose()
         e_updates['CONNECTIONS_ENCRYPTION_KEY']=Fernet.generate_key().decode()
+    if not engine.get('EVIDENCE_ENCRYPTION_KEY'):
+        db_engine=create_engine(make_url(engine['DATABASE_URL']).set(drivername='postgresql+psycopg'),hide_parameters=True,connect_args={'connect_timeout':5})
+        try:
+            with db_engine.connect() as connection:
+                if connection.scalar(text("SELECT to_regclass('engine.run_record_evidence')")) and connection.scalar(text('SELECT count(*) FROM engine.run_record_evidence')):
+                    raise RuntimeError('Há evidências salvas. Recupere EVIDENCE_ENCRYPTION_KEY; ela não será substituída automaticamente.')
+        finally:db_engine.dispose()
+        e_updates['EVIDENCE_ENCRYPTION_KEY']=Fernet.generate_key().decode()
     api_key=engine.get('ENGINE_API_KEY') or ''
     if len(api_key)<16 or api_key.startswith('SUBSTITUIR'):
         api_key=secrets.token_urlsafe(48);e_updates['ENGINE_API_KEY']=api_key
@@ -105,7 +113,7 @@ def check():
     try:
         with engine.connect() as c:
             if c.scalar(text('SELECT current_user'))!='srv_dataqore_engine':raise RuntimeError('Use a conta restrita do motor.')
-            for name in ('connections','datasets','comparison_definitions','runs','run_results'):
+            for name in ('connections','datasets','comparison_definitions','runs','run_results','run_record_evidence'):
                 c.execute(text(f'SELECT 1 FROM engine.{name} LIMIT 0'))
     finally:engine.dispose()
     result=subprocess.run(['node',str(ROOT/'controller/dist/src/check.js')],cwd=ROOT/'controller',env=environment('controller.env'),capture_output=True,text=True)

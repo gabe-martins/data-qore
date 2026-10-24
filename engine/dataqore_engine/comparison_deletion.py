@@ -37,7 +37,7 @@ class ComparisonDeletion:
                 m.runs.c.status.in_(["queued", "running"])).limit(1)) is not None:
                 raise DomainError(409, "comparison_busy", "Wait for queued or running comparisons to finish before deleting.")
             conn.execute(runs.order_by(m.runs.c.id).with_for_update()).all()
-            for table in (m.run_results,):
+            for table in (m.run_record_evidence, m.run_results):
                 conn.execute(table.delete().where(table.c.run_id.in_(runs)))
             conn.execute(m.runs.delete().where(m.runs.c.id.in_(runs)))
             conn.execute(m.comparison_definitions.delete().where(m.comparison_definitions.c.id == identifier))

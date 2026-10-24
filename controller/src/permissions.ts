@@ -21,6 +21,7 @@ function routes(permission: string, method: string, paths: string[]) {
 }
 routes("dashboard.read", "get", ["/overview", "/overview/row-match-trend"]);
 routes("results.read", "get", ["/runs", "/runs/{identifier}", "/runs/{identifier}/result"]);
+routes("results.read", "get", ["/runs/{identifier}/quality", "/runs/{identifier}/quality/columns", "/runs/{identifier}/quality/records", "/runs/{identifier}/quality/records/{ordinal}", "/runs/{identifier}/quality/export"]);
 routes("connections.read", "get", ["/connectors", "/connections", "/connections/{identifier}", "/connections/{identifier}/dependencies"]);
 routes("connections.manage", "post", ["/connections", "/connections/test", "/connections/{identifier}/test"]);
 routes("connections.manage", "patch", ["/connections/{identifier}"]);

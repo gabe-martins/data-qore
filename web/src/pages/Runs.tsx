@@ -4,7 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, type Model, type Page } from "../api";
 import { ComparisonRunAnimation } from "../components/ComparisonRunAnimation";
-import { CriticalMetrics } from "../components/CriticalMetrics";
+
 import {
   Badge,
   Button,
@@ -103,9 +103,13 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
               <Badge value={run.data.status} />
               {run.data.comparison_id && (
                 <p>
-                  <Allowed permission="comparisons.read"><Link to={`/comparisons/${run.data.comparison_id}`}>
-                    Open comparison
-                  </Link></Allowed>
+                  <Allowed permission="results.read">
+                    <Link
+                      to={`/comparisons/${run.data.comparison_id}?run_id=${run.data.id}${differences ? "#quality-records" : ""}`}
+                    >
+                      Open comparison quality
+                    </Link>
+                  </Allowed>
                 </p>
               )}
               {run.data.status === "failed" && (
@@ -113,13 +117,17 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
                   {run.data.error_code}: {run.data.error_message}
                 </p>
               )}
-              {(run.data.status === "queued" || run.data.status === "running") && (
+              {(run.data.status === "queued" ||
+                run.data.status === "running") && (
                 <ComparisonRunAnimation state={run.data.status} />
               )}
             </Card>
             {result.data && (
               <>
-                <CriticalMetrics result={result.data.result} />
+                <p className="notice">
+                  Quality indicators and record inspection are available inside
+                  the comparison page, for this selected execution.
+                </p>
                 <Card title="Execution details">
                   <details>
                     <summary>Frozen configuration</summary>

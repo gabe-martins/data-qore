@@ -14,5 +14,6 @@ engine/local_sources/
 controller/generated/
 web/playwright-report/
 web/test-results/
+/test-results/
 *.tsbuildinfo
 .local/

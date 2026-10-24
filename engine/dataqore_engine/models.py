@@ -76,6 +76,18 @@ run_results = Table('run_results', metadata,
     CheckConstraint("jsonb_typeof(result) = 'object'::text", name='run_results_result_check'),
 )
 
+run_record_evidence = Table('run_record_evidence', metadata,
+    Column('run_id', UUID(), nullable=False),
+    Column('ordinal', INTEGER(), nullable=False),
+    Column('state', TEXT(), nullable=False),
+    Column('affected_columns', JSONB(), nullable=False),
+    Column('key_digest', TEXT(), nullable=False),
+    Column('payload_ciphertext', TEXT(), nullable=False),
+    Column('expires_at', TIMESTAMP(timezone=True), nullable=False),
+    PrimaryKeyConstraint('run_id','ordinal'),
+    ForeignKeyConstraint(['run_id'], ['engine.runs.id'], ondelete='RESTRICT'),
+)
+
 runs = Table('runs', metadata,
     Column('id', UUID(), nullable=False, server_default=text('gen_random_uuid()')),
     Column('kind', TEXT(), nullable=False),
