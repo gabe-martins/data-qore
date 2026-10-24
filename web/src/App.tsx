@@ -1,15 +1,18 @@
 import { AccessContext, Protected, profileLabels } from "./lib/access";
 import { lazy, Suspense, useEffect, useState } from "react";
 import {
-  NavLink,
   Navigate,
   Route,
   Routes,
   useNavigate,
+  useLocation,
 } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Menu, UserRound } from "lucide-react";
+import { Menu } from "lucide-react";
 import * as NavigationDialog from "@radix-ui/react-dialog";
+import { SettingsSidebar } from "./components/SettingsSidebar";
+import { UserMenu } from "./components/UserMenu";
+import { Appearance } from "./pages/Appearance";
 import { SidebarContent } from "./components/Sidebar";
 import { ThemeControl } from "./components/ThemeControl";
 import { useAppearance, BrandLogo } from "./lib/appearance";
@@ -63,6 +66,8 @@ export function App() {
   const [ready, setReady] = useState(false);
   const [menu, setMenu] = useState(false);
   const { sidebar } = useAppearance();
+  const location = useLocation();
+  const settings = location.pathname === "/settings" || location.pathname.startsWith("/settings/");
   useEffect(() => {
     const desktop = matchMedia('(min-width: 851px)');
     const changed = () => { if (desktop.matches) setMenu(false); };
@@ -105,7 +110,7 @@ export function App() {
   async function signOut() { setMenu(false); await logout(); expire(); }
   return (
     <AccessContext.Provider value={user}><NavigationDialog.Root open={menu} onOpenChange={setMenu}>
-    <div className="app-shell" data-sidebar={sidebar}>
+    <div className="app-shell" data-sidebar={sidebar} data-settings={settings}>
       <header className="topbar">
         <NavigationDialog.Trigger asChild>
           <button type="button" className="icon-button mobile-menu" aria-label="Toggle navigation" aria-controls="mobile-navigation"><Menu /></button>
@@ -113,27 +118,25 @@ export function App() {
         <div className="product-title">
           <BrandLogo className="wordmark" />
         </div>
-        <NavLink to="/account" className="profile-link" aria-label="Account" title="Account">
-          <UserRound size={21} aria-hidden="true" />
-        </NavLink>
+        <UserMenu user={user} onSignOut={signOut} />
       </header>
-      <aside className="sidebar sidebar-desktop" data-compact={sidebar === 'collapsed'} aria-label="Desktop sidebar">
-        <SidebarContent onNavigate={() => {}} onSignOut={() => { void signOut(); }} />
+      <aside className={"sidebar sidebar-desktop" + (settings ? " settings-sidebar" : "")} data-compact={!settings && sidebar === 'collapsed'} aria-label="Desktop sidebar">
+        {settings ? <SettingsSidebar onNavigate={() => {}} /> : <SidebarContent onNavigate={() => {}} />}
       </aside>
       <NavigationDialog.Portal>
         <NavigationDialog.Overlay className="navigation-overlay" />
-        <NavigationDialog.Content className="sidebar navigation-drawer" id="mobile-navigation" onCloseAutoFocus={event => {
+        <NavigationDialog.Content className={"sidebar navigation-drawer" + (settings ? " settings-sidebar" : "")} id="mobile-navigation" onCloseAutoFocus={event => {
           if (matchMedia('(min-width: 851px)').matches) {
-            event.preventDefault(); document.querySelector<HTMLButtonElement>('.sidebar-desktop .sidebar-toggle')?.focus();
+            event.preventDefault(); document.querySelector<HTMLElement>('.sidebar-desktop .sidebar-toggle, .sidebar-desktop .settings-nav-link')?.focus();
           }
         }}>
           <NavigationDialog.Title className="sr-only">Main navigation</NavigationDialog.Title>
-          <NavigationDialog.Description className="sr-only">Choose a page, appearance or sign out.</NavigationDialog.Description>
-          <SidebarContent mobile onNavigate={() => setMenu(false)} onSignOut={() => { void signOut(); }} />
+          <NavigationDialog.Description className="sr-only">Choose a page.</NavigationDialog.Description>
+          {settings ? <SettingsSidebar mobile onNavigate={() => setMenu(false)} /> : <SidebarContent mobile onNavigate={() => setMenu(false)} />}
         </NavigationDialog.Content>
       </NavigationDialog.Portal>
       <div className="app-main">
-        <main className="page">
+        <main className={"page" + (settings ? " settings-page" : "")}>
           <Suspense fallback={<Loading />}>
             <Routes>
               <Route path="/" element={<Protected permission="dashboard.read"><Overview /></Protected>} />
@@ -152,12 +155,18 @@ export function App() {
                 element={<Protected permission="results.read"><RunResult differences /></Protected>}
               />
               <Route
-                path="/account"
+                path="/settings/profile"
                 element={<Account user={user} onChanged={expire} />}
               />
-              <Route path="/access/users" element={<Protected permission="access.manage"><AccessManagement view="users" /></Protected>} />
-              <Route path="/access/groups" element={<Protected permission="access.manage"><AccessManagement view="groups" /></Protected>} />
-              <Route path="/access/audit" element={<Protected permission="audit.read"><AccessManagement view="audit" /></Protected>} />
+              <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
+              <Route path="/settings/appearance" element={<Appearance />} />
+              <Route path="/account" element={<Navigate to="/settings/profile" replace />} />
+              <Route path="/access/users" element={<Navigate to="/settings/users" replace />} />
+              <Route path="/access/groups" element={<Navigate to="/settings/groups" replace />} />
+              <Route path="/access/audit" element={<Navigate to="/settings/audit" replace />} />
+              <Route path="/settings/users" element={<Protected permission="access.manage"><AccessManagement view="users" /></Protected>} />
+              <Route path="/settings/groups" element={<Protected permission="access.manage"><AccessManagement view="groups" /></Protected>} />
+              <Route path="/settings/audit" element={<Protected permission="audit.read"><AccessManagement view="audit" /></Protected>} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </Suspense>
@@ -249,12 +258,12 @@ function Account({ user, onChanged }: { user: User; onChanged: () => void }) {
   return (
     <>
       <PageTitle
-        title="Account"
+        title="Profile"
         subtitle="Manage your account credentials."
       />
       {user.must_change_password && <p className="notice" role="alert">Change your temporary password before accessing the application.</p>}
-      <div className="two-columns">
-        <Card title="Profile">
+      <div className="two-columns settings-profile">
+        <Card title="Account details">
           <dl>
             <dt>Name</dt>
             <dd>{user.display_name}</dd>
