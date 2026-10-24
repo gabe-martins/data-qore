@@ -1,5 +1,5 @@
 import { NavLink, Link } from "react-router-dom";
-import { ArrowLeft, ShieldCheck, UserRound, Target, X } from "lucide-react";
+import { ArrowLeft, BookOpen, ShieldCheck, UserRound, Target, X } from "lucide-react";
 import { useAccess } from "../lib/access";
 
 export function SettingsSidebar({ mobile = false, onNavigate }: { mobile?: boolean; onNavigate: () => void }) {
@@ -27,6 +27,10 @@ export function SettingsSidebar({ mobile = false, onNavigate }: { mobile?: boole
         <NavLink to="/settings/profile" className="settings-nav-link" onClick={onNavigate}>Profile</NavLink>
         <NavLink to="/settings/appearance" className="settings-nav-link" onClick={onNavigate}>Appearance</NavLink>
       </section>
+      {!user?.must_change_password && user?.permissions.includes("dashboard.read") && <section aria-label="Help">
+        <h3 className="settings-nav-category"><BookOpen size={17} aria-hidden="true" />Help</h3>
+        <NavLink to="/settings/manual" className="settings-nav-link" onClick={onNavigate}>Manual de uso</NavLink>
+      </section>}
     </nav>
     {!user?.must_change_password && <Link to="/" className="settings-back" onClick={onNavigate}><ArrowLeft size={17} aria-hidden="true" />Back to application</Link>}
   </>;

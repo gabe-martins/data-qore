@@ -53,13 +53,21 @@ run a comparison, then visit **Runs** to review progress and results.
 Access tokens stay in memory; session renewal uses an HttpOnly cookie.
 Saved connection passwords are not displayed when editing a connection.
 
-Comparison rules show **Absolute tolerance (units)** and **Relative tolerance (%)**.
-Enter `1` for 1% relative tolerance. Dot/comma decimals are accepted without
-thousands separators. Absolute values retain the column's units. Help buttons
-explain how the larger of the two limits is applied to numeric values and can
-be opened with hover, focus or tap and closed with Escape. The API still uses
-decimal fractions as strings; editing an existing comparison preserves its
-numeric meaning. These limits do not represent a percentage of differing rows.
+The Portuguese user manual is available in **Settings → Help → Manual de uso**
+at `/settings/manual`, with a topic index, metric formulas and examples,
+standalone HTML download, and browser printing. Its single content source is
+[`src/content/user-manual.html`](src/content/user-manual.html); the settings page
+reuses that document's content and styles with the application's current theme.
+Keep screen labels and instructions aligned with the current UI and engine.
+
+Comparison rules show **Absolute tolerance** and **Relative tolerance (fraction)**.
+Enter `0.01` for 1% relative tolerance. Dot/comma decimals are accepted without
+thousands separators. Absolute values retain the column's units. The form explains
+fractions and the manual provides a worked example: the allowed difference is
+the maximum of the absolute tolerance and the relative tolerance times the
+larger absolute value. API tolerances use
+decimal fractions as strings. These limits do not represent a percentage of
+differing rows.
 
 Exact conversion checks (no database required):
 

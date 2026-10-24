@@ -38,6 +38,9 @@ const AccessManagement = lazy(() =>
     default: m.AccessManagement,
   })),
 );
+const UserManual = lazy(() =>
+  import("./pages/UserManual").then((m) => ({ default: m.UserManual })),
+);
 const Overview = lazy(() =>
   import("./pages/Overview").then((m) => ({ default: m.Overview })),
 );
@@ -303,6 +306,10 @@ export function App() {
                     element={<Navigate to="/settings/profile" replace />}
                   />
                   <Route path="/settings/appearance" element={<Appearance />} />
+                  <Route
+                    path="/settings/manual"
+                    element={<Protected permission="dashboard.read"><UserManual /></Protected>}
+                  />
                   <Route path="/settings/quality" element={<Protected permission="dashboard.read"><QualitySettings /></Protected>} />
                   <Route
                     path="/account"
