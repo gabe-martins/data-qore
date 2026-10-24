@@ -21,6 +21,7 @@ class Settings:
     heartbeat_seconds: float = 5
     job_timeout_seconds: float = 600
     poll_seconds: float = 1
+    evidence_encryption_key: str = field(default="", repr=False)
 
     def __post_init__(self):
         try:
@@ -41,6 +42,8 @@ class Settings:
             for v in (self.heartbeat_seconds,self.job_timeout_seconds,self.poll_seconds)):
             raise ValueError("Versão da chave e intervalos do worker precisam ser válidos.")
         object.__setattr__(self,"sqlite_allowed_root",Path(self.sqlite_allowed_root).resolve())
+        if self.evidence_encryption_key:
+            Fernet(self.evidence_encryption_key.encode())
 
 
 def load_settings():
@@ -56,4 +59,5 @@ def load_settings():
         heartbeat_seconds=float(get("WORKER_HEARTBEAT_SECONDS","5")),
         job_timeout_seconds=float(get("WORKER_JOB_TIMEOUT_SECONDS","600")),
         poll_seconds=float(get("WORKER_POLL_SECONDS","1")),
+        evidence_encryption_key=get("EVIDENCE_ENCRYPTION_KEY"),
     )

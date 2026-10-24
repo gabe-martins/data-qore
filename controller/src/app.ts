@@ -30,6 +30,7 @@ import { z } from "zod";
 import { accessOperations } from "./access.js";
 import { routePermission, selfServicePaths, publicPaths } from "./permissions.js";
 import { lockComparisons } from "./comparison-lock.js";
+import { qualityTargetSchema, qualitySettingsOut, readQualitySettings } from "./quality-settings.js";
 import { Schedules, cronSchema, nextDates, scheduleOut, dispatchOut } from "./schedules.js";
 const COOKIE = "dataqore_refresh";
 const messages: Record<string, string> = {
@@ -110,6 +111,9 @@ const messages: Record<string, string> = {
   encryption_key_version_unavailable:
     "The original encryption key version is unavailable.",
   result_not_ready: "This run has no completed result.",
+  evidence_expired: "Individual record evidence expired after 30 days. Aggregated results remain available.",
+  evidence_not_captured: "This execution has no available record evidence. Historical results are not reconstructed from current source data.",
+  evidence_unavailable: "Record evidence is unavailable. Check the evidence encryption key configuration.",
   storage_unavailable: "Engine storage is unavailable.",
   source_table_not_found: "Table not found in the current catalog.",
 };
@@ -138,6 +142,7 @@ export async function createApp(config: Config, db: DB) {
           "The controller requires its restricted runtime account.",
         );
       await db.user.count();
+      await db.qualitySettings.findUniqueOrThrow({ where: { id: true } });
       return { status: "ok" };
     }
     @Get("/api/openapi.json") spec() {
@@ -171,6 +176,18 @@ export async function createApp(config: Config, db: DB) {
   }
   const operations: [string, string, (req: any, res: any) => Promise<any>][] = [
     ...accessOperations(db),
+    ["get", "/api/v1/settings/quality", async () => readQualitySettings(db)],
+    ["patch", "/api/v1/settings/quality", async req => {
+      const values = qualityTargetSchema.parse(req.body);
+      return db.$transaction(async tx => {
+        const row = await tx.qualitySettings.update({ where: { id: true }, data: {
+          rowMatchTargetPercentage: values.row_match_target_percentage, updatedAt: new Date(),
+        } });
+        await tx.auditLog.create({ data: { actorUserId: req.access.user.id, action: "quality_target_updated",
+          resourceType: "quality_settings", requestId: req.id, outcome: "success", details: values } });
+        return qualitySettingsOut(row);
+      });
+    }],
     ["post", "/api/v1/schedules/preview", async (req, res) => {
       const v = cronSchema.parse(req.body);
       res.status(200);
@@ -338,6 +355,10 @@ export async function createApp(config: Config, db: DB) {
               "invalid_engine_response",
               "Invalid engine response.",
             );
+          }
+          if (method === "get" && path.startsWith("/v1/runs/") && (path.includes("/quality/records") || path.endsWith("/quality/export"))) {
+            await auth.audit(path.endsWith("/export") ? "evidence:export" : "evidence:read", response.ok ? "success" : "failure", session.user.id, req.id, "run", req.params.identifier);
+            res.header("Cache-Control", "no-store");
           }
           if (preview && response.ok) {
             const schedules = await db.$transaction(async tx => {

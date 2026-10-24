@@ -265,7 +265,7 @@ class CriticalMetrics(Model):
 
 
 class ComparisonResult(Model):
-    format_version: Literal[6]
+    format_version: Literal[6,7]
     engine_version: str
     execution_id: UUID
     started_at: datetime
@@ -281,6 +281,57 @@ class ComparisonResult(Model):
     summary: dict[str,Any]
     warnings: list[str]
     query_log: list[dict[str,Any]]
+    evidence: dict[str,Any] | None = None
+
+
+class QualityMetricSummary(Model):
+    row_count_match: RowCountMatch
+    key_coverage: KeyCoverage
+    duplicate_key_rate: list[DuplicateKeyRate]
+    row_match_rate: RowMatchRate
+
+
+class QualityResultContext(Model):
+    format_version: Literal[6,7]
+    execution_id: UUID
+    sources: list[dict[str,Any]]
+    comparison_options: ComparisonOptions = Field(default_factory=ComparisonOptions)
+    resolved_scope: dict[str,Any]
+    sampling_plan: dict[str,Any]
+    key_validation: list[dict[str,Any]]
+    summary: dict[str,Any]
+    warnings: list[str]
+    metrics: QualityMetricSummary
+    column_count: int
+    columns_requiring_review: int
+    column_directory: list[dict[str,Any]]
+
+
+class QualityOut(Model):
+    run: RunOut
+    comparison_name: str
+    result: QualityResultContext | None
+    dimensions: list[dict[str,Any]]
+    diagnostics: list[dict[str,Any]]
+    evidence: dict[str,Any]
+
+
+class EvidenceRecordOut(Model):
+    id: int
+    state: str
+    affected_columns: list[str]
+    key: list[dict[str,Any]]
+    cells: list[dict[str,Any]] | None = None
+
+
+class QualityColumnOut(Model):
+    id: str
+    left_column: str | None
+    right_column: str | None
+    left_type: str | None
+    right_type: str | None
+    status: str
+    metric: ColumnMatchRate
 
 
 class ResultOut(Model):
@@ -466,3 +517,64 @@ class OverviewOut(Model):
     attention:list[AttentionOut]
     as_of:datetime
     scope:str
+
+
+class OverviewColumnPair(Model):
+    left_column: str | None
+    right_column: str | None
+
+
+class OverviewComparisonOut(Model):
+    comparison_id: UUID
+    name: str
+    source_table: str
+    target_table: str
+    run_id: UUID | None
+    status: str | None
+    execution_status: str | None
+    finished_at: datetime | None
+    conclusion: str | None
+    metrics: CriticalMetrics | None
+    summary: dict[str,Any] | None
+    points: list[DailyRowMatchPoint]
+    column_pairs: list[OverviewColumnPair]
+
+
+class OverviewComparisonsOut(Page[OverviewComparisonOut]):
+    days: Literal[7,15,30]
+    timezone: str
+    start_day: str
+    end_day: str
+    as_of: datetime
+
+
+class TrendMetricValue(Model):
+    label: str
+    percentage: Decimal | None
+    numerator: int
+    denominator: int
+    total: int | None
+    not_evaluated: int
+    scope: str
+    reason: str | None = None
+
+    model_config = ConfigDict(extra='ignore')
+
+
+class MetricTrendPoint(Model):
+    day: str
+    run_id: UUID | None
+    status: str | None
+    values: list[TrendMetricValue]
+
+
+class MetricTrendOut(Model):
+    comparison_id: UUID
+    name: str
+    metric: str
+    days: Literal[7,15,30]
+    timezone: str
+    start_day: str
+    end_day: str
+    as_of: datetime
+    points: list[MetricTrendPoint]

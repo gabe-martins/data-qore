@@ -130,7 +130,7 @@ def _verify(connection, service):
         with connection.cursor() as cur:
             cur.execute("SELECT to_regclass('app._prisma_migrations')")
             if cur.fetchone()[0] is not None:
-                cur.execute("SELECT migration_name FROM app._prisma_migrations WHERE migration_name IN ('1_schedules','2_environment_settings','3_critical_metrics','4_access_control') AND finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY migration_name DESC LIMIT 1")
+                cur.execute("SELECT migration_name FROM app._prisma_migrations WHERE migration_name IN ('1_schedules','2_environment_settings','3_critical_metrics','4_access_control','5_quality_target') AND finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY migration_name DESC LIMIT 1")
                 row=cur.fetchone()
                 if row:version='app_'+row[0]
     path = Path(__file__).with_name("baselines") / f"{version}.json"
@@ -138,7 +138,9 @@ def _verify(connection, service):
         exists = connection.execute("SELECT to_regclass('engine.alembic_version')").fetchone()[0]
         if exists:
             versions = connection.execute("SELECT version_num FROM engine.alembic_version").fetchall()
-            if versions == [("0005_critical_metrics",)]:
+            if versions == [("0006_record_evidence",)]:
+                path = path.with_name("engine_0006_record_evidence.json")
+            elif versions == [("0005_critical_metrics",)]:
                 path = path.with_name("engine_0005_critical_metrics.json")
             elif versions == [("0004_quality_rules",)]:
                 path = path.with_name("engine_0004_quality_rules.json")

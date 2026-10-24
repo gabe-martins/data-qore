@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, allPages, post, type Model, type Page } from "../api";
 import {
@@ -9,7 +14,12 @@ import {
   type ComparisonOptions,
 } from "../components/ComparisonOptionsEditor";
 import { DeleteComparisonDialog } from "../components/DeleteComparisonDialog";
-import { Rate, CriticalMetrics } from "../components/CriticalMetrics";
+import { Rate } from "../components/CriticalMetrics";
+import {
+  ComparisonQuality,
+  ExecutionContext,
+} from "../components/ComparisonQuality";
+import { useCan } from "../lib/access";
 import { normalizeTolerance } from "../lib/tolerances";
 import {
   Badge,
@@ -107,16 +117,27 @@ export function ComparisonDetail() {
   const { id } = useParams(),
     navigate = useNavigate(),
     cache = useQueryClient();
-  const [error, setError] = useState<unknown>(null),
-    [busy, setBusy] = useState(false),
-    [deleting, setDeleting] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const canReadDefinition = useCan("comparisons.read"),
+    canManage = useCan("comparisons.manage"),
+    canExecute = useCan("runs.execute");
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState<unknown>(null),
+    [deleting, setDeleting] = useState(false),
+    [offset, setOffset] = useState(0);
   const trigger = useRef<HTMLButtonElement>(null);
-  const c = useQuery({
+  const definition = useQuery({
     queryKey: ["comparison", id],
     queryFn: () => api<Model<"ComparisonOut">>(`/comparisons/${id}`),
+    enabled: canReadDefinition,
   });
-  const [offset, setOffset] = useState(0);
-  const runs = useQuery({
+  const latest = useQuery({
+    queryKey: ["comparison-latest-run", id],
+    queryFn: () =>
+      api<Page<Model<"RunOut">>>(`/runs?comparison_id=${id}&limit=1`),
+    refetchInterval: 2000,
+  });
+  const history = useQuery({
     queryKey: ["comparison-runs", id, offset],
     queryFn: () =>
       api<Page<Model<"RunOut">>>(
@@ -124,190 +145,171 @@ export function ComparisonDetail() {
       ),
     refetchInterval: 2000,
   });
-  const latest = useQuery({
-    queryKey: [
-      "comparison-latest",
-      id,
-      runs.data?.items[0]?.status,
-      runs.data?.items[0]?.id,
-    ],
-    queryFn: () =>
-      api<Model<"ResultOut">>(`/runs/${runs.data!.items[0].id}/result`),
-    enabled: runs.data?.items[0]?.status === "succeeded" && offset === 0,
+  const selected = params.get("run_id") ?? latest.data?.items[0]?.id;
+  useEffect(() => {
+    if (!params.get("run_id") && latest.data?.items[0])
+      setParams({ run_id: latest.data.items[0].id }, { replace: true });
+  }, [params, latest.data, setParams]);
+  const quality = useQuery({
+    queryKey: ["comparison-quality", selected],
+    queryFn: () => api<Model<"QualityOut">>(`/runs/${selected}/quality`),
+    enabled: !!selected,
+    refetchInterval: (q) =>
+      ["queued", "running"].includes(q.state.data?.run.status ?? "")
+        ? 2000
+        : 60000,
   });
+  const valid = quality.data?.run.comparison_id === id;
+  const c = definition.data;
   return (
     <>
       <PageTitle
-        title={c.data?.name ?? "Comparison"}
-        subtitle="Definition, critical metrics and execution history."
+        title={quality.data?.comparison_name ?? c?.name ?? "Comparison"}
+        subtitle="Execution context and comparison quality"
         action={
           <>
-            <Button asChild>
-              <Link to={`/comparisons/${id}/edit`}>Edit</Link>
-            </Button>
-            <Button
-              disabled={busy || !c.data?.is_active}
-              onClick={async () => {
-                setBusy(true);
-                setError(null);
-                try {
-                  const run = await post<Model<"RunOut">>(
-                    `/comparisons/${id}/runs`,
-                    {},
-                  );
-                  navigate(`/runs/${run.id}`);
-                } catch (e) {
-                  setError(e);
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              Run comparison
-            </Button>
+            {canManage && (
+              <Button asChild>
+                <Link to={`/comparisons/${id}/edit`}>Edit</Link>
+              </Button>
+            )}
+            {canExecute && (
+              <Button
+                disabled={busy || !c?.is_active}
+                onClick={async () => {
+                  setBusy(true);
+                  setError(null);
+                  try {
+                    const run = await post<Model<"RunOut">>(
+                      `/comparisons/${id}/runs`,
+                      {},
+                    );
+                    setParams({ run_id: run.id });
+                    await cache.invalidateQueries({
+                      queryKey: ["comparison-latest-run", id],
+                    });
+                  } catch (e) {
+                    setError(e);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Run comparison
+              </Button>
+            )}
           </>
         }
       />
-      <ErrorBox error={error || c.error || runs.error || latest.error} />
-      {c.isPending ? (
-        <Loading />
-      ) : (
-        c.data && (
-          <>
-            <Card title="Definition">
-              <Badge value={c.data.is_active ? "active" : "inactive"} />
-              <p>
-                Sample: {c.data.sampling_options?.method} ·{" "}
-                {c.data.sampling_options?.method === "percentage"
-                  ? `${c.data.sampling_options?.percentage}% of the larger scope`
-                  : `${c.data.sampling_options?.rows} keys`}
-              </p>
-              <div className="form-grid comparison-settings">
-                <p>
-                  <strong>Comparison key</strong>
-                  <span>
-                    {c.data.comparison_options?.business_key
-                      ?.map((p) => `${p.left} ↔ ${p.right}`)
-                      .join(", ") || "Discovered from metadata"}
-                  </span>
-                </p>
-                <p>
-                  <strong>Data scope</strong>
-                  <span>
-                    {c.data.comparison_options?.scope?.period
-                      ? "Configured period"
-                      : "Entire table"}
-                    {c.data.comparison_options?.scope?.filters?.length
-                      ? " · equivalent filters applied"
-                      : ""}
-                  </span>
-                </p>
-                <p>
-                  <strong>Excluded columns</strong>
-                  <span>
-                    A:{" "}
-                    {c.data.comparison_options?.excluded_columns?.left?.join(
-                      ", ",
-                    ) || "None"}{" "}
-                    · B:{" "}
-                    {c.data.comparison_options?.excluded_columns?.right?.join(
-                      ", ",
-                    ) || "None"}
-                  </span>
-                </p>
-                <p>
-                  <strong>Timestamp interpretation</strong>
-                  <span>
-                    {Object.entries(
-                      c.data.comparison_options?.timestamp_timezones ?? {},
-                    )
-                      .flatMap(([side, zones]) =>
-                        Object.entries(zones).map(
-                          ([column, zone]) =>
-                            `${side === "left" ? "A" : "B"}.${column}: ${zone}`,
-                        ),
-                      )
-                      .join(" · ") || "No explicit overrides"}
-                  </span>
-                </p>
-                <p>
-                  <strong>Numeric equality</strong>
-                  <span>
-                    Absolute tolerance: {String(c.data.absolute_tolerance ?? 0)}{" "}
-                    · relative: {String(c.data.relative_tolerance ?? 0)}{" "}
-                    (fraction)
-                  </span>
-                </p>
-                <p>
-                  <strong>Sample seed</strong>
-                  <span>
-                    {String(
-                      c.data.sampling_options?.seed ??
-                        "Generated on each execution",
-                    )}
-                  </span>
-                </p>
-              </div>
-              <details>
-                <summary>Scope, mapping and tolerances</summary>
-                <JsonView value={c.data} />
-              </details>
-              <div className="form-footer">
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      await api(`/comparisons/${id}`, {
-                        method: "PATCH",
-                        body: JSON.stringify({ is_active: !c.data!.is_active }),
-                      });
-                      await cache.invalidateQueries({
-                        queryKey: ["comparison", id],
-                      });
-                    } catch (e) {
-                      setError(e);
-                    }
-                  }}
-                >
-                  {c.data.is_active ? "Deactivate" : "Activate"}
-                </Button>
-                <Button
-                  variant="outline"
-                  ref={trigger}
-                  onClick={() => setDeleting(true)}
-                >
-                  Delete comparison
-                </Button>
-              </div>
-            </Card>
-            {latest.data && <CriticalMetrics result={latest.data.result} />}
-            <Card title="Execution history">
-              {runs.data?.items.length ? (
-                <>
-                  <RunsTable runs={runs.data.items} />
-                  <Pagination
-                    total={runs.data.total}
-                    offset={offset}
-                    setOffset={setOffset}
-                  />
-                </>
-              ) : (
-                <Empty title="No runs" />
+      <ErrorBox
+        error={
+          error ||
+          definition.error ||
+          history.error ||
+          latest.error ||
+          quality.error
+        }
+      />
+      <Card title="Selected execution">
+        <label>
+          Execution
+          <select
+            aria-label="Selected execution"
+            value={selected ?? ""}
+            onChange={(e) => setParams({ run_id: e.target.value })}
+          >
+            {!history.data?.items.some((r) => r.id === selected) &&
+              selected && (
+                <option value={selected}>
+                  {selected} · selected execution
+                </option>
               )}
-            </Card>
-            {deleting && (
-              <DeleteComparisonDialog
-                comparison={c.data}
-                onClose={() => setDeleting(false)}
-                returnFocus={() => trigger.current}
-                onDeleted={() => {
-                  cache.invalidateQueries({ queryKey: ["comparisons"] });
-                  navigate("/comparisons");
-                }}
-              />
-            )}
+            {!selected && <option value="">No executions</option>}
+            {history.data?.items.map((r) => (
+              <option key={r.id} value={r.id}>
+                {new Date(r.requested_at).toLocaleString("en-US", {
+                  timeZone: "America/Sao_Paulo",
+                })}{" "}
+                · {r.status} · {r.id.slice(0, 8)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p>
+          The selected execution stays fixed when browsing history. All
+          indicators and records below belong to this execution.
+        </p>
+      </Card>
+      {quality.isFetching && !quality.data ? (
+        <Loading />
+      ) : quality.data && valid ? (
+        <>
+          <ExecutionContext quality={quality.data} />
+          <ComparisonQuality key={selected} quality={quality.data} />
+        </>
+      ) : quality.data && !valid ? (
+        <p role="alert">This execution belongs to a different comparison.</p>
+      ) : !selected && !latest.isPending ? (
+        <Empty title="No executions yet">
+          Start a comparison to obtain real metrics. No demonstration data is
+          displayed.
+        </Empty>
+      ) : null}
+      <Card title="Execution history">
+        {history.data?.items.length ? (
+          <>
+            <RunsTable runs={history.data.items} />
+            <Pagination
+              total={history.data.total}
+              offset={offset}
+              setOffset={setOffset}
+            />
           </>
-        )
+        ) : (
+          <Empty title="No comparison runs" />
+        )}
+      </Card>
+      {canManage && c && (
+        <Card title="Manage comparison">
+          <div className="form-footer">
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  await api(`/comparisons/${id}`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ is_active: !c.is_active }),
+                  });
+                  await cache.invalidateQueries({
+                    queryKey: ["comparison", id],
+                  });
+                } catch (e) {
+                  setError(e);
+                }
+              }}
+            >
+              {c.is_active ? "Deactivate" : "Activate"}
+            </Button>
+            <Button
+              variant="outline"
+              ref={trigger}
+              onClick={() => setDeleting(true)}
+            >
+              Delete comparison
+            </Button>
+          </div>
+        </Card>
+      )}
+      {deleting && c && (
+        <DeleteComparisonDialog
+          comparison={c}
+          onClose={() => setDeleting(false)}
+          returnFocus={() => trigger.current}
+          onDeleted={() => {
+            void cache.invalidateQueries({ queryKey: ["comparisons"] });
+            navigate("/comparisons");
+          }}
+        />
       )}
     </>
   );
@@ -411,7 +413,7 @@ export function Wizard() {
       await cache.invalidateQueries({ queryKey: ["comparisons"] });
       if (run) {
         const r = await post<Model<"RunOut">>(`/comparisons/${c.id}/runs`, {});
-        navigate(`/runs/${r.id}`);
+        navigate(`/comparisons/${c.id}?run_id=${r.id}`);
       } else navigate(`/comparisons/${c.id}`);
     } catch (e) {
       setError(e);

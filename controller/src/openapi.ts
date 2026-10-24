@@ -4,6 +4,7 @@ import { root } from "./config.js";
 import { z } from "zod";
 import { groupSchema, groupPatchSchema, userSchema, userPatchSchema, resetSchema } from "./access.js";
 import { profiles, profilePermissions, routePermission } from "./permissions.js";
+import { qualityTargetSchema, qualitySettingsSchema } from "./quality-settings.js";
 import { loginSchema, changeSchema } from "./auth.js";
 import { cronSchema, scheduleSchema, schedulePatchBaseSchema, scheduleOutSchema, dispatchOutSchema } from "./schedules.js";
 export const engineSpec = JSON.parse(
@@ -133,6 +134,19 @@ export function openapi() {
   const auditOutput = { type: "object", required: ["id", "action", "outcome", "resource_type", "created_at"], properties: {
     id: { type: "string" }, actor_user_id: { type: ["string", "null"] }, action: { type: "string" }, resource_type: { type: "string" }, resource_id: { type: ["string", "null"] }, request_id: { type: ["string", "null"] }, outcome: { type: "string", enum: ["success", "failure"] }, created_at: { type: "string", format: "date-time" } } };
   spec.components.schemas.User = user;
+  spec.components.schemas.QualitySettingsOut = z.toJSONSchema(qualitySettingsSchema);
+  spec.paths["/api/v1/settings/quality"] = {};
+  for (const method of ["get", "patch"]) {
+    spec.paths["/api/v1/settings/quality"][method] = {
+      tags: ["settings"], security: [{ bearerAuth: [] }],
+      ...(method === "patch" ? { requestBody: { required: true, content: { "application/json": {
+        schema: z.toJSONSchema(qualityTargetSchema, { io: "input" }),
+      } } } } : {}),
+      responses: { "200": { description: "Current Row Match Rate target", content: { "application/json": {
+        schema: { $ref: "#/components/schemas/QualitySettingsOut" },
+      } } }, "401": { description: "Unauthorized" }, "422": { description: "Invalid target" } },
+    };
+  }
   spec.components.schemas.AccessGroup = groupOutput;
   spec.components.schemas.ManagedUser = userOutput;
   spec.components.schemas.SecurityAudit = auditOutput;

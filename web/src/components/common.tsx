@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { AlertTriangle, LoaderCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { ApiError } from "../api";
+import { formatPercent } from "../lib/metricFormatting";
 export { Button };
 export function PageTitle({
   title,
@@ -119,10 +120,7 @@ export function Stat({
     </div>
   );
 }
-export const percent = (v: unknown) =>
-  v === null || v === undefined
-    ? "Not evaluated"
-    : `${Number(v).toLocaleString("en-US", { maximumFractionDigits: 2 })}%`;
+export const percent = formatPercent;
 export const date = (v?: string | null) =>
   v ? new Date(v).toLocaleString("en-US") : "—";
 export function Pagination({

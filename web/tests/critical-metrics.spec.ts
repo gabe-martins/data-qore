@@ -84,32 +84,21 @@ test("closed scope → repeatable sample → five saved metrics → edit → his
   await page.getByRole("button", { name: "Review", exact: true }).click();
   await expect(page.getByText(/2 requested keys/)).toBeVisible();
   await page.getByRole("button", { name: "Save and run", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Comparison Quality", exact: true }),
+  ).toBeVisible({ timeout: 30000 });
+  await expect(page.locator(".quality-headline")).toContainText(
+    "Row Match Rate",
+  );
   for (const name of [
     "Row Count Match",
-    "Row Match Rate",
     "Key Coverage",
     "Duplicate Key Rate",
     "Column Match Rate",
   ])
-    await expect(page.getByRole("heading", { name, exact: true })).toBeVisible({
-      timeout: 30000,
-    });
+    await expect(page.locator(".quality-indicators")).toContainText(name);
   await expect(
-    page.getByRole("heading", { name: "Result interpretation", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Counts match. A 0% count difference means equal volumes.", {
-      exact: true,
-    }),
-  ).toBeVisible();
-  await expect(
-    page.getByText(
-      "No duplicate or null keys found. Here, 0% is the expected result.",
-      { exact: true },
-    ),
-  ).toHaveCount(2);
-  await expect(
-    page.getByText("Differences by column:", { exact: true }),
+    page.getByRole("heading", { name: "Column analysis", exact: true }),
   ).toBeVisible();
   await expect(page.getByText("Sample quality", { exact: true })).toHaveCount(
     0,
@@ -124,7 +113,6 @@ test("closed scope → repeatable sample → five saved metrics → edit → his
     path: "test-results/critical-metrics-desktop.png",
     fullPage: true,
   });
-  await page.getByRole("link", { name: "Open comparison" }).click();
   await page.getByRole("link", { name: "Edit", exact: true }).click();
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await page.getByRole("button", { name: "Next", exact: true }).click();
@@ -137,7 +125,13 @@ test("closed scope → repeatable sample → five saved metrics → edit → his
   await page
     .getByRole("button", { name: "Save comparison", exact: true })
     .click();
-  await expect(page.getByText(/50% of the larger scope/)).toBeVisible();
+  const definitionResponse = await request.get(
+    `${s.base}/comparisons/${new URL(page.url()).pathname.split("/").pop()}`,
+    { headers: s.headers },
+  );
+  expect((await definitionResponse.json()).sampling_options.percentage).toBe(
+    "50",
+  );
   await page.getByRole("link", { name: "Runs", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Run history" }),
@@ -188,7 +182,7 @@ test("explicit column exclusion and timestamp timezone survive preview, executio
   ).toBeVisible();
   await page.getByRole("button", { name: "Save and run", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Row Match Rate", exact: true }),
+    page.getByRole("heading", { name: "Comparison Quality", exact: true }),
   ).toBeVisible({ timeout: 30000 });
   await expect(
     page.getByText("2 / 2 evaluated", { exact: false }).first(),
@@ -196,7 +190,7 @@ test("explicit column exclusion and timestamp timezone survive preview, executio
   await expect(
     page.getByText("compatible in sample", { exact: true }),
   ).toBeVisible();
-  const id = page.url().split("/").pop();
+  const id = new URL(page.url()).searchParams.get("run_id");
   const response = await request.get(`${s.base}/runs/${id}/result`, {
     headers: s.headers,
   });
@@ -209,7 +203,6 @@ test("explicit column exclusion and timestamp timezone survive preview, executio
   expect(result.comparison_options.timestamp_timezones.left.sold).toBe(
     "America/Sao_Paulo",
   );
-  await page.getByRole("link", { name: "Open comparison" }).click();
   await page.getByRole("link", { name: "Edit", exact: true }).click();
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(
@@ -234,9 +227,9 @@ test("relative units, invalid identity and mobile results remain explicit", asyn
   });
   const run = await s.post(`/comparisons/${c.id}/runs`, {}, 202);
   await login(page);
-  await page.goto(`/runs/${run.id}`);
+  await page.goto(`/comparisons/${c.id}?run_id=${run.id}`);
   await expect(
-    page.getByRole("heading", { name: "Duplicate Key Rate", exact: true }),
+    page.getByRole("heading", { name: "Comparison Quality", exact: true }),
   ).toBeVisible({ timeout: 30000 });
   await expect(
     page.getByText("difference observed", { exact: true }),

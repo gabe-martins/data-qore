@@ -62,6 +62,7 @@ class LauncherTests(unittest.TestCase):
             'DATABASE_URL=postgresql+psycopg://srv_dataqore_engine:secret@configured-host/dataqore_engine',
             'ENGINE_API_KEY=existing-api-key-0123456789',
             'CONNECTIONS_ENCRYPTION_KEY='+Fernet.generate_key().decode(),
+            'EVIDENCE_ENCRYPTION_KEY='+Fernet.generate_key().decode(),
             'CONNECTIONS_ENCRYPTION_KEY_VERSION=v1',
             'WORKER_HEARTBEAT_SECONDS=5','WORKER_JOB_TIMEOUT_SECONDS=600','WORKER_POLL_SECONDS=1',''])
         app='\n'.join([

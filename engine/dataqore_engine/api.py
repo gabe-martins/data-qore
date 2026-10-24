@@ -5,7 +5,7 @@ import hmac
 from typing import Annotated
 from uuid import UUID,uuid4
 
-from fastapi import APIRouter,Depends,FastAPI,Header,Query,Request
+from fastapi import APIRouter,Depends,FastAPI,Header,Query,Request,Path
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
@@ -22,6 +22,7 @@ from .comparison_deletion import ComparisonDeletion
 from .comparison_options import compact_options, metadata_signature, validate_options
 from .settings import load_settings
 from .storage import DomainError,Repository,database_engine,json_safe
+from .evidence import evidence_state
 
 Limit=Annotated[int,Query(ge=1,le=200)]
 Offset=Annotated[int,Query(ge=0)]
@@ -34,6 +35,8 @@ def create_app(settings=None):
     repository=Repository(engine)
     sources=SourceManager(settings)
     queue=Queue(engine)
+    from .quality_results import QualityResults
+    quality=QualityResults(engine,settings)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -91,6 +94,7 @@ def create_app(settings=None):
             if conn.scalar(text("SELECT current_user"))!="srv_dataqore_engine":
                 raise DomainError(503,"runtime_role_invalid","A conta de execução precisa ser restrita ao motor.")
             conn.execute(select(m.connections.c.id).limit(0))
+            conn.execute(select(m.run_record_evidence.c.run_id).limit(0))
         return {"status":"ok"}
 
     router=APIRouter(prefix="/v1",dependencies=[Depends(authorize)],responses={
@@ -345,6 +349,37 @@ def create_app(settings=None):
     def get_run(identifier:UUID):
         return out(s.RunOut,repository.get(m.runs,identifier))
 
+    @router.get("/runs/{identifier}/quality",response_model=s.QualityOut,tags=["quality"])
+    def get_quality(identifier:UUID):
+        return quality.summary(identifier)
+
+    @router.get("/runs/{identifier}/quality/columns",response_model=s.Page[s.QualityColumnOut],tags=["quality"])
+    def quality_columns(identifier:UUID,limit:Annotated[int,Query(ge=1,le=100)]=50,offset:Offset=0,
+                        search:str=Query(default="",max_length=255),status:Annotated[str,Query(pattern="^(all|passed|attention|critical|not_calculated)$")]="all",
+                        sort:Annotated[str,Query(pattern="^(differences|name|match)$")]="differences"):
+        items=quality.columns(quality.result(identifier))
+        items=[c for c in items if (status=="all" or c["status"]==status) and search.casefold() in ((c["left_column"] or "")+" "+(c["right_column"] or "")).casefold()]
+        items.sort(key=lambda c:(c["left_column"] or c["right_column"] or "").casefold() if sort=="name" else (c["metric"]["percentage"] is None,float(c["metric"]["percentage"] or 0),c["id"]) if sort=="match" else (-c["metric"]["different_values"]-c["metric"]["unknown_values"],c["id"]))
+        return {"items":items[offset:offset+limit],"total":len(items),"limit":limit,"offset":offset}
+
+    EvidenceState=Annotated[str,Query(pattern="^(all|equal|different|only_source|only_target|unknown)$")]
+
+    @router.get("/runs/{identifier}/quality/records",response_model=s.Page[s.EvidenceRecordOut],tags=["quality"])
+    def quality_records(identifier:UUID,limit:Annotated[int,Query(ge=1,le=100)]=50,offset:Offset=0,
+                        state:EvidenceState="all",column:str|None=Query(default=None,max_length=300),key:str|None=Query(default=None,max_length=8192)):
+        return quality.records(identifier,limit,offset,state,column,key)
+
+    @router.get("/runs/{identifier}/quality/records/{ordinal}",response_model=s.EvidenceRecordOut,tags=["quality"])
+    def quality_record(identifier:UUID,ordinal:Annotated[int,Path(ge=0,le=9999)]):
+        return quality.record(identifier,ordinal)
+
+    @router.get("/runs/{identifier}/quality/export",response_model=dict,tags=["quality"])
+    def quality_export(identifier:UUID,state:EvidenceState="all",column:str|None=Query(default=None,max_length=300),key:str|None=Query(default=None,max_length=8192)):
+        result=quality.result(identifier)
+        return {"run_id":str(identifier),"scope":"captured_sample_only","evidence":evidence_state(result),
+                "filters":{"state":state,"column":column,"key_filter_applied":key is not None},
+                **quality.records(identifier,10000,0,state,column,key,detail=True)}
+
     @router.get("/runs/{identifier}/result",response_model=s.ResultOut,tags=["runs"])
     def get_result(identifier:UUID):
         run=repository.get(m.runs,identifier)
@@ -358,5 +393,7 @@ def create_app(settings=None):
 
     from .read_api import register_read_api
     register_read_api(router,engine)
+    from .overview_metrics import register_overview_metrics
+    register_overview_metrics(router,engine)
     app.include_router(router)
     return app

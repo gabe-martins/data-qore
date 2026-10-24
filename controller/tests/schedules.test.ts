@@ -153,7 +153,7 @@ test("authenticated schedule API and real scheduled run use the engine queue", {
     assert.equal(resultResponse.status, 200);
     const resultBody = await resultResponse.json() as any;
     const result = resultBody.result;
-    assert.equal(result.format_version, 6);
+    assert.equal(result.format_version, 7);
     const frozenResponse=await fetch(config.engineUrl+"/v1/runs/"+dispatch.runId,{headers:{"X-API-Key":config.engineKey}});
     const frozen=await frozenResponse.json() as any;
     assert.deepEqual(frozen.parameters.comparison_options.mapping, comparison.comparison_options.mapping);
@@ -193,7 +193,7 @@ test("Unity Catalog simulated source is preserved by a real scheduled dispatch",
     }
     const response=await fetch(config.engineUrl+"/v1/runs/"+dispatch.runId+"/result",{headers:{"X-API-Key":config.engineKey}});
     const body=await response.json() as any;
-    assert.equal(body.format_version,6);
+    assert.equal(body.format_version,7);
     assert.equal(body.result.sources[0].catalog_name,"main");
     assert.equal(body.result.sources[0].table,"main.sales.records_view");
     assert.ok(body.result.key_validation.every((v:any)=>v.valid));

@@ -249,7 +249,7 @@ class APITests(TemporaryPostgres):
         preview=self.request('POST','/comparisons/preview',json=payload)
         self.assertEqual((preview['scope_counts'],preview['sample_target']),([2,2],1))
         run,result=self.finish(c)
-        self.assertEqual(result['format_version'],6)
+        self.assertEqual(result['format_version'],7)
         self.assertEqual(len(result['result']['metrics']),5)
         self.assertNotIn('PRIVATE_VALUE',json.dumps(result))
         self.assertEqual(result['result']['sampling_plan']['seed'],'18446744073709551615')
@@ -304,6 +304,30 @@ class APITests(TemporaryPostgres):
         self.assertIsNone(trend['series'][0]['points'][-1]['percentage'])
         summaries=self.request('GET','/comparison-summaries')
         self.assertIsNone(summaries['items'][0]['latest_result']['row_match_rate'])
+        overview=self.request('GET','/overview/comparisons?days=7')
+        self.assertIsNone(overview['items'][0]['metrics'])
+        self.assertEqual(overview['items'][0]['status'],'failed')
+        self.assertIsNone(overview['items'][0]['points'][-1]['percentage'])
+        daily=self.request('GET',f"/overview/metric-trend?comparison_id={c['id']}&metric=row_match_rate")
+        self.assertEqual(daily['points'][-1]['values'],[])
+
+    def test_overview_five_metrics_are_saved_daily_values_with_real_gaps(self):
+        c=self.definition();_,result=self.finish(c)
+        page=self.request('GET','/overview/comparisons?days=15&limit=1')
+        self.assertEqual(page['total'],1)
+        self.assertEqual(len(page['items'][0]['points']),15)
+        self.assertIsNone(page['items'][0]['points'][0]['percentage'])
+        self.assertEqual(page['items'][0]['metrics'],result['result']['metrics'])
+        for metric in result['result']['metrics']:
+            query=f"/overview/metric-trend?comparison_id={c['id']}&metric={metric}"
+            if metric=='column_match_rate':query+='&left_column=value&right_column=value'
+            trend=self.request('GET',query)
+            self.assertEqual(trend['points'][0]['values'],[])
+            self.assertTrue(trend['points'][-1]['values'])
+        self.request('GET','/overview/comparisons?days=365',422)
+        self.request('GET',f"/overview/metric-trend?comparison_id={c['id']}&metric=column_match_rate",422)
+        empty=self.request('GET','/overview/comparisons?search=unmatched&limit=1')
+        self.assertEqual((empty['items'],empty['total']),([],0))
 
     def test_deletion_protects_frozen_sources_and_active_runs(self):
         c=self.definition();run=self.request('POST',f"/comparisons/{c['id']}/runs",202)

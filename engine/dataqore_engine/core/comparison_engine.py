@@ -111,6 +111,7 @@ def execute_comparison(
     comparison_options=None,
     resolved_scope=None,
     execution_id=None,
+    evidence_capture=None,
 ):
     from ..comparison_options import validate_options, metadata_signature
 
@@ -331,9 +332,11 @@ def execute_comparison(
     equal_rows = 0
     different_rows = missing
     unknown_rows = vanished if valid else len(selection)
+    classifications = {}
     for token in common:
         changed = False
         unknown = bool(unpaired["left"] or unpaired["right"])
+        outcomes = []
         for i, pair in enumerate(pairs):
             lm, rm = (
                 {**sources[j]["columns"][pair[side]],
@@ -361,12 +364,15 @@ def execute_comparison(
             column_counts[i][0 if value is True else 1 if value is False else 2] += 1
             changed |= value is False
             unknown |= value is None
+            outcomes.append(value)
         if changed:
             different_rows += 1
         elif unknown:
             unknown_rows += 1
         else:
             equal_rows += 1
+        if evidence_capture is not None:
+            classifications[token] = ("different" if changed else "unknown" if unknown else "equal", outcomes)
     reason = None if valid else capture_problem or "invalid_key"
     row_rate = {
         **rate(equal_rows, equal_rows + different_rows, len(selection), reason=reason),
@@ -435,15 +441,41 @@ def execute_comparison(
             "Text-key grouping uses source collation and may conservatively reject a key.",
         ]
     )
-    return {
-        "format_version": 6,
-        "engine_version": "6.0",
+    finished_at = datetime.now(timezone.utc).isoformat()
+    if evidence_capture is not None and valid:
+        from ..evidence import cell
+        def record_state(token):
+            return classifications[token][0] if token in classifications else "only_source" if token in a else "only_target" if token in b else "unknown"
+        priority = {"different": 0, "only_source": 1, "only_target": 2, "unknown": 3, "equal": 4}
+        for token, values in sorted(selection, key=lambda entry: priority[record_state(entry[0])]):
+            cells = []
+            outcomes = classifications.get(token, (None, []))[1]
+            for j, pair in enumerate(pairs):
+                value = outcomes[j] if outcomes else False if token in a or token in b else None
+                cells.append({"id": f"pair_{j}", "left_column": pair["left"], "right_column": pair["right"],
+                    "status": "equal" if value is True else "different" if value is False else "unknown",
+                    **{side: cell(index.get(token, {}).get(pair[side]),
+                        {**sources[i]["columns"][pair[side]], "naive_timezone": context["timestamp_timezones"][side].get(pair[side])}, token in index)
+                       for i, (side, index) in enumerate((("left", a), ("right", b)))}})
+            for i, side in enumerate(("left", "right")):
+                index = (a,b)[i]
+                for name in unpaired[side]:
+                    cells.append({"id": side + ":" + name, "left_column": name if i == 0 else None,
+                        "right_column": name if i == 1 else None, "status": "unknown",
+                        side: cell(index.get(token, {}).get(name), sources[i]["columns"][name], token in index),
+                        ("right" if i == 0 else "left"): {"kind":"missing","raw":None}})
+            evidence_capture.capture(values, [sources[0]["columns"][name] for name in key_columns[0]], record_state(token), cells)
+    result = {
+        "format_version": 7 if evidence_capture is not None else 6,
+        "engine_version": "7.0" if evidence_capture is not None else "6.0",
         "execution_id": str(execution_id or uuid4()),
         "started_at": started,
-        "finished_at": datetime.now(timezone.utc).isoformat(),
+        "finished_at": finished_at,
         "sources": [
             {
                 "dataset_id": s.get("dataset_id"),
+                "connection_name": s.get("connection"),
+                "connector": s["creds"]["type"],
                 "catalog_name": s.get("catalog_name", ""),
                 "table_name": s["table"],
                 "table": ".".join(
@@ -485,3 +517,7 @@ def execute_comparison(
         "warnings": warnings,
         "query_log": events,
     }
+    if evidence_capture is not None:
+        result["evidence"] = evidence_capture.manifest(len(selection), valid, finished_at)
+        result["_evidence_rows"] = evidence_capture.rows
+    return result

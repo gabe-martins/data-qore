@@ -5,7 +5,7 @@ export const profileLabels: Record<Profile, string> = {
   developer: "Data Developer", platform_admin: "Platform Administrator",
 };
 const read = ["dashboard.read", "results.read"];
-const quality = [...read, "datasets.read", "comparisons.read", "comparisons.manage", "runs.execute", "schedules.read", "schedules.manage"];
+const quality = [...read, "datasets.read", "comparisons.read", "comparisons.manage", "runs.execute", "schedules.read", "schedules.manage", "quality_settings.manage"];
 const development = [...quality, "connections.read", "connections.manage", "catalog.read", "datasets.manage"];
 export const profilePermissions: Record<Profile, readonly string[]> = {
   viewer: read, quality_manager: quality, developer: development,
@@ -19,8 +19,10 @@ const policies: Record<string, string> = {};
 function routes(permission: string, method: string, paths: string[]) {
   for (const path of paths) policies[`${method} /api/v1${path}`] = permission;
 }
-routes("dashboard.read", "get", ["/overview", "/overview/row-match-trend"]);
+routes("dashboard.read", "get", ["/overview", "/overview/row-match-trend", "/overview/comparisons", "/overview/metric-trend", "/settings/quality"]);
+routes("quality_settings.manage", "patch", ["/settings/quality"]);
 routes("results.read", "get", ["/runs", "/runs/{identifier}", "/runs/{identifier}/result"]);
+routes("results.read", "get", ["/runs/{identifier}/quality", "/runs/{identifier}/quality/columns", "/runs/{identifier}/quality/records", "/runs/{identifier}/quality/records/{ordinal}", "/runs/{identifier}/quality/export"]);
 routes("connections.read", "get", ["/connectors", "/connections", "/connections/{identifier}", "/connections/{identifier}/dependencies"]);
 routes("connections.manage", "post", ["/connections", "/connections/test", "/connections/{identifier}/test"]);
 routes("connections.manage", "patch", ["/connections/{identifier}"]);

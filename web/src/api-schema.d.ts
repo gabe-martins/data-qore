@@ -352,6 +352,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/runs/{identifier}/quality": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Quality */
+        get: operations["get_quality_v1_runs__identifier__quality_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{identifier}/quality/columns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quality Columns */
+        get: operations["quality_columns_v1_runs__identifier__quality_columns_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{identifier}/quality/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quality Records */
+        get: operations["quality_records_v1_runs__identifier__quality_records_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{identifier}/quality/records/{ordinal}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quality Record */
+        get: operations["quality_record_v1_runs__identifier__quality_records__ordinal__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{identifier}/quality/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quality Export */
+        get: operations["quality_export_v1_runs__identifier__quality_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/runs/{identifier}/result": {
         parameters: {
             query?: never;
@@ -420,6 +505,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/overview/comparisons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Comparisons */
+        get: operations["comparisons_v1_overview_comparisons_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/overview/metric-trend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Metric Trend */
+        get: operations["metric_trend_v1_overview_metric_trend_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -466,7 +585,7 @@ export interface paths {
                                 };
                                 /** @enum {string} */
                                 profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
-                                permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
+                                permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "quality_settings.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
                                 must_change_password: boolean;
                             };
                         };
@@ -525,7 +644,7 @@ export interface paths {
                                 };
                                 /** @enum {string} */
                                 profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
-                                permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
+                                permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "quality_settings.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
                                 must_change_password: boolean;
                             };
                         };
@@ -621,7 +740,7 @@ export interface paths {
                             };
                             /** @enum {string} */
                             profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
-                            permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
+                            permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "quality_settings.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
                             must_change_password: boolean;
                         };
                     };
@@ -1180,6 +1299,108 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/quality": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Current Row Match Rate target */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QualitySettingsOut"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid target */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        row_match_target_percentage: number | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Current Row Match Rate target */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QualitySettingsOut"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden or password change required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid target */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         trace?: never;
     };
     "/api/v1/users": {
@@ -2213,9 +2434,9 @@ export interface components {
         ComparisonResult: {
             /**
              * Format Version
-             * @constant
+             * @enum {integer}
              */
-            format_version: 6;
+            format_version: 6 | 7;
             /** Engine Version */
             engine_version: string;
             /**
@@ -2269,6 +2490,10 @@ export interface components {
             query_log: {
                 [key: string]: unknown;
             }[];
+            /** Evidence */
+            evidence?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** ComparisonRowMatchSeries */
         ComparisonRowMatchSeries: {
@@ -2718,6 +2943,23 @@ export interface components {
             /** Request Id */
             request_id?: string | null;
         };
+        /** EvidenceRecordOut */
+        EvidenceRecordOut: {
+            /** Id */
+            id: number;
+            /** State */
+            state: string;
+            /** Affected Columns */
+            affected_columns: string[];
+            /** Key */
+            key: {
+                [key: string]: unknown;
+            }[];
+            /** Cells */
+            cells?: {
+                [key: string]: unknown;
+            }[] | null;
+        };
         /** ExcludedColumns */
         ExcludedColumns: {
             /** Left */
@@ -2816,6 +3058,114 @@ export interface components {
             status: "available" | "partial" | "not_evaluated";
             /** Reason */
             reason: string | null;
+        };
+        /** MetricTrendOut */
+        MetricTrendOut: {
+            /**
+             * Comparison Id
+             * Format: uuid
+             */
+            comparison_id: string;
+            /** Name */
+            name: string;
+            /** Metric */
+            metric: string;
+            /**
+             * Days
+             * @enum {integer}
+             */
+            days: 7 | 15 | 30;
+            /** Timezone */
+            timezone: string;
+            /** Start Day */
+            start_day: string;
+            /** End Day */
+            end_day: string;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Points */
+            points: components["schemas"]["MetricTrendPoint"][];
+        };
+        /** MetricTrendPoint */
+        MetricTrendPoint: {
+            /** Day */
+            day: string;
+            /** Run Id */
+            run_id: string | null;
+            /** Status */
+            status: string | null;
+            /** Values */
+            values: components["schemas"]["TrendMetricValue"][];
+        };
+        /** OverviewColumnPair */
+        OverviewColumnPair: {
+            /** Left Column */
+            left_column: string | null;
+            /** Right Column */
+            right_column: string | null;
+        };
+        /** OverviewComparisonOut */
+        OverviewComparisonOut: {
+            /**
+             * Comparison Id
+             * Format: uuid
+             */
+            comparison_id: string;
+            /** Name */
+            name: string;
+            /** Source Table */
+            source_table: string;
+            /** Target Table */
+            target_table: string;
+            /** Run Id */
+            run_id: string | null;
+            /** Status */
+            status: string | null;
+            /** Execution Status */
+            execution_status: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /** Conclusion */
+            conclusion: string | null;
+            metrics: components["schemas"]["CriticalMetrics"] | null;
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            } | null;
+            /** Points */
+            points: components["schemas"]["DailyRowMatchPoint"][];
+            /** Column Pairs */
+            column_pairs: components["schemas"]["OverviewColumnPair"][];
+        };
+        /** OverviewComparisonsOut */
+        OverviewComparisonsOut: {
+            /** Items */
+            items: components["schemas"]["OverviewComparisonOut"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /**
+             * Days
+             * @enum {integer}
+             */
+            days: 7 | 15 | 30;
+            /** Timezone */
+            timezone: string;
+            /** Start Day */
+            start_day: string;
+            /** End Day */
+            end_day: string;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
         };
         /** OverviewOut */
         OverviewOut: {
@@ -2923,6 +3273,28 @@ export interface components {
             /** Offset */
             offset: number;
         };
+        /** Page[EvidenceRecordOut] */
+        Page_EvidenceRecordOut_: {
+            /** Items */
+            items: components["schemas"]["EvidenceRecordOut"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** Page[QualityColumnOut] */
+        Page_QualityColumnOut_: {
+            /** Items */
+            items: components["schemas"]["QualityColumnOut"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
         /** Page[RunOut] */
         Page_RunOut_: {
             /** Items */
@@ -2996,6 +3368,94 @@ export interface components {
             left_naive_timezone?: string | null;
             /** Right Naive Timezone */
             right_naive_timezone?: string | null;
+        };
+        /** QualityColumnOut */
+        QualityColumnOut: {
+            /** Id */
+            id: string;
+            /** Left Column */
+            left_column: string | null;
+            /** Right Column */
+            right_column: string | null;
+            /** Left Type */
+            left_type: string | null;
+            /** Right Type */
+            right_type: string | null;
+            /** Status */
+            status: string;
+            metric: components["schemas"]["ColumnMatchRate"];
+        };
+        /** QualityMetricSummary */
+        QualityMetricSummary: {
+            row_count_match: components["schemas"]["RowCountMatch"];
+            key_coverage: components["schemas"]["KeyCoverage"];
+            /** Duplicate Key Rate */
+            duplicate_key_rate: components["schemas"]["DuplicateKeyRate"][];
+            row_match_rate: components["schemas"]["RowMatchRate"];
+        };
+        /** QualityOut */
+        QualityOut: {
+            run: components["schemas"]["RunOut"];
+            /** Comparison Name */
+            comparison_name: string;
+            result: components["schemas"]["QualityResultContext"] | null;
+            /** Dimensions */
+            dimensions: {
+                [key: string]: unknown;
+            }[];
+            /** Diagnostics */
+            diagnostics: {
+                [key: string]: unknown;
+            }[];
+            /** Evidence */
+            evidence: {
+                [key: string]: unknown;
+            };
+        };
+        /** QualityResultContext */
+        QualityResultContext: {
+            /**
+             * Format Version
+             * @enum {integer}
+             */
+            format_version: 6 | 7;
+            /**
+             * Execution Id
+             * Format: uuid
+             */
+            execution_id: string;
+            /** Sources */
+            sources: {
+                [key: string]: unknown;
+            }[];
+            comparison_options?: components["schemas"]["ComparisonOptions"];
+            /** Resolved Scope */
+            resolved_scope: {
+                [key: string]: unknown;
+            };
+            /** Sampling Plan */
+            sampling_plan: {
+                [key: string]: unknown;
+            };
+            /** Key Validation */
+            key_validation: {
+                [key: string]: unknown;
+            }[];
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            };
+            /** Warnings */
+            warnings: string[];
+            metrics: components["schemas"]["QualityMetricSummary"];
+            /** Column Count */
+            column_count: number;
+            /** Columns Requiring Review */
+            columns_requiring_review: number;
+            /** Column Directory */
+            column_directory: {
+                [key: string]: unknown;
+            }[];
         };
         /** RecentRunOut */
         RecentRunOut: {
@@ -3280,6 +3740,25 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /** TrendMetricValue */
+        TrendMetricValue: {
+            /** Label */
+            label: string;
+            /** Percentage */
+            percentage: string | null;
+            /** Numerator */
+            numerator: number;
+            /** Denominator */
+            denominator: number;
+            /** Total */
+            total: number | null;
+            /** Not Evaluated */
+            not_evaluated: number;
+            /** Scope */
+            scope: string;
+            /** Reason */
+            reason?: string | null;
+        };
         /** TrendOut */
         TrendOut: {
             /** Passed */
@@ -3367,8 +3846,15 @@ export interface components {
             };
             /** @enum {string} */
             profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
-            permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
+            permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "quality_settings.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
             must_change_password: boolean;
+        };
+        QualitySettingsOut: {
+            row_match_target_percentage: string | null;
+            /** Format: date-time */
+            updated_at: string;
+            /** @constant */
+            metric: "row_match_rate";
         };
         AccessGroup: {
             /** Format: uuid */
@@ -5550,6 +6036,395 @@ export interface operations {
             };
         };
     };
+    get_quality_v1_runs__identifier__quality_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QualityOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    quality_columns_v1_runs__identifier__quality_columns_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                search?: string;
+                status?: string;
+                sort?: string;
+            };
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_QualityColumnOut_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    quality_records_v1_runs__identifier__quality_records_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                state?: string;
+                column?: string | null;
+                key?: string | null;
+            };
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_EvidenceRecordOut_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    quality_record_v1_runs__identifier__quality_records__ordinal__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+                ordinal: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceRecordOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    quality_export_v1_runs__identifier__quality_export_get: {
+        parameters: {
+            query?: {
+                state?: string;
+                column?: string | null;
+                key?: string | null;
+            };
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
     get_result_v1_runs__identifier__result_get: {
         parameters: {
             query?: never;
@@ -5791,6 +6666,163 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OverviewOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    comparisons_v1_overview_comparisons_get: {
+        parameters: {
+            query?: {
+                days?: number;
+                timezone?: string;
+                limit?: number;
+                offset?: number;
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverviewComparisonsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden or password change required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    metric_trend_v1_overview_metric_trend_get: {
+        parameters: {
+            query: {
+                comparison_id: string;
+                metric?: "row_count_match" | "key_coverage" | "duplicate_key_rate" | "row_match_rate" | "column_match_rate";
+                days?: number;
+                timezone?: string;
+                left_column?: string | null;
+                right_column?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricTrendOut"];
                 };
             };
             /** @description Unauthorized */

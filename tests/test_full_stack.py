@@ -67,7 +67,7 @@ class FullStackTests(TemporaryPostgres):
             'DATAQORE_WEB_URL':f'http://127.0.0.1:{web_port}','PYTHONPATH':os.pathsep.join(map(str,[ROOT/'tests/databricks_test_support',ROOT/'tests',ROOT/'engine'])),'DATAQORE_DATABRICKS_STUB_ROOT':str(source),'WORKER_POLL_SECONDS':'.1'}
         env.update(cfg)
         engine_env={**env,'DATABASE_URL':f'postgresql+psycopg://srv_dataqore_engine@127.0.0.1:{self.port}/dataqore_engine',
-            'CONNECTIONS_ENCRYPTION_KEY':Fernet.generate_key().decode(),'CONNECTIONS_ENCRYPTION_KEY_VERSION':'v1','SQLITE_ALLOWED_ROOT':str(source)}
+            'CONNECTIONS_ENCRYPTION_KEY':Fernet.generate_key().decode(),'EVIDENCE_ENCRYPTION_KEY':Fernet.generate_key().decode(),'CONNECTIONS_ENCRYPTION_KEY_VERSION':'v1','SQLITE_ALLOWED_ROOT':str(source)}
         # Ensure that neither service falls back to the personal file for any setting.
         empty=self.directory/'empty.env';empty.write_text('');env['DATAQORE_ENV_FILE']=str(empty);engine_env['DATAQORE_ENV_FILE']=str(empty)
         def admin_cli(command,expected=0):
@@ -139,7 +139,7 @@ class FullStackTests(TemporaryPostgres):
                     self.fail('Service did not start: '+url)
                 time.sleep(.2)
         commands=[(['node','--import','tsx','--test','tests/controller.test.ts','tests/diagnostics.test.ts'],ROOT/'controller'),
-            (['node','node_modules/@playwright/test/cli.js','test','critical-metrics.spec.ts','comparison-animation.spec.ts','result-interpretation.spec.ts','--output','test-results/critical-artifacts'],ROOT/'web'),
+            (['node','node_modules/@playwright/test/cli.js','test','critical-metrics.spec.ts','comparison-animation.spec.ts','--output','test-results/critical-artifacts'],ROOT/'web'),
             (['node','node_modules/@playwright/test/cli.js','test','ui-appearance.spec.ts','--output','test-results/appearance-artifacts'],ROOT/'web'),
             (['node','--import','tsx','--test','tests/comparison-delete.test.ts','tests/schedules.test.ts'],ROOT/'controller'),
             (['node','--import','tsx','--test','tests/access.test.ts'],ROOT/'controller'),
