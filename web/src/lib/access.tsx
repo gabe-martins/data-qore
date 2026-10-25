@@ -1,3 +1,4 @@
+import { useLanguage } from "../i18n/LanguageProvider";
 import { createContext, useContext, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import type { User } from "../api";
@@ -8,9 +9,10 @@ export function Allowed({ permission, children }: { permission: string; children
   return useCan(permission) ? children : null;
 }
 export function Protected({ permission, children }: { permission: string; children: ReactNode }) {
+  const { t: tr } = useLanguage();
   const user = useAccess();
   if (user?.must_change_password) return <Navigate to="/account" replace />;
-  return user?.permissions.includes(permission) ? children : <p role="alert">You do not have permission to access this page.</p>;
+  return user?.permissions.includes(permission) ? children : <p role="alert">{tr("You do not have permission to access this page.")}</p>;
 }
 export const profileLabels: Record<string, string> = { viewer: "Results Viewer", quality_manager: "Quality Manager", developer: "Data Developer", platform_admin: "Platform Administrator" };
 export const profileDescriptions: Record<string, string> = {

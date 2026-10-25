@@ -1,3 +1,4 @@
+import { useLanguage } from "../../i18n/LanguageProvider";
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -8,6 +9,7 @@ export function DialogContent({
   children,
   returnFocus,
 }: React.PropsWithChildren<{ title: string; description: string; returnFocus?: () => HTMLElement | null }>) {
+  const { t: tr } = useLanguage();
   const previous = React.useRef(document.activeElement as HTMLElement | null);
   return (
     <DialogPrimitive.Portal>
@@ -27,7 +29,7 @@ export function DialogContent({
         </DialogPrimitive.Description>
         <DialogPrimitive.Close
           className="icon-button dialog-close"
-          aria-label="Close"
+          aria-label={tr("Close")}
         >
           <X size={22} />
         </DialogPrimitive.Close>

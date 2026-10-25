@@ -1,3 +1,4 @@
+import { useLanguage } from "../i18n/LanguageProvider";
 import { useEffect, useRef, useState } from "react";
 import {
   Link,
@@ -34,6 +35,7 @@ import {
   RunsTable,
 } from "../components/common";
 export function Comparisons() {
+  const { t: tr } = useLanguage();
   const [offset, setOffset] = useState(0),
     [search, setSearch] = useState("");
   const q = useQuery({
@@ -46,18 +48,16 @@ export function Comparisons() {
   return (
     <>
       <PageTitle
-        title="Comparisons"
-        subtitle="Five critical metrics, equivalent scopes and reproducible samples."
+        title={tr("Comparisons")}
+        subtitle={tr("Five critical metrics, equivalent scopes and reproducible samples.")}
         action={
           <Button asChild>
-            <Link to="/comparisons/new">New comparison</Link>
+            <Link to="/comparisons/new">{"New comparison"}</Link>
           </Button>
         }
       />
       <Card>
-        <label>
-          Search
-          <input
+        <label>{tr("Search")}<input
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -74,10 +74,10 @@ export function Comparisons() {
               <table>
                 <thead>
                   <tr>
-                    <th>Comparison</th>
-                    <th>State</th>
-                    <th>Row Match Rate</th>
-                    <th>Latest run</th>
+                    <th>{tr("Comparison")}</th>
+                    <th>{tr("State")}</th>
+                    <th>{tr("Row Match Rate")}</th>
+                    <th>{tr("Latest run")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -107,13 +107,14 @@ export function Comparisons() {
             />
           </>
         ) : (
-          <Empty title="No comparisons" />
+          <Empty title={tr("No comparisons")} />
         )}
       </Card>
     </>
   );
 }
 export function ComparisonDetail() {
+  const { t: tr, locale, reason } = useLanguage();
   const { id } = useParams(),
     navigate = useNavigate(),
     cache = useQueryClient();
@@ -164,13 +165,13 @@ export function ComparisonDetail() {
   return (
     <>
       <PageTitle
-        title={quality.data?.comparison_name ?? c?.name ?? "Comparison"}
-        subtitle="Execution context and comparison quality"
+        title={quality.data?.comparison_name ?? c?.name ?? tr("Comparison")}
+        subtitle={tr("Execution context and comparison quality")}
         action={
           <>
             {canManage && (
               <Button asChild>
-                <Link to={`/comparisons/${id}/edit`}>Edit</Link>
+                <Link to={`/comparisons/${id}/edit`}>{"Edit"}</Link>
               </Button>
             )}
             {canExecute && (
@@ -194,9 +195,7 @@ export function ComparisonDetail() {
                     setBusy(false);
                   }
                 }}
-              >
-                Run comparison
-              </Button>
+              >{"Run comparison"}</Button>
             )}
           </>
         }
@@ -210,35 +209,30 @@ export function ComparisonDetail() {
           quality.error
         }
       />
-      <Card title="Selected execution">
-        <label>
-          Execution
-          <select
-            aria-label="Selected execution"
+      <Card title={tr("Selected execution")}>
+        <label>{tr("Execution")}<select
+            aria-label={tr("Selected execution")}
             value={selected ?? ""}
             onChange={(e) => setParams({ run_id: e.target.value })}
           >
             {!history.data?.items.some((r) => r.id === selected) &&
               selected && (
                 <option value={selected}>
-                  {selected} · selected execution
+                  {selected} · {tr("selected execution")}
                 </option>
               )}
-            {!selected && <option value="">No executions</option>}
+            {!selected && <option value="">{tr("No executions")}</option>}
             {history.data?.items.map((r) => (
               <option key={r.id} value={r.id}>
-                {new Date(r.requested_at).toLocaleString("en-US", {
+                {new Date(r.requested_at).toLocaleString(locale, {
                   timeZone: "America/Sao_Paulo",
                 })}{" "}
-                · {r.status} · {r.id.slice(0, 8)}
+                · {reason(r.status)} · {r.id.slice(0, 8)}
               </option>
             ))}
           </select>
         </label>
-        <p>
-          The selected execution stays fixed when browsing history. All
-          indicators and records below belong to this execution.
-        </p>
+        <p>{tr("The selected execution stays fixed when browsing history. All indicators and records below belong to this execution.")}</p>
       </Card>
       {quality.isFetching && !quality.data ? (
         <Loading />
@@ -248,14 +242,11 @@ export function ComparisonDetail() {
           <ComparisonQuality key={selected} quality={quality.data} />
         </>
       ) : quality.data && !valid ? (
-        <p role="alert">This execution belongs to a different comparison.</p>
+        <p role="alert">{tr("This execution belongs to a different comparison.")}</p>
       ) : !selected && !latest.isPending ? (
-        <Empty title="No executions yet">
-          Start a comparison to obtain real metrics. No demonstration data is
-          displayed.
-        </Empty>
+        <Empty title={tr("No executions yet")}>{tr("Start a comparison to obtain real metrics. No demonstration data is displayed.")}</Empty>
       ) : null}
-      <Card title="Execution history">
+      <Card title={tr("Execution history")}>
         {history.data?.items.length ? (
           <>
             <RunsTable runs={history.data.items} />
@@ -266,11 +257,11 @@ export function ComparisonDetail() {
             />
           </>
         ) : (
-          <Empty title="No comparison runs" />
+          <Empty title={tr("No comparison runs")} />
         )}
       </Card>
       {canManage && c && (
-        <Card title="Manage comparison">
+        <Card title={tr("Manage comparison")}>
           <div className="form-footer">
             <Button
               variant="outline"
@@ -288,15 +279,13 @@ export function ComparisonDetail() {
                 }
               }}
             >
-              {c.is_active ? "Deactivate" : "Activate"}
+              {c.is_active ? tr("Deactivate") : tr("Activate")}
             </Button>
             <Button
               variant="outline"
               ref={trigger}
               onClick={() => setDeleting(true)}
-            >
-              Delete comparison
-            </Button>
+            >{tr("Delete comparison")}</Button>
           </div>
         </Card>
       )}
@@ -315,6 +304,7 @@ export function ComparisonDetail() {
   );
 }
 export function Wizard() {
+  const { t: tr } = useLanguage();
   const { id } = useParams(),
     navigate = useNavigate(),
     cache = useQueryClient();
@@ -424,8 +414,8 @@ export function Wizard() {
   return (
     <>
       <PageTitle
-        title={id ? "Edit comparison" : "New comparison"}
-        subtitle={`Step ${step + 1} of 4 · ${["Sources and scope", "Columns and timezones", "Identity and sample", "Review"][step]}`}
+        title={id ? tr("Edit comparison") : tr("New comparison")}
+        subtitle={tr("Step {0} of 4 · {1}", {0: step + 1, 1: tr(["Sources and scope", "Columns and timezones", "Identity and sample", "Review"][step])})}
       />
       <ErrorBox error={error || datasets.error || current.error} />
       {datasets.isPending || (id && current.isPending) ? (
@@ -441,10 +431,8 @@ export function Wizard() {
         >
           {step === 0 && (
             <>
-              <Card title="Sources">
-                <label>
-                  Name
-                  <input
+              <Card title={tr("Sources")}>
+                <label>{tr("Name")}<input
                     required
                     maxLength={255}
                     value={name}
@@ -453,10 +441,9 @@ export function Wizard() {
                 </label>
                 <div className="form-grid">
                   {([left, right] as string[]).map((v, i) => (
-                    <label key={i}>
-                      Source {i ? "B" : "A"}
+                    <label key={i}>{tr("Source ")}{i ? "B" : "A"}
                       <select
-                        aria-label={`Source ${i ? "B" : "A"}`}
+                        aria-label={tr("Source {0}", {0: i ? "B" : "A"})}
                         required
                         value={v}
                         onChange={(e) => {
@@ -464,7 +451,7 @@ export function Wizard() {
                           setOptions({});
                         }}
                       >
-                        <option value="">Choose dataset</option>
+                        <option value="">{tr("Choose dataset")}</option>
                         {datasets.data?.items
                           .filter((d) => d.id !== (i ? left : right))
                           .map((d) => (
@@ -514,26 +501,20 @@ export function Wizard() {
                 )}
               />
               <Card
-                title="Reproducible random sample"
-                subtitle="The same selected keys are fetched in both sources. Selection scans all eligible keys; at most 10,000 keys are compared."
+                title={tr("Reproducible random sample")}
+                subtitle={tr("The same selected keys are fetched in both sources. Selection scans all eligible keys; at most 10,000 keys are compared.")}
               >
-                <label>
-                  Sample size
-                  <select
-                    aria-label="Sample size"
+                <label>{tr("Sample size")}<select
+                    aria-label={tr("Sample size")}
                     value={method}
                     onChange={(e) => setMethod(e.target.value as typeof method)}
                   >
-                    <option value="rows">Number of keys</option>
-                    <option value="percentage">
-                      Percentage of larger scope
-                    </option>
+                    <option value="rows">{tr("Number of keys")}</option>
+                    <option value="percentage">{tr("Percentage of larger scope")}</option>
                   </select>
                 </label>
                 {method === "rows" ? (
-                  <label>
-                    Keys
-                    <input
+                  <label>{tr("Keys")}<input
                       type="number"
                       required
                       min={1}
@@ -544,9 +525,7 @@ export function Wizard() {
                     />
                   </label>
                 ) : (
-                  <label>
-                    Percentage
-                    <input
+                  <label>{tr("Percentage")}<input
                       required
                       inputMode="decimal"
                       value={percentage}
@@ -554,50 +533,35 @@ export function Wizard() {
                     />
                   </label>
                 )}
-                <label>
-                  Seed (optional)
-                  <input
+                <label>{tr("Seed (optional)")}<input
                     inputMode="numeric"
                     pattern="[0-9]{1,20}"
                     value={seed}
                     onChange={(e) => setSeed(e.target.value)}
-                    placeholder="Generated when queued"
+                    placeholder={tr("Generated when queued")}
                   />
                 </label>
-                <p className="notice">
-                  Same seed, scope and unchanged key set reproduce the
-                  selection. Values may change. Percentage uses the larger
-                  source row count, not the union size.
-                </p>
+                <p className="notice">{tr("Same seed, scope and unchanged key set reproduce the selection. Values may change. Percentage uses the larger source row count, not the union size.")}</p>
               </Card>
-              <Card title="Numeric tolerances">
+              <Card title={tr("Numeric tolerances")}>
                 <div className="form-grid">
-                  <label>
-                    Absolute tolerance
-                    <input
+                  <label>{tr("Absolute tolerance")}<input
                       required
                       value={absolute}
                       onChange={(e) => setAbsolute(e.target.value)}
                     />
                   </label>
-                  <label>
-                    Relative tolerance (fraction)
-                    <input
+                  <label>{tr("Relative tolerance (fraction)")}<input
                       required
                       value={relative}
                       onChange={(e) => setRelative(e.target.value)}
                     />
                   </label>
                 </div>
-                <p>
-                  Zero means exact numeric equality. Relative tolerance uses a
-                  fraction: 0.1 means 10%; 10 means 1,000%.
-                </p>
+                <p>{tr("Zero means exact numeric equality. Relative tolerance uses a fraction: 0.1 means 10%; 10 means 1,000%.")}</p>
                 <details>
-                  <summary>Capture budgets</summary>
-                  <label>
-                    Maximum cells (both sources)
-                    <input
+                  <summary>{tr("Capture budgets")}</summary>
+                  <label>{tr("Maximum cells (both sources)")}<input
                       type="number"
                       required
                       min={1}
@@ -605,9 +569,7 @@ export function Wizard() {
                       onChange={(e) => setMaxCells(Number(e.target.value))}
                     />
                   </label>
-                  <label>
-                    Maximum captured bytes
-                    <input
+                  <label>{tr("Maximum captured bytes")}<input
                       type="number"
                       required
                       min={1}
@@ -620,31 +582,25 @@ export function Wizard() {
             </>
           )}
           {step === 3 && preview && (
-            <Card title="Review">
+            <Card title={tr("Review")}>
               <p>
-                {name} · {preview.sample_target} requested keys · scoped rows{" "}
+                {name} · {preview.sample_target}{tr(" requested keys · scoped rows")}{" "}
                 {preview.scope_counts.join(" / ")}
               </p>
-              <p>
-                Comparison key:{" "}
+              <p>{tr("Comparison key:")}{" "}
                 {(preview.business_key.length
                   ? preview.business_key
                   : preview.suggested_business_key
                 )
                   .map((p) => `${p.left} ↔ ${p.right}`)
-                  .join(", ") || "Unavailable — choose a business key"}
+                  .join(", ") || tr("Unavailable — choose a business key")}
               </p>
-              <p>
-                Preview counts are provisional. Execution validates key
-                uniqueness and freezes its own counts and selection.
+              <p>{tr("Preview counts are provisional. Execution validates key uniqueness and freezes its own counts and selection.")}</p>
+              <p>{tr("Excluded columns A:")}{" "}
+                {preview.excluded_columns?.left?.join(", ") || tr("None")} · B:{" "}
+                {preview.excluded_columns?.right?.join(", ") || tr("None")}
               </p>
-              <p>
-                Excluded columns A:{" "}
-                {preview.excluded_columns?.left?.join(", ") || "None"} · B:{" "}
-                {preview.excluded_columns?.right?.join(", ") || "None"}
-              </p>
-              <p>
-                Timestamp interpretation:{" "}
+              <p>{tr("Timestamp interpretation:")}{" "}
                 {Object.entries(preview.timestamp_timezones ?? {})
                   .flatMap(([side, zones]) =>
                     Object.entries(zones).map(
@@ -652,10 +608,10 @@ export function Wizard() {
                         `${side === "left" ? "A" : "B"}.${column}: ${zone}`,
                     ),
                   )
-                  .join(" · ") || "No explicit overrides"}
+                  .join(" · ") || tr("No explicit overrides")}
               </p>
               <JsonView value={preview} />
-              <p>Save the definition or save and run now.</p>
+              <p>{tr("Save the definition or save and run now.")}</p>
             </Card>
           )}
           <div className="form-footer">
@@ -665,27 +621,23 @@ export function Wizard() {
                 variant="outline"
                 disabled={busy}
                 onClick={() => setStep(step - 1)}
-              >
-                Back
-              </Button>
+              >{tr("Back")}</Button>
             )}
             <Button type="submit" disabled={busy}>
               {busy
-                ? "Working…"
+                ? tr("Working…")
                 : step === 3
-                  ? "Save comparison"
+                  ? tr("Save comparison")
                   : step === 2
-                    ? "Review"
-                    : "Next"}
+                    ? tr("Review")
+                    : tr("Next")}
             </Button>
             {step === 3 && (
               <Button
                 type="button"
                 disabled={busy}
                 onClick={() => void save(true)}
-              >
-                Save and run
-              </Button>
+              >{tr("Save and run")}</Button>
             )}
           </div>
         </form>

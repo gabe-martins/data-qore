@@ -1,5 +1,7 @@
+import { useLanguage } from "../i18n/LanguageProvider";
 /** Decorative motion illustrates comparison, never measured progress or results. */
 export function ComparisonRunAnimation({ state }: { state: "queued" | "running" }) {
+  const { t: tr } = useLanguage();
   return (
     <div className="comparison-wait" data-state={state}>
       <svg className="comparison-motion" viewBox="0 0 360 200" fill="none" aria-hidden="true" focusable="false">
@@ -40,10 +42,10 @@ export function ComparisonRunAnimation({ state }: { state: "queued" | "running" 
         </g>
       </svg>
       <div role="status" aria-live="polite" aria-atomic="true">
-        <h2>{state === "queued" ? "Comparison queued" : "Analyzing comparison data"}</h2>
+        <h2>{state === "queued" ? tr("Comparison queued") : tr("Analyzing comparison data")}</h2>
       </div>
-      <p className="muted">{state === "queued" ? "Waiting for a worker to start the comparison." : "Comparing your datasets and preparing the results."}</p>
-      <p className="muted small">This page updates automatically every two seconds. You can navigate away and return to this run.</p>
+      <p className="muted">{state === "queued" ? tr("Waiting for a worker to start the comparison.") : tr("Comparing your datasets and preparing the results.")}</p>
+      <p className="muted small">{tr("This page updates automatically every two seconds. You can navigate away and return to this run.")}</p>
     </div>
   );
 }

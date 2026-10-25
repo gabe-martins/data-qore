@@ -1,3 +1,4 @@
+import { useLanguage } from "../i18n/LanguageProvider";
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Database, Plus, Search, Trash2 } from "lucide-react";
@@ -16,6 +17,7 @@ import { Dialog, DialogContent } from "../components/ui/dialog";
 import { DeleteConnectionDialog } from "../components/DeleteConnectionDialog";
 type Connection = Model<"ConnectionOut">;
 export function Connections() {
+  const { t: tr, locale } = useLanguage();
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
   const [editing, setEditing] = useState<Connection | null | undefined>();
@@ -37,7 +39,7 @@ export function Connections() {
     setError(null);
     try {
       await post(`/connections/${c.id}/test`);
-      setTests((v) => ({ ...v, [c.id]: new Date().toLocaleTimeString() }));
+      setTests((v) => ({ ...v, [c.id]: new Date().toISOString() }));
     } catch (e) {
       setError(e);
     } finally {
@@ -47,15 +49,15 @@ export function Connections() {
   return (
     <>
       <PageTitle
-        title="Connections"
-        subtitle="Manage your data sources and validate access before analysis."
+        title={tr("Connections")}
+        subtitle={tr("Manage your data sources and validate access before analysis.")}
       />
       <div className="toolbar">
         <div className="search">
           <Search size={20} />
           <input
-            aria-label="Search connections"
-            placeholder="Search connections…"
+            aria-label={tr("Search connections")}
+            placeholder={tr("Search connections…")}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -64,9 +66,7 @@ export function Connections() {
           />
         </div>
         <Button ref={newConnectionButton} onClick={() => setEditing(null)}>
-          <Plus size={18} />
-          New connection
-        </Button>
+          <Plus size={18} />{tr("New connection")}</Button>
       </div>
       <ErrorBox error={q.error || error} />
       {q.isPending ? (
@@ -88,30 +88,28 @@ export function Connections() {
             </div>
             <div className="connection-meta">
               <div>
-                <span className="muted">Registered datasets</span>
+                <span className="muted">{tr("Registered datasets")}</span>
                 <strong>{c.dataset_count}</strong>
               </div>
               <div>
-                <span className="muted">Credential access</span>
-                <strong>Encrypted · write only</strong>
+                <span className="muted">{tr("Credential access")}</span>
+                <strong>{tr("Encrypted · write only")}</strong>
               </div>
             </div>
             <div className="card-bottom">
               <span className="muted small">
                 {tests[c.id]
-                  ? `Tested this session at ${tests[c.id]}`
-                  : "Not tested in this session"}
+                  ? tr("Tested this session at {0}", {0: new Date(tests[c.id]).toLocaleTimeString(locale)})
+                  : tr("Not tested in this session")}
               </span>
               <div className="actions">
-                <Button variant="outline" onClick={() => setEditing(c)}>
-                  Edit
-                </Button>
+                <Button variant="outline" onClick={() => setEditing(c)}>{tr("Edit")}</Button>
                 <Button
                   variant="outline"
                   disabled={!c.is_active || busy === c.id}
                   onClick={() => test(c)}
                 >
-                  {busy === c.id ? "Testing…" : "Test"}
+                  {busy === c.id ? tr("Testing…") : tr("Test")}
                 </Button>
                 <Button
                   variant="ghost"
@@ -128,20 +126,17 @@ export function Connections() {
                     }
                   }}
                 >
-                  {c.is_active ? "Deactivate" : "Activate"}
+                  {c.is_active ? tr("Deactivate") : tr("Activate")}
                 </Button>
                 <Button variant="outline" onClick={() => setDeleting(c)}>
-                  <Trash2 size={16} aria-hidden="true" /> Delete
-                </Button>
+                  <Trash2 size={16} aria-hidden="true" />{tr(" Delete")}</Button>
               </div>
             </div>
           </Card>
         ))
       ) : (
         <Card>
-          <Empty title="No connections found">
-            Add a read-only source to explore its catalog.
-          </Empty>
+          <Empty title={tr("No connections found")}>{tr("Add a read-only source to explore its catalog.")}</Empty>
         </Card>
       )}
       {q.data && (
@@ -190,6 +185,7 @@ function ConnectionForm({
   connection: Connection | null;
   onSaved: () => void;
 }) {
+  const { t: tr } = useLanguage();
   const [connector, setConnector] = useState<string>(
     connection?.connector ?? "postgresql",
   );
@@ -231,8 +227,8 @@ function ConnectionForm({
   }
   return (
     <DialogContent
-      title={connection ? "Edit connection" : "New connection"}
-      description="Configure a read-only data source. Credentials are never returned by the API."
+      title={connection ? tr("Edit connection") : tr("New connection")}
+      description={tr("Configure a read-only data source. Credentials are never returned by the API.")}
     >
       <form
         onChange={() => setMessage("")}
@@ -257,20 +253,16 @@ function ConnectionForm({
         }}
       >
         <div className="form-grid">
-          <label>
-            Connection name
-            <input
+          <label>{tr("Connection name")}<input
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               maxLength={255}
-              placeholder="e.g. sales_production"
+              placeholder={tr("e.g. sales_production")}
             />
           </label>
-          <label>
-            Database type
-            <select
-              aria-label="Database type"
+          <label>{tr("Database type")}<select
+              aria-label={tr("Database type")}
               value={connector}
               disabled={!!connection}
               onChange={(e) => setConnector(e.target.value)}
@@ -280,7 +272,7 @@ function ConnectionForm({
                   {c}
                   {drivers.data?.find((d) => d.connector === c)?.available ===
                   false
-                    ? " — driver unavailable"
+                    ? tr(" — driver unavailable")
                     : ""}
                 </option>
               ))}
@@ -293,26 +285,20 @@ function ConnectionForm({
               type="checkbox"
               checked={replace}
               onChange={(e) => setReplace(e.target.checked)}
-            />
-            Replace all credentials
-          </label>
+            />{tr("Replace all credentials")}</label>
         )}
         {replace && (
           <div key={connector}>
             <div className="form-grid">
               {connector !== "sqlite" && connector !== "databricks" && (
                 <>
-                  <label>
-                    Host / address
-                    <input
+                  <label>{tr("Host / address")}<input
                       name="hostname"
                       required
                       placeholder="db.company.com"
                     />
                   </label>
-                  <label>
-                    Port
-                    <input
+                  <label>{tr("Port")}<input
                       name="port"
                       type="number"
                       min="1"
@@ -321,13 +307,9 @@ function ConnectionForm({
                       required
                     />
                   </label>
-                  <label>
-                    User
-                    <input name="username" required autoComplete="off" />
+                  <label>{tr("User")}<input name="username" required autoComplete="off" />
                   </label>
-                  <label>
-                    Password
-                    <input
+                  <label>{tr("Password")}<input
                       name="password"
                       type="password"
                       required
@@ -337,22 +319,22 @@ function ConnectionForm({
                 </>
               )}
               {connector === "databricks" && <>
-                <label>Server hostname<input name="hostname" required placeholder="workspace.azuredatabricks.net" autoComplete="off" /></label>
-                <label>HTTP path<input name="http_path" required placeholder="/sql/1.0/warehouses/warehouse-id" autoComplete="off" /></label>
-                <label>Authentication<select aria-label="Databricks authentication" value={authType} onChange={e=>setAuthType(e.target.value)}><option value="pat">Personal access token (PAT)</option><option value="oauth_m2m">OAuth M2M — service principal</option></select></label>
-                {authType === "pat" ? <label>Access token<input name="access_token" type="password" required autoComplete="new-password" /></label> : <>
-                  <label>Client ID<input name="client_id" required autoComplete="off" /></label>
-                  <label>Client secret<input name="client_secret" type="password" required autoComplete="new-password" /></label>
+                <label>{tr("Server hostname")}<input name="hostname" required placeholder="workspace.azuredatabricks.net" autoComplete="off" /></label>
+                <label>{tr("HTTP path")}<input name="http_path" required placeholder="/sql/1.0/warehouses/warehouse-id" autoComplete="off" /></label>
+                <label>{tr("Authentication")}<select aria-label={tr("Databricks authentication")} value={authType} onChange={e=>setAuthType(e.target.value)}><option value="pat">{tr("Personal access token (PAT)")}</option><option value="oauth_m2m">{tr("OAuth M2M — service principal")}</option></select></label>
+                {authType === "pat" ? <label>{tr("Access token")}<input name="access_token" type="password" required autoComplete="new-password" /></label> : <>
+                  <label>{tr("Client ID")}<input name="client_id" required autoComplete="off" /></label>
+                  <label>{tr("Client secret")}<input name="client_secret" type="password" required autoComplete="new-password" /></label>
                 </>}
-                <p className="notice">Use a Unity Catalog SQL Warehouse with read-only permissions. Choose catalog and schema in Catalog after saving. OAuth tokens renew automatically.</p>
+                <p className="notice">{tr("Use a Unity Catalog SQL Warehouse with read-only permissions. Choose catalog and schema in Catalog after saving. OAuth tokens renew automatically.")}</p>
               </>}
               {connector !== "databricks" && <>
               <label>
                 {connector === "sqlite"
-                  ? "SQLite file"
+                  ? tr("SQLite file")
                   : connector === "oracle"
-                    ? "Service name"
-                    : "Database"}
+                    ? tr("Service name")
+                    : tr("Database")}
                 <input
                   name="database"
                   required
@@ -363,9 +345,7 @@ function ConnectionForm({
               </label>
               </>}
               {connector === "postgresql" && (
-                <label>
-                  SSL mode
-                  <select name="sslmode" defaultValue="prefer">
+                <label>{tr("SSL mode")}<select name="sslmode" defaultValue="prefer">
                     {[
                       "disable",
                       "allow",
@@ -382,28 +362,21 @@ function ConnectionForm({
             </div>
             {connector === "mssql" && (
               <label className="check-label">
-                <input name="trust" type="checkbox" />
-                Trust server certificate (explicit local exception)
-              </label>
+                <input name="trust" type="checkbox" />{tr("Trust server certificate (explicit local exception)")}</label>
             )}
             {connector === "sqlite" && (
-              <p className="notice">
-                Select an existing file inside the engine’s SQLITE_ALLOWED_ROOT
-                directory. File upload is not supported.
-              </p>
+              <p className="notice">{tr("Select an existing file inside the engine’s SQLITE_ALLOWED_ROOT directory. File upload is not supported.")}</p>
             )}
           </div>
         )}
         <ErrorBox error={error} />
         {message && (
           <p className="notice success" role="status">
-            {message}
+            {tr(message)}
           </p>
         )}
         <div className="form-footer">
-          <span className="muted small">
-            A read-only source account is recommended.
-          </span>
+          <span className="muted small">{tr("A read-only source account is recommended.")}</span>
           <Button
             type="button"
             variant="outline"
@@ -426,10 +399,10 @@ function ConnectionForm({
               }
             }}
           >
-            {busy ? "Working…" : "Test connection"}
+            {busy ? tr("Working…") : tr("Test connection")}
           </Button>
           <Button disabled={busy}>
-            {connection ? "Save changes" : "Save connection"}
+            {connection ? tr("Save changes") : tr("Save connection")}
           </Button>
         </div>
       </form>

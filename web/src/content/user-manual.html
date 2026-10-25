@@ -97,8 +97,8 @@
     <p class="manual-kicker">DataQore · Guia do usuário</p>
     <h1>Manual de uso</h1>
     <p class="manual-lead">Da conexão à investigação de divergências: saiba configurar comparações, interpretar as cinco métricas críticas e acompanhar a qualidade dos seus dados.</p>
-    <p class="manual-meta">Referência da interface: 24/10/2026 · Português · Os nomes em inglês correspondem aos rótulos exibidos na aplicação.</p>
-    <p class="manual-meta">Acesso: menu do usuário → Settings → Help → Manual de uso. Use o índice ou Ctrl+F / ⌘F para localizar um assunto. Na aplicação, Baixar HTML permite guardar uma cópia independente; Imprimir / salvar PDF abre as opções de impressão do navegador.</p>
+    <p class="manual-meta">Referência da interface: 24/10/2026 · Português do Brasil · Os rótulos acompanham o idioma selecionado na aplicação.</p>
+    <p class="manual-meta">Acesso: menu do usuário → Configurações → Ajuda → Manual de uso. Use o índice ou Ctrl+F / ⌘F para localizar um assunto. Na aplicação, Baixar HTML permite guardar uma cópia independente; Imprimir / salvar PDF abre as opções de impressão do navegador.</p>
   </header>
 
   <div class="manual-layout">
@@ -108,17 +108,17 @@
         <li><a href="#manual-visao">O que o DataQore faz</a></li>
         <li><a href="#manual-primeiros-passos">Primeiros passos</a></li>
         <li><a href="#manual-navegacao">Acesso e navegação</a></li>
-        <li><a href="#manual-overview">Overview e suas tabelas</a></li>
-        <li><a href="#manual-connections">Connections</a></li>
-        <li><a href="#manual-catalog">Catalog e datasets</a></li>
-        <li><a href="#manual-comparisons">Comparisons: configurar</a></li>
+        <li><a href="#manual-overview">Visão geral e suas tabelas</a></li>
+        <li><a href="#manual-connections">Conexões</a></li>
+        <li><a href="#manual-catalog">Catálogo e datasets</a></li>
+        <li><a href="#manual-comparisons">Comparações: configurar</a></li>
         <li><a href="#manual-amostragem">Amostragem e cobertura</a></li>
         <li><a href="#manual-metricas">As cinco métricas</a></li>
         <li><a href="#manual-investigacao">Investigar resultados</a></li>
         <li><a href="#manual-evidencias">Inspecionar e exportar</a></li>
-        <li><a href="#manual-runs">Runs: histórico e estados</a></li>
-        <li><a href="#manual-schedules">Schedules</a></li>
-        <li><a href="#manual-settings">Settings e administração</a></li>
+        <li><a href="#manual-runs">Execuções: histórico e estados</a></li>
+        <li><a href="#manual-schedules">Agendamentos</a></li>
+        <li><a href="#manual-settings">Configurações e administração</a></li>
         <li><a href="#manual-exclusoes">Desativação e exclusões</a></li>
         <li><a href="#manual-duvidas">Dúvidas e diagnóstico</a></li>
         <li><a href="#manual-glossario">Glossário</a></li>
@@ -129,9 +129,9 @@
       <section class="manual-section" id="manual-visao" aria-labelledby="manual-visao-titulo">
         <span class="manual-number">01 · Visão geral</span>
         <h2 id="manual-visao-titulo">O que o DataQore faz</h2>
-        <p>O DataQore compara duas fontes de dados, chamadas <strong>Source A</strong> e <strong>Source B</strong>, usando tabelas cadastradas, um recorte equivalente e uma chave que identifica cada registro. Ele salva a configuração usada em cada execução e apresenta diferenças de volume, presença de chaves, integridade da identidade e correspondência dos valores.</p>
+        <p>O DataQore compara duas fontes de dados, chamadas <strong>Fonte A</strong> e <strong>Fonte B</strong>, usando tabelas cadastradas, um recorte equivalente e uma chave que identifica cada registro. Ele salva a configuração usada em cada execução e apresenta diferenças de volume, presença de chaves, integridade da identidade e correspondência dos valores.</p>
         <ol class="manual-flow" aria-label="Fluxo de trabalho">
-          <li>Connections</li><li>Catalog</li><li>Comparisons</li><li>Execução</li><li>Comparison Quality</li><li>Overview</li>
+          <li>Conexões</li><li>Catálogo</li><li>Comparações</li><li>Execução</li><li>Qualidade da comparação</li><li>Visão geral</li>
         </ol>
         <p>Uma <strong>connection</strong> representa o acesso a uma fonte; um <strong>dataset</strong> é o cadastro de uma tabela ou view; uma <strong>comparison</strong> reúne as regras entre dois datasets; um <strong>run</strong> é uma execução dessas regras. Você pode reutilizar a mesma comparação em várias execuções manuais ou agendadas.</p>
         <div class="manual-note"><strong>Qualidade exige contexto.</strong> Contagens e integridade da chave cobrem todo o recorte. A presença de chaves e a igualdade de linhas e colunas descrevem a amostra selecionada. Uma amostra com 100% de correspondência não comprova igualdade de todas as linhas das tabelas.</div>
@@ -142,30 +142,30 @@
         <span class="manual-number">02 · Início rápido</span>
         <h2 id="manual-primeiros-titulo">Faça sua primeira comparação</h2>
         <ol>
-          <li><strong>Entre na aplicação.</strong> Use o e-mail e a senha recebidos do administrador. Se a senha for temporária, altere-a em Profile antes de usar as funções operacionais.</li>
-          <li><strong>Cadastre e teste duas fontes em Connections.</strong> Use New connection, preencha os campos, teste com Test connection e salve. Essa etapa exige Data Developer ou Platform Administrator.</li>
-          <li><strong>Registre as tabelas em Catalog.</strong> Selecione conexão, catálogo quando aplicável e schema. Clique em Register dataset para cada tabela; abra o dataset e confira as colunas.</li>
-          <li><strong>Crie a definição em Comparisons → New comparison.</strong> Escolha A e B, configure recorte, colunas, fusos, mapeamento, chave, amostra e tolerâncias.</li>
-          <li><strong>Confira Review.</strong> Revise os volumes provisórios, a chave e a seleção solicitada. Save comparison apenas salva; Save and run também inicia uma execução.</li>
-          <li><strong>Aguarde a conclusão.</strong> Na comparação, acompanhe Selected execution. Em Runs, você também encontra o estado técnico. Só interprete métricas quando houver resultado concluído.</li>
-          <li><strong>Investigue em Comparison Quality.</strong> Leia a conclusão, os denominadores, as dimensões, as colunas com divergências e os registros capturados.</li>
-          <li><strong>Acompanhe e automatize.</strong> Use Overview para evolução diária e Schedules para executar periodicamente a comparação salva.</li>
+          <li><strong>Entre na aplicação.</strong> Use o e-mail e a senha recebidos do administrador. Se a senha for temporária, altere-a em Perfil antes de usar as funções operacionais.</li>
+          <li><strong>Cadastre e teste duas fontes em Conexões.</strong> Use Nova conexão, preencha os campos, teste com Testar conexão e salve. Essa etapa exige Desenvolvedor de dados ou Administrador da plataforma.</li>
+          <li><strong>Registre as tabelas em Catálogo.</strong> Selecione conexão, catálogo quando aplicável e schema. Clique em Cadastrar conjunto de dados para cada tabela; abra o dataset e confira as colunas.</li>
+          <li><strong>Crie a definição em Comparações → Nova comparação.</strong> Escolha A e B, configure recorte, colunas, fusos, mapeamento, chave, amostra e tolerâncias.</li>
+          <li><strong>Confira Revisão.</strong> Revise os volumes provisórios, a chave e a seleção solicitada. Salvar comparação apenas salva; Salvar e executar também inicia uma execução.</li>
+          <li><strong>Aguarde a conclusão.</strong> Na comparação, acompanhe Execução selecionada. Em Execuções, você também encontra o estado técnico. Só interprete métricas quando houver resultado concluído.</li>
+          <li><strong>Investigue em Qualidade da comparação.</strong> Leia a conclusão, os denominadores, as dimensões, as colunas com divergências e os registros capturados.</li>
+          <li><strong>Acompanhe e automatize.</strong> Use Visão geral para evolução diária e Agendamentos para executar periodicamente a comparação salva.</li>
         </ol>
-        <p>Se você é Results Viewer, comece em Overview ou Runs e abra um resultado existente. Se é Quality Manager, pode configurar comparações e agendamentos com os datasets já registrados.</p>
+        <p>Se você é Leitor de resultados, comece em Visão geral ou Execuções e abra um resultado existente. Se é Gestor de qualidade, pode configurar comparações e agendamentos com os datasets já registrados.</p>
       </section>
 
       <section class="manual-section" id="manual-navegacao" aria-labelledby="manual-navegacao-titulo">
         <span class="manual-number">03 · Acesso</span>
         <h2 id="manual-navegacao-titulo">Acesso e navegação</h2>
-        <p>Na tela de entrada, informe Email e Password e use Sign in. Não há cadastro público de usuários nem envio automático de senha por e-mail. Em caso de senha esquecida ou conta desativada, procure o administrador.</p>
-        <p>A barra lateral organiza Overview, Connections, Catalog, Comparisons, Schedules e Runs conforme suas permissões. No desktop, ela pode ser recolhida. No celular, use Toggle navigation para abrir o menu e selecione a página desejada. As listas têm paginação; buscas e filtros podem mudar a quantidade de resultados.</p>
-        <p>No menu do usuário, <strong>Settings</strong> abre as configurações, <strong>Theme</strong> altera o tema e <strong>Sign out</strong> encerra a sessão. Em Settings, Back to application retorna à aplicação. Uma página ou ação ausente pode refletir o perfil de acesso; abrir o endereço diretamente não concede a permissão.</p>
+        <p>Na tela de entrada, informe E-mail e Senha e use Entrar. Não há cadastro público de usuários nem envio automático de senha por e-mail. Em caso de senha esquecida ou conta desativada, procure o administrador.</p>
+        <p>A barra lateral organiza Visão geral, Conexões, Catálogo, Comparações, Agendamentos e Execuções conforme suas permissões. No desktop, ela pode ser recolhida. No celular, use Abrir navegação para abrir o menu e selecione a página desejada. As listas têm paginação; buscas e filtros podem mudar a quantidade de resultados.</p>
+        <p>No menu do usuário, <strong>Configurações</strong> abre as configurações, <strong>Tema</strong> altera o tema e <strong>Sair</strong> encerra a sessão. Em Configurações, Voltar à aplicação retorna à aplicação. Uma página ou ação ausente pode refletir o perfil de acesso; abrir o endereço diretamente não concede a permissão.</p>
         <div class="manual-table manual-wide" tabindex="0" role="region" aria-label="Permissões por perfil">
           <table>
             <caption>Os quatro perfis fixos</caption>
-            <thead><tr><th scope="col">Função</th><th scope="col">Results Viewer</th><th scope="col">Quality Manager</th><th scope="col">Data Developer</th><th scope="col">Platform Administrator</th></tr></thead>
+            <thead><tr><th scope="col">Função</th><th scope="col">Leitor de resultados</th><th scope="col">Gestor de qualidade</th><th scope="col">Desenvolvedor de dados</th><th scope="col">Administrador da plataforma</th></tr></thead>
             <tbody>
-              <tr><th scope="row">Overview, Runs, qualidade e downloads</th><td>Sim</td><td>Sim</td><td>Sim</td><td>Sim</td></tr>
+              <tr><th scope="row">Visão geral, Execuções, qualidade e downloads</th><td>Sim</td><td>Sim</td><td>Sim</td><td>Sim</td></tr>
               <tr><th scope="row">Consultar datasets e definições</th><td>Não</td><td>Sim</td><td>Sim</td><td>Sim</td></tr>
               <tr><th scope="row">Gerenciar e executar comparações; agendar</th><td>Não</td><td>Sim</td><td>Sim</td><td>Sim</td></tr>
               <tr><th scope="row">Explorar fontes; gerenciar conexões e datasets</th><td>Não</td><td>Não</td><td>Sim</td><td>Sim</td></tr>
@@ -175,110 +175,110 @@
             </tbody>
           </table>
         </div>
-        <p>Results Viewer pode abrir Comparison Quality por um resultado ou link do Overview, inclusive inspecionar e exportar evidências disponíveis, sem receber acesso à edição da definição. Os dados são compartilhados no ambiente; grupos organizam acesso, sem criar conjuntos de dados separados por equipe.</p>
+        <p>Leitor de resultados pode abrir Qualidade da comparação por um resultado ou link do Visão geral, inclusive inspecionar e exportar evidências disponíveis, sem receber acesso à edição da definição. Os dados são compartilhados no ambiente; grupos organizam acesso, sem criar conjuntos de dados separados por equipe.</p>
       </section>
 
       <section class="manual-section" id="manual-overview" aria-labelledby="manual-overview-titulo">
         <span class="manual-number">04 · Acompanhamento</span>
-        <h2 id="manual-overview-titulo">Overview e suas tabelas</h2>
-        <p>Overview concentra a situação das comparações ativas e a evolução dos resultados salvos. Consultar essa página não inicia comparações nem faz novas leituras das tabelas de origem.</p>
+        <h2 id="manual-overview-titulo">Visão geral e suas tabelas</h2>
+        <p>Visão geral concentra a situação das comparações ativas e a evolução dos resultados salvos. Consultar essa página não inicia comparações nem faz novas leituras das tabelas de origem.</p>
         <h3>Indicadores do topo</h3>
         <ul>
-          <li><strong>Row Match Rate:</strong> consolidado ponderado. Soma registros iguais e posições avaliadas dos resultados considerados, em vez de calcular uma média simples dos percentuais. O detalhe mostra avaliados e cobertura.</li>
-          <li><strong>Quality target:</strong> meta global atual, seu estado de atendimento e o acesso às configurações. Ela se aplica a Row Match Rate.</li>
-          <li><strong>Active comparisons:</strong> quantidade de comparações ativas e quantas têm último resultado avaliável.</li>
-          <li><strong>Requires investigation:</strong> soma das comparações com diferenças observadas, resultado inconclusivo ou falha técnica; o detalhamento separa os três casos.</li>
+          <li><strong>Taxa de correspondência de linhas:</strong> consolidado ponderado. Soma registros iguais e posições avaliadas dos resultados considerados, em vez de calcular uma média simples dos percentuais. O detalhe mostra avaliados e cobertura.</li>
+          <li><strong>Meta de qualidade:</strong> meta global atual, seu estado de atendimento e o acesso às configurações. Ela se aplica a Taxa de correspondência de linhas.</li>
+          <li><strong>Comparações ativas:</strong> quantidade de comparações ativas e quantas têm último resultado avaliável.</li>
+          <li><strong>Requer investigação:</strong> soma das comparações com diferenças observadas, resultado inconclusivo ou falha técnica; o detalhamento separa os três casos.</li>
         </ul>
         <div class="manual-example"><strong>Exemplo didático de ponderação:</strong> uma comparação tem 90/100 linhas iguais e outra, 10/10. O consolidado é 100/110 = 90,91%, e não a média de 90% e 100%.</div>
-        <h3>Comparisons at a glance: leia cada coluna</h3>
+        <h3>Resumo das comparações: leia cada coluna</h3>
         <div class="manual-table" tabindex="0" role="region" aria-label="Colunas da tabela do Overview">
           <table>
             <caption>Resumo por comparação ativa</caption>
             <thead><tr><th scope="col">Coluna</th><th scope="col">O que apresenta e como usar</th></tr></thead>
             <tbody>
-              <tr><th scope="row">Comparison</th><td>Nome, direção entre tabelas, conclusão, data do resultado e eventual execução em andamento. Clique no nome para abrir a execução indicada; Show daily chart seleciona seu gráfico.</td></tr>
-              <tr><th scope="row">Row Match Rate</th><td>Percentual de registros iguais, numerador/denominador, não avaliados e atendimento da meta. Uma taxa alta com avaliação parcial exige verificar a cobertura.</td></tr>
-              <tr><th scope="row">Daily curve</th><td>Minigráfico diário de Row Match Rate no período escolhido. Ausência de avaliação é lacuna.</td></tr>
-              <tr><th scope="row">Key Coverage</th><td>Duas taxas amostrais na ordem A → B / B → A. Uma fonte pode conter todas as chaves da outra e ainda ter chaves extras.</td></tr>
-              <tr><th scope="row">Duplicate Key Rate</th><td>Taxa de excesso de linhas com chave duplicada, A / B, no recorte completo. Menor é melhor; 0% é saudável quando a avaliação está disponível.</td></tr>
-              <tr><th scope="row">Row Count Match</th><td>Equal counts ou Different counts, volumes A/B, diferença assinada Δ = B − A e diferença percentual absoluta sobre A. O percentual apresentado mede diferença: 0% significa volumes iguais.</td></tr>
-              <tr><th scope="row">Column Match Rate</th><td>Quantidade de pares a revisar / total de pares. As taxas individuais ficam nos detalhes da comparação. Esse resumo não é uma média dos valores das colunas.</td></tr>
+              <tr><th scope="row">Comparação</th><td>Nome, direção entre tabelas, conclusão, data do resultado e eventual execução em andamento. Clique no nome para abrir a execução indicada; Mostrar gráfico diário seleciona seu gráfico.</td></tr>
+              <tr><th scope="row">Taxa de correspondência de linhas</th><td>Percentual de registros iguais, numerador/denominador, não avaliados e atendimento da meta. Uma taxa alta com avaliação parcial exige verificar a cobertura.</td></tr>
+              <tr><th scope="row">Curva diária</th><td>Minigráfico diário de Taxa de correspondência de linhas no período escolhido. Ausência de avaliação é lacuna.</td></tr>
+              <tr><th scope="row">Cobertura de chaves</th><td>Duas taxas amostrais na ordem A → B / B → A. Uma fonte pode conter todas as chaves da outra e ainda ter chaves extras.</td></tr>
+              <tr><th scope="row">Taxa de duplicidade de chaves</th><td>Taxa de excesso de linhas com chave duplicada, A / B, no recorte completo. Menor é melhor; 0% é saudável quando a avaliação está disponível.</td></tr>
+              <tr><th scope="row">Correspondência de contagem de linhas</th><td>Contagens iguais ou Contagens diferentes, volumes A/B, diferença assinada Δ = B − A e diferença percentual absoluta sobre A. O percentual apresentado mede diferença: 0% significa volumes iguais.</td></tr>
+              <tr><th scope="row">Taxa de correspondência por coluna</th><td>Quantidade de pares a revisar / total de pares. As taxas individuais ficam nos detalhes da comparação. Esse resumo não é uma média dos valores das colunas.</td></tr>
             </tbody>
           </table>
         </div>
-        <p>Search comparisons filtra por nome e a paginação percorre o conjunto. O seletor Comparison do gráfico usa as comparações carregadas na página atual; ajuste a busca ou a página para localizar outra.</p>
-        <h3>Comparison quality over time</h3>
-        <p>Escolha Comparison, Period de 7, 15 ou 30 dias e uma das cinco métricas. Para Column Match Rate, selecione também Column pair. Key Coverage preserva as duas direções; Duplicate Key Rate preserva as duas fontes. Nos gráficos de diferença de volume e duplicidade, valores menores são melhores.</p>
+        <p>Buscar comparações filtra por nome e a paginação percorre o conjunto. O seletor Comparação do gráfico usa as comparações carregadas na página atual; ajuste a busca ou a página para localizar outra.</p>
+        <h3>Qualidade das comparações ao longo do tempo</h3>
+        <p>Escolha Comparação, Período de 7, 15 ou 30 dias e uma das cinco métricas. Para Taxa de correspondência por coluna, selecione também Par de colunas. Cobertura de chaves preserva as duas direções; Taxa de duplicidade de chaves preserva as duas fontes. Nos gráficos de diferença de volume e duplicidade, valores menores são melhores.</p>
         <p>Cada dia usa a última execução terminal da comparação, no fuso America/Sao_Paulo; hoje é parcial. Uma falha posterior no mesmo dia deixa a taxa indisponível, mesmo que exista sucesso anterior. Dias sem avaliação são lacunas, sem zeros artificiais ou ligação entre pontos ausentes. Execuções pendentes não apagam o último resultado terminal. Os detalhes diários permitem conferir numeradores e denominadores e abrir a execução correspondente.</p>
         <p>A linha de meta usa o valor <strong>atual</strong> em todo o período exibido; não reconstrói metas antigas. O intervalo do gráfico controla a visualização do histórico e não altera o recorte de dados usado nas execuções.</p>
       </section>
 
       <section class="manual-section" id="manual-connections" aria-labelledby="manual-connections-titulo">
         <span class="manual-number">05 · Fontes</span>
-        <h2 id="manual-connections-titulo">Connections</h2>
-        <p>Connections cadastra e testa o acesso às fontes. Search connections localiza uma conexão pelo nome. Cada cartão apresenta nome, conector, estado active/inactive, quantidade de datasets registrados, indicação de credenciais cifradas e o último teste feito na sessão atual.</p>
+        <h2 id="manual-connections-titulo">Conexões</h2>
+        <p>Conexões cadastra e testa o acesso às fontes. Buscar conexões localiza uma conexão pelo nome. Cada cartão apresenta nome, conector, estado active/inactive, quantidade de datasets registrados, indicação de credenciais cifradas e o último teste feito na sessão atual.</p>
         <ol>
-          <li>Use <strong>New connection</strong> e informe Connection name e Database type.</li>
+          <li>Use <strong>Nova conexão</strong> e informe Nome da conexão e Tipo de banco de dados.</li>
           <li>Preencha os campos específicos do conector conforme a tabela abaixo.</li>
-          <li>Use <strong>Test connection</strong>. Um teste bem-sucedido verifica o acesso naquele momento; não executa uma comparação.</li>
-          <li>Clique em <strong>Save connection</strong>. Depois, use Test no cartão para testar novamente quando precisar.</li>
+          <li>Use <strong>Testar conexão</strong>. Um teste bem-sucedido verifica o acesso naquele momento; não executa uma comparação.</li>
+          <li>Clique em <strong>Salvar conexão</strong>. Depois, use Testar no cartão para testar novamente quando precisar.</li>
         </ol>
         <div class="manual-table" tabindex="0" role="region" aria-label="Campos por conector">
           <table>
             <caption>Tipos de fonte disponíveis na interface</caption>
             <thead><tr><th scope="col">Conector</th><th scope="col">Campos e particularidades</th></tr></thead>
             <tbody>
-              <tr><th scope="row">postgresql</th><td>Host / address, Port (inicial 5432), User, Password, Database e SSL mode conforme a configuração da fonte.</td></tr>
+              <tr><th scope="row">postgresql</th><td>Servidor / endereço, Porta (inicial 5432), Usuário, Senha, Banco de dados e Modo SSL conforme a configuração da fonte.</td></tr>
               <tr><th scope="row">mysql</th><td>Host, porta (inicial 3306), usuário, senha e banco.</td></tr>
               <tr><th scope="row">mssql</th><td>SQL Server: host, porta (inicial 1433), usuário, senha e banco. Trust server certificate é uma exceção explícita de confiança do certificado; confirme com o responsável pela fonte quando necessária.</td></tr>
-              <tr><th scope="row">oracle</th><td>Host, porta (inicial 1521), usuário, senha e Service name.</td></tr>
-              <tr><th scope="row">sqlite</th><td>SQLite file aponta para um arquivo já existente na pasta permitida do servidor do motor. Não é um caminho no computador do navegador nem um envio de arquivo.</td></tr>
-              <tr><th scope="row">databricks</th><td>Server hostname, HTTP path de um SQL Warehouse e autenticação por Personal access token (PAT) ou OAuth M2M, com Client ID e Client secret. Catálogo e schema são escolhidos posteriormente em Catalog.</td></tr>
+              <tr><th scope="row">oracle</th><td>Host, porta (inicial 1521), usuário, senha e Nome do serviço.</td></tr>
+              <tr><th scope="row">sqlite</th><td>Arquivo SQLite aponta para um arquivo já existente na pasta permitida do servidor do motor. Não é um caminho no computador do navegador nem um envio de arquivo.</td></tr>
+              <tr><th scope="row">databricks</th><td>Nome do servidor, Caminho HTTP de um SQL Warehouse e autenticação por Token de acesso pessoal (PAT) ou OAuth M2M, com ID do cliente e Segredo do cliente. Catálogo e schema são escolhidos posteriormente em Catálogo.</td></tr>
             </tbody>
           </table>
         </div>
         <p>Driver unavailable indica que a instalação não dispõe do driver necessário; solicite a preparação ao administrador. A disponibilidade na lista não garante que uma fonte específica esteja acessível.</p>
-        <p>Em <strong>Edit</strong>, altere o nome ou marque <strong>Replace all credentials</strong> para fornecer novamente o conjunto de credenciais. As credenciais salvas não são exibidas. O tipo de banco não pode ser trocado na edição. <strong>Deactivate / Activate</strong> controla a disponibilidade operacional; <strong>Delete</strong> verifica dependências antes de permitir a exclusão.</p>
+        <p>Em <strong>Editar</strong>, altere o nome ou marque <strong>Substituir todas as credenciais</strong> para fornecer novamente o conjunto de credenciais. As credenciais salvas não são exibidas. O tipo de banco não pode ser trocado na edição. <strong>Desativar / Ativar</strong> controla a disponibilidade operacional; <strong>Excluir</strong> verifica dependências antes de permitir a exclusão.</p>
         <p>Use uma conta de fonte com acesso de leitura compatível com as tabelas que serão comparadas. Um teste de conexão não garante permissão em todos os schemas ou tabelas.</p>
       </section>
 
       <section class="manual-section" id="manual-catalog" aria-labelledby="manual-catalog-titulo">
         <span class="manual-number">06 · Tabelas</span>
-        <h2 id="manual-catalog-titulo">Catalog e datasets</h2>
-        <p>Para Data Developer e Platform Administrator, <strong>Source catalog</strong> permite explorar os metadados das fontes ativas. Selecione Connection e Schema; no Databricks, escolha também o Unity Catalog. A tabela mostra Schema, Table / view e Action, além de Type quando aplicável.</p>
-        <p><strong>Register dataset</strong> registra a referência à tabela ou view para uso nas comparações. Não copia a população da fonte. A seção <strong>Registered datasets</strong> lista tabela, tipo, localização, quantidade de colunas nos metadados e ação Delete. Quality Manager consulta os datasets já registrados, sem explorar ou cadastrar novas fontes.</p>
+        <h2 id="manual-catalog-titulo">Catálogo e datasets</h2>
+        <p>Para Desenvolvedor de dados e Administrador da plataforma, <strong>Catálogo da fonte</strong> permite explorar os metadados das fontes ativas. Selecione Conexão e Esquema; no Databricks, escolha também o Unity Catálogo. A tabela mostra Esquema, Tabela / visão e Ação, além de Tipo quando aplicável.</p>
+        <p><strong>Cadastrar conjunto de dados</strong> registra a referência à tabela ou view para uso nas comparações. Não copia a população da fonte. A seção <strong>Conjuntos de dados cadastrados</strong> lista tabela, tipo, localização, quantidade de colunas nos metadados e ação Excluir. Gestor de qualidade consulta os datasets já registrados, sem explorar ou cadastrar novas fontes.</p>
         <h3>Detalhe do dataset</h3>
-        <p>Clique no nome da tabela para ver localização e quantidade de colunas. <strong>Column metadata</strong> apresenta Column (nome), Type (tipo), Nullable (se aceita nulos) e Primary key (se integra a chave primária). Unknown indica metadado não informado. <strong>Table details</strong>, quando disponível, mostra informações adicionais da fonte.</p>
-        <p>Use <strong>Refresh metadata</strong>, com permissão de gerenciamento, após alterações no schema da origem. Essa ação atualiza os metadados cadastrados; revise as comparações afetadas. <strong>New comparison</strong> abre o assistente de criação, onde você escolhe as duas fontes.</p>
+        <p>Clique no nome da tabela para ver localização e quantidade de colunas. <strong>Metadados das colunas</strong> apresenta Coluna (nome), Tipo (tipo), Aceita nulos (se aceita nulos) e Chave primária (se integra a chave primária). Desconhecido indica metadado não informado. <strong>Detalhes da tabela</strong>, quando disponível, mostra informações adicionais da fonte.</p>
+        <p>Use <strong>Atualizar metadados</strong>, com permissão de gerenciamento, após alterações no schema da origem. Essa ação atualiza os metadados cadastrados; revise as comparações afetadas. <strong>Nova comparação</strong> abre o assistente de criação, onde você escolhe as duas fontes.</p>
         <div class="manual-note">Se uma tabela não aparecer, confira conexão ativa, catálogo/schema e permissões de leitura. A exploração do catálogo mostra metadados; os valores dos registros são investigados na evidência de uma execução.</div>
       </section>
 
       <section class="manual-section" id="manual-comparisons" aria-labelledby="manual-comparisons-titulo">
         <span class="manual-number">07 · Configuração</span>
-        <h2 id="manual-comparisons-titulo">Comparisons: configure em quatro etapas</h2>
-        <p>A lista Comparisons permite buscar definições e mostra Comparison, State (active/inactive), Row Match Rate disponível e Latest run (estado técnico). Abra o nome para consultar a qualidade e o histórico. Use New comparison para criar ou Edit nos detalhes para alterar uma definição.</p>
-        <h3>Etapa 1 — Sources and scope</h3>
-        <p>Informe Name e selecione os datasets em Source A e Source B. Escolha uma regra de período em Equivalent scope:</p>
+        <h2 id="manual-comparisons-titulo">Comparações: configure em quatro etapas</h2>
+        <p>A lista Comparações permite buscar definições e mostra Comparação, Estado (active/inactive), Taxa de correspondência de linhas disponível e Última execução (estado técnico). Abra o nome para consultar a qualidade e o histórico. Use Nova comparação para criar ou Editar nos detalhes para alterar uma definição.</p>
+        <h3>Etapa 1 — Fontes e recorte</h3>
+        <p>Informe Nome e selecione os datasets em Fonte A e Fonte B. Escolha uma regra de período em Recorte equivalente:</p>
         <ul>
-          <li><strong>All available dates:</strong> sem restrição temporal; filtros adicionais ainda podem limitar o recorte.</li>
-          <li><strong>Fixed period:</strong> escolha as colunas de período em A/B e informe Start (inclusive), End (exclusive) e Scope timezone. Por exemplo, de 2026-10-01 até 2026-11-01 inclui outubro inteiro.</li>
-          <li><strong>Previous complete units:</strong> escolha horas, dias ou meses completos e a quantidade. Safety delay (minutes) recua o instante de referência antes de determinar as unidades fechadas. Horas exigem timestamp; dias e meses também aceitam DATE. A janela é resolvida ao enfileirar.</li>
+          <li><strong>Todas as datas disponíveis:</strong> sem restrição temporal; filtros adicionais ainda podem limitar o recorte.</li>
+          <li><strong>Período fixo:</strong> escolha as colunas de período em A/B e informe Início (inclusivo), Fim (exclusivo) e Fuso do recorte. Por exemplo, de 2026-10-01 até 2026-11-01 inclui outubro inteiro.</li>
+          <li><strong>Unidades completas anteriores:</strong> escolha horas, dias ou meses completos e a quantidade. Margem de atraso (minutos) recua o instante de referência antes de determinar as unidades fechadas. Horas exigem timestamp; dias e meses também aceitam DATE. A janela é resolvida ao enfileirar.</li>
         </ul>
-        <p>Scope timezone usa uma zona IANA, como America/Sao_Paulo. Se as colunas de período armazenam timestamps sem fuso, informe Naive timestamp timezone A/B de acordo com o significado dos valores. Um intervalo segue <code>[início, fim)</code>: inclui o início e exclui o fim.</p>
-        <p>Em <strong>Equivalent filters / batches → Add filter / batch</strong>, escolha colunas equivalentes A/B, operador e valor. Os critérios são combinados com AND. Operadores: Equals, In a list, Greater than or equal, Less than, Is null e Is not null. Para lista, use um valor por linha; para números nos filtros, use ponto decimal. Não há campo de SQL livre.</p>
-        <h3>Etapa 2 — Columns and timezones</h3>
-        <p>Em <strong>Compare</strong>, marque as colunas que participam da comparação. Desmarcar uma coluna a exclui da correspondência por linha e por coluna, sem retirar linhas das contagens ou da validação da chave. Para remover um par inteiro, exclua seus dois lados. Uma coluna remanescente sem par impede a aprovação integral da linha. Colunas de identidade não podem ser excluídas.</p>
-        <p><strong>Timestamp timezone</strong> define a interpretação de cada timestamp sem fuso, mesmo sem filtro temporal. Use a zona que representa o valor gravado, não a localização do navegador. Timestamps com offset preservam o instante; a comparação considera os instantes em UTC. Horários locais ambíguos ou inexistentes podem ficar não avaliados. O fuso da janela e a interpretação dos valores têm funções diferentes e precisam ser coerentes.</p>
-        <h3>Etapa 3 — Identity and sample</h3>
-        <p>Em <strong>Column mapping &amp; identity</strong>, confira Source column A e Comparison column B. Pares manuais têm prioridade; nomes restantes que coincidem sem ambiguidade são associados automaticamente, sem diferenciar maiúsculas/minúsculas no nome. Isso não altera a comparação dos valores textuais, que continua exata.</p>
-        <p>Marque <strong>Business key</strong> nos pares que identificam o mesmo registro. Vários pares formam uma chave composta. Escolha valores estáveis, com tipos compatíveis, não nulos e únicos no recorte. Tipos de ponto flutuante não servem como identidade. Sem seleção explícita, o motor procura uma chave PK/UNIQUE compatível nos metadados. A execução valida a identidade no recorte completo; nulos ou duplicidades impedem o alinhamento e não causam troca automática de chave.</p>
-        <p>Configure <strong>Reproducible random sample</strong>: Number of keys ou Percentage of larger scope e, opcionalmente, Seed. Veja os limites na <a href="#manual-amostragem">seção de amostragem</a>.</p>
-        <p>Em <strong>Numeric tolerances</strong>, Absolute tolerance usa a unidade do campo e <strong>Relative tolerance (fraction)</strong> usa fração: <code>0,01</code> ou <code>0.01</code> significa 1%; <code>1</code> significa 100%. Valores zero exigem igualdade numérica exata. Ponto ou vírgula decimal são aceitos nesses campos, sem separador de milhar.</p>
+        <p>Fuso do recorte usa uma zona IANA, como America/Sao_Paulo. Se as colunas de período armazenam timestamps sem fuso, informe Fuso do timestamp sem zona A/B de acordo com o significado dos valores. Um intervalo segue <code>[início, fim)</code>: inclui o início e exclui o fim.</p>
+        <p>Em <strong>Filtros / lotes equivalentes → Adicionar filtro / lote</strong>, escolha colunas equivalentes A/B, operador e valor. Os critérios são combinados com AND. Operadores: Igual a, Em uma lista, Maior ou igual a, Menor que, É nulo e Não é nulo. Para lista, use um valor por linha; para números nos filtros, use ponto decimal. Não há campo de SQL livre.</p>
+        <h3>Etapa 2 — Colunas e fusos horários</h3>
+        <p>Em <strong>Comparar</strong>, marque as colunas que participam da comparação. Desmarcar uma coluna a exclui da correspondência por linha e por coluna, sem retirar linhas das contagens ou da validação da chave. Para remover um par inteiro, exclua seus dois lados. Uma coluna remanescente sem par impede a aprovação integral da linha. Colunas de identidade não podem ser excluídas.</p>
+        <p><strong>Fuso do timestamp</strong> define a interpretação de cada timestamp sem fuso, mesmo sem filtro temporal. Use a zona que representa o valor gravado, não a localização do navegador. Timestamps com offset preservam o instante; a comparação considera os instantes em UTC. Horários locais ambíguos ou inexistentes podem ficar não avaliados. O fuso da janela e a interpretação dos valores têm funções diferentes e precisam ser coerentes.</p>
+        <h3>Etapa 3 — Identidade e amostra</h3>
+        <p>Em <strong>Coluna mapping &amp; identity</strong>, confira Coluna da fonte A e Coluna da comparação B. Pares manuais têm prioridade; nomes restantes que coincidem sem ambiguidade são associados automaticamente, sem diferenciar maiúsculas/minúsculas no nome. Isso não altera a comparação dos valores textuais, que continua exata.</p>
+        <p>Marque <strong>Chave de negócio</strong> nos pares que identificam o mesmo registro. Vários pares formam uma chave composta. Escolha valores estáveis, com tipos compatíveis, não nulos e únicos no recorte. Tipos de ponto flutuante não servem como identidade. Sem seleção explícita, o motor procura uma chave PK/UNIQUE compatível nos metadados. A execução valida a identidade no recorte completo; nulos ou duplicidades impedem o alinhamento e não causam troca automática de chave.</p>
+        <p>Configure <strong>Amostra aleatória reproduzível</strong>: Quantidade de chaves ou Percentual do maior recorte e, opcionalmente, Seed. Veja os limites na <a href="#manual-amostragem">seção de amostragem</a>.</p>
+        <p>Em <strong>Tolerâncias numéricas</strong>, Tolerância absoluta usa a unidade do campo e <strong>Tolerância relativa (fração)</strong> usa fração: <code>0,01</code> ou <code>0.01</code> significa 1%; <code>1</code> significa 100%. Valores zero exigem igualdade numérica exata. Ponto ou vírgula decimal são aceitos nesses campos, sem separador de milhar.</p>
         <div class="manual-formula">|A − B| ≤ máximo(tolerância absoluta, tolerância relativa × máximo(|A|, |B|))</div>
         <div class="manual-example"><strong>Exemplo didático:</strong> A = 100 e B = 101, com tolerância relativa 0,01 e absoluta zero. A diferença é 1 e o limite relativo é 1,01; os valores são considerados equivalentes. Essas tolerâncias não são uma permissão para certa porcentagem de linhas divergentes. Texto preserva caixa e espaços.</div>
-        <p>Em <strong>Capture budgets</strong>, Maximum cells (both sources) e Maximum captured bytes limitam o conteúdo a capturar para a comparação. São orçamentos operacionais, diferentes do número de chaves. Solicitações acima dos limites não são reduzidas silenciosamente.</p>
-        <h3>Etapa 4 — Review</h3>
-        <p>Confira nome, chaves solicitadas, scoped rows A/B, Comparison key, exclusões e interpretação de timestamps. As contagens da prévia são provisórias. <strong>Back</strong> retorna para corrigir; <strong>Save comparison</strong> salva sem executar; <strong>Save and run</strong> salva e enfileira. Uma conexão que muda entre a prévia e a execução pode produzir contagens diferentes.</p>
+        <p>Em <strong>Limites de captura</strong>, Máximo de células (nas duas fontes) e Máximo de bytes capturados limitam o conteúdo a capturar para a comparação. São orçamentos operacionais, diferentes do número de chaves. Solicitações acima dos limites não são reduzidas silenciosamente.</p>
+        <h3>Etapa 4 — Revisão</h3>
+        <p>Confira nome, chaves solicitadas, linhas no recorte A/B, Chave da comparação, exclusões e interpretação de timestamps. As contagens da prévia são provisórias. <strong>Voltar</strong> retorna para corrigir; <strong>Salvar comparação</strong> salva sem executar; <strong>Salvar e executar</strong> salva e enfileira. Uma conexão que muda entre a prévia e a execução pode produzir contagens diferentes.</p>
         <p>A definição editada vale para novas execuções. Cada execução mantém sua configuração congelada, incluindo janela, pares, exclusões, fusos, tolerâncias e semente; editar a comparação não reescreve o histórico.</p>
       </section>
 
@@ -287,8 +287,8 @@
         <h2 id="manual-amostragem-titulo">Amostragem e cobertura</h2>
         <p>O motor percorre as chaves elegíveis do recorte nas duas fontes, seleciona de forma determinística posições da união dessas chaves e busca as mesmas chaves em A e B. Isso permite encontrar registros exclusivos de qualquer lado; não são duas amostras independentes.</p>
         <ul>
-          <li><strong>Number of keys:</strong> quantidade inteira de 1 a 10.000; o padrão do formulário é 1.000.</li>
-          <li><strong>Percentage of larger scope:</strong> percentual maior que zero e até 100, aplicado à maior contagem completa A/B, com arredondamento para cima. O resultado solicitado também precisa respeitar o teto de 10.000.</li>
+          <li><strong>Quantidade de chaves:</strong> quantidade inteira de 1 a 10.000; o padrão do formulário é 1.000.</li>
+          <li><strong>Percentual do maior recorte:</strong> percentual maior que zero e até 100, aplicado à maior contagem completa A/B, com arredondamento para cima. O resultado solicitado também precisa respeitar o teto de 10.000.</li>
           <li><strong>Seed:</strong> semente decimal inteira sem sinal de até 64 bits. Deixe vazia para gerar ao enfileirar. Mesma semente, regras e conjunto de chaves reproduzem a seleção; os valores dos registros podem ter mudado.</li>
         </ul>
         <div class="manual-example"><strong>Exemplo didático:</strong> A tem 20.000 linhas e B tem 30.000 no recorte. Uma solicitação de 10% seleciona até 3.000 chaves, calculadas sobre 30.000. Não significa 10% da união. Se houver menos chaves na união que a quantidade solicitada, a seleção efetiva será menor. Uma solicitação de 50% produziria 15.000 e seria rejeitada pelo teto.</div>
@@ -297,13 +297,13 @@
             <caption>Três números com significados diferentes</caption>
             <thead><tr><th scope="col">Informação</th><th scope="col">Significado</th></tr></thead>
             <tbody>
-              <tr><th scope="row">Scoped population A / B</th><td>Todas as linhas que satisfazem o período e os filtros em cada fonte.</td></tr>
-              <tr><th scope="row">Selected union-key positions</th><td>Quantidade de posições selecionadas da união de chaves; é o tamanho efetivo da amostra, antes de considerar avaliações indisponíveis.</td></tr>
+              <tr><th scope="row">População no recorte A / B</th><td>Todas as linhas que satisfazem o período e os filtros em cada fonte.</td></tr>
+              <tr><th scope="row">Posições selecionadas da união de chaves</th><td>Quantidade de posições selecionadas da união de chaves; é o tamanho efetivo da amostra, antes de considerar avaliações indisponíveis.</td></tr>
               <tr><th scope="row">Evaluation coverage</th><td>Posições avaliadas / posições selecionadas × 100. Uma cobertura de 100% indica que toda a amostra foi avaliada, não que toda a população foi comparada.</td></tr>
             </tbody>
           </table>
         </div>
-        <p>Analysis coverage também pode mostrar posições selecionadas / maior volume do recorte. Esse percentual não é a fração da união. Não é apresentado intervalo de confiança estatístico para extrapolar o resultado.</p>
+        <p>Cobertura da análise também pode mostrar posições selecionadas / maior volume do recorte. Esse percentual não é a fração da união. Não é apresentado intervalo de confiança estatístico para extrapolar o resultado.</p>
         <div class="manual-note"><strong>O teto não limita todo o trabalho nas fontes.</strong> Até 10.000 chaves são comparadas, mas as contagens e a validação/seleção de chaves percorrem o recorte completo. O custo e a duração dependem do volume e das fontes. Leituras estáveis locais não sincronizam dois bancos distintos; confira os avisos de consistência.</div>
       </section>
 
@@ -316,34 +316,34 @@
             <caption>Métricas apresentadas nas tabelas e nos detalhes</caption>
             <thead><tr><th scope="col">Métrica</th><th scope="col">Cálculo</th><th scope="col">Escopo</th><th scope="col">Como interpretar</th></tr></thead>
             <tbody>
-              <tr><th scope="row">Row Count Match</th><td>Contagens A/B; diferença assinada B − A; diferença absoluta |B − A|; percentual 100 × |B − A| / A.</td><td>Todo o recorte.</td><td>Equal counts exige A = B. No percentual de diferença, 0% é melhor. Volumes iguais não garantem conteúdo igual.</td></tr>
-              <tr><th scope="row">Key Coverage</th><td>A → B: 100 × chaves comuns / chaves observadas em A na amostra. B → A: mesma fórmula com denominador B.</td><td>Amostra selecionada; duas direções.</td><td>Maior é melhor. 100% em uma direção não garante 100% na outra.</td></tr>
-              <tr><th scope="row">Duplicate Key Rate</th><td>100 × excesso de linhas duplicadas / linhas com todos os componentes da chave não nulos, por fonte.</td><td>Todo o recorte, A e B separadamente.</td><td>Menor é melhor. Nulos são informados separadamente; 0% não dispensa conferir componentes nulos.</td></tr>
-              <tr><th scope="row">Row Match Rate</th><td>100 × registros integralmente iguais / posições avaliadas.</td><td>Amostra selecionada.</td><td>Maior é melhor. Todas as colunas incluídas precisam corresponder. Ausências contam como diferença.</td></tr>
-              <tr><th scope="row">Column Match Rate</th><td>100 × valores iguais / posições avaliadas de cada par de colunas.</td><td>Amostra selecionada, por par.</td><td>Maior é melhor. Localiza campos problemáticos; não é calculada uma média geral entre pares.</td></tr>
+              <tr><th scope="row">Correspondência de contagem de linhas</th><td>Contagens A/B; diferença assinada B − A; diferença absoluta |B − A|; percentual 100 × |B − A| / A.</td><td>Todo o recorte.</td><td>Contagens iguais exige A = B. No percentual de diferença, 0% é melhor. Volumes iguais não garantem conteúdo igual.</td></tr>
+              <tr><th scope="row">Cobertura de chaves</th><td>A → B: 100 × chaves comuns / chaves observadas em A na amostra. B → A: mesma fórmula com denominador B.</td><td>Amostra selecionada; duas direções.</td><td>Maior é melhor. 100% em uma direção não garante 100% na outra.</td></tr>
+              <tr><th scope="row">Taxa de duplicidade de chaves</th><td>100 × excesso de linhas duplicadas / linhas com todos os componentes da chave não nulos, por fonte.</td><td>Todo o recorte, A e B separadamente.</td><td>Menor é melhor. Nulos são informados separadamente; 0% não dispensa conferir componentes nulos.</td></tr>
+              <tr><th scope="row">Taxa de correspondência de linhas</th><td>100 × registros integralmente iguais / posições avaliadas.</td><td>Amostra selecionada.</td><td>Maior é melhor. Todas as colunas incluídas precisam corresponder. Ausências contam como diferença.</td></tr>
+              <tr><th scope="row">Taxa de correspondência por coluna</th><td>100 × valores iguais / posições avaliadas de cada par de colunas.</td><td>Amostra selecionada, por par.</td><td>Maior é melhor. Localiza campos problemáticos; não é calculada uma média geral entre pares.</td></tr>
             </tbody>
           </table>
         </div>
-        <h3>Row Count Match — correspondência de volume</h3>
+        <h3>Correspondência de contagem de linhas — correspondência de volume</h3><p>Referência em inglês: <span lang="en-US">Row Count Match</span>.</p>
         <p>Se A = 1.000 e B = 1.100, B − A = +100 e a diferença percentual é 10%. Inverter A/B muda o denominador. Se A = 100 e B = 300, a diferença é 200%. Com A = 0 e B maior que zero, o percentual sobre A é indefinido; os volumes ainda mostram a diferença. Duas tabelas vazias podem ter contagens iguais, mas não fornecem uma amostra de linhas para avaliar.</p>
-        <h3>Key Coverage — presença direcional</h3>
+        <h3>Cobertura de chaves — presença direcional</h3><p>Referência em inglês: <span lang="en-US">Key Coverage</span>.</p>
         <p>Imagine que, nas posições selecionadas, A contém 100 chaves e B contém 80, todas presentes em A. São 80 comuns: A → B = 80% e B → A = 100%. Isso indica ausência em B de parte das chaves observadas em A. A métrica trata de presença, sem afirmar que os valores dos registros comuns são iguais. Sem identidade válida, o alinhamento e as taxas podem ficar indisponíveis.</p>
-        <h3>Duplicate Key Rate — integridade da identidade</h3>
-        <p>Um grupo de três linhas com a mesma chave contribui com <strong>duas linhas excedentes</strong>. Se as demais chaves forem únicas e houver 100 linhas com chave não nula, a taxa será 2/100 = 2%. Duplicate groups conta grupos repetidos; Null key rows conta linhas com ao menos um componente nulo. Esses indicadores não têm o mesmo denominador. Duplicidade casual em uma coluna que não compõe a identidade não é duplicidade da chave.</p>
-        <h3>Row Match Rate — igualdade integral do registro</h3>
+        <h3>Taxa de duplicidade de chaves — integridade da identidade</h3><p>Referência em inglês: <span lang="en-US">Duplicate Key Rate</span>.</p>
+        <p>Um grupo de três linhas com a mesma chave contribui com <strong>duas linhas excedentes</strong>. Se as demais chaves forem únicas e houver 100 linhas com chave não nula, a taxa será 2/100 = 2%. Grupos duplicados conta grupos repetidos; Linhas com chave nula conta linhas com ao menos um componente nulo. Esses indicadores não têm o mesmo denominador. Duplicidade casual em uma coluna que não compõe a identidade não é duplicidade da chave.</p>
+        <h3>Taxa de correspondência de linhas — igualdade integral do registro</h3><p>Referência em inglês: <span lang="en-US">Row Match Rate</span>.</p>
         <p>Uma posição é igual quando todos os campos incluídos correspondem conforme tipos, fusos e tolerâncias congelados. Um registro presente em apenas uma fonte é divergente. Uma diferença comprovada em um campo prevalece sobre outro campo desconhecido; sem diferença comprovada, uma posição com campo desconhecido fica fora do denominador. Colunas sem par ou incompatíveis impedem aprovação integral.</p>
-        <div class="manual-example"><strong>Exemplo didático:</strong> de 1.000 posições selecionadas, 940 são iguais, 40 têm diferença comprovada e 20 não puderam ser avaliadas. Row Match Rate = 940/980 = 95,92%; Evaluation coverage = 980/1.000 = 98%. A taxa descreve 980 posições, e não 1.000 nem toda a população. Mesmo acima de uma meta de 95%, a avaliação é parcial e há diferenças observadas.</div>
-        <h3>Column Match Rate — igualdade por campo</h3>
-        <p>Cada par tem numerador, denominador, diferentes e não avaliados próprios. Um campo pode ter 100% enquanto outro concentra divergências; isso explica por que taxas altas em várias colunas não tornam o registro inteiro igual. Registros ausentes contam como diferença por coluna quando avaliáveis. Unknown não equivale a igualdade. Colunas explicitamente excluídas não participam dessas taxas.</p>
-        <p>Abra <strong>Calculation details</strong> para conferir a fórmula, o alcance, os denominadores e as tolerâncias do resultado selecionado. As regras numéricas não removem espaços nem mudam a caixa do texto. NULL, texto vazio, espaço em branco e registro ausente são situações distintas.</p>
+        <div class="manual-example"><strong>Exemplo didático:</strong> de 1.000 posições selecionadas, 940 são iguais, 40 têm diferença comprovada e 20 não puderam ser avaliadas. Taxa de correspondência de linhas = 940/980 = 95,92%; Evaluation coverage = 980/1.000 = 98%. A taxa descreve 980 posições, e não 1.000 nem toda a população. Mesmo acima de uma meta de 95%, a avaliação é parcial e há diferenças observadas.</div>
+        <h3>Taxa de correspondência por coluna — igualdade por campo</h3><p>Referência em inglês: <span lang="en-US">Column Match Rate</span>.</p>
+        <p>Cada par tem numerador, denominador, diferentes e não avaliados próprios. Um campo pode ter 100% enquanto outro concentra divergências; isso explica por que taxas altas em várias colunas não tornam o registro inteiro igual. Registros ausentes contam como diferença por coluna quando avaliáveis. Desconhecido não equivale a igualdade. Colunas explicitamente excluídas não participam dessas taxas.</p>
+        <p>Abra <strong>Detalhes do cálculo</strong> para conferir a fórmula, o alcance, os denominadores e as tolerâncias do resultado selecionado. As regras numéricas não removem espaços nem mudam a caixa do texto. NULL, texto vazio, espaço em branco e registro ausente são situações distintas.</p>
         <a class="manual-back" href="#manual-inicio">Voltar ao início</a>
       </section>
 
       <section class="manual-section" id="manual-investigacao" aria-labelledby="manual-investigacao-titulo">
         <span class="manual-number">10 · Diagnóstico</span>
-        <h2 id="manual-investigacao-titulo">Investigue uma execução em Comparison Quality</h2>
-        <p>Abra a comparação e escolha <strong>Selected execution → Execution</strong>. A escolha fica fixada no endereço pelo run_id; percorrer páginas do histórico não troca automaticamente os indicadores. Confirme a execução antes de interpretar ou compartilhar um link.</p>
-        <p><strong>Execution information</strong> mostra estado técnico, fontes, data/duração, chave, recorte, exclusões, interpretação de timestamps, tolerâncias e estratégia/semente. A duração pode ficar Pending enquanto os horários necessários não estiverem disponíveis. Esses dados pertencem à execução congelada.</p>
+        <h2 id="manual-investigacao-titulo">Investigue uma execução em Qualidade da comparação</h2>
+        <p>Abra a comparação e escolha <strong>Execução selecionada → Execução</strong>. A escolha fica fixada no endereço pelo run_id; percorrer páginas do histórico não troca automaticamente os indicadores. Confirme a execução antes de interpretar ou compartilhar um link.</p>
+        <p><strong>Informações da execução</strong> mostra estado técnico, fontes, data/duração, chave, recorte, exclusões, interpretação de timestamps, tolerâncias e estratégia/semente. A duração pode ficar Pendente enquanto os horários necessários não estiverem disponíveis. Esses dados pertencem à execução congelada.</p>
         <h3>Conclusão analítica, estado técnico e meta</h3>
         <div class="manual-table" tabindex="0" role="region" aria-label="Conclusões analíticas">
           <table>
@@ -356,35 +356,35 @@
             </tbody>
           </table>
         </div>
-        <p><strong>succeeded</strong> significa que a execução publicou um resultado; esse resultado ainda pode apontar diferenças. <strong>Target met</strong> indica atendimento da referência de Row Match Rate com avaliação completa, sem dispensar divergências nas outras métricas. Consulte a configuração da meta em Settings.</p>
-        <h3>Quality dimensions e Analysis coverage</h3>
-        <p>Clique nos indicadores do resumo ou expanda uma dimensão para ver os detalhes. <strong>Volume</strong> trata das contagens; <strong>Key Coverage</strong>, da presença das chaves; <strong>Consistency</strong>, da correspondência de registros; <strong>Integrity</strong>, de nulos e duplicidades na chave; <strong>Technical Compatibility</strong>, de pares sem correspondência ou incompatíveis. Compatibilidade é um diagnóstico sem percentual próprio.</p>
-        <p><strong>Passed</strong> indica requisito atendido; <strong>Attention</strong> destaca diferenças de volume ou conteúdo; <strong>Critical</strong> sinaliza problemas como identidade inválida, ausências de chave ou impedimentos estruturais; <strong>Not calculated</strong> indica cálculo/avaliação insuficiente. A disponibilidade do cálculo e o status de validação são informações distintas.</p>
-        <p>Em Analysis coverage, confira população A/B, posições selecionadas e cobertura da avaliação. Abra Consistency and limitations para ler os avisos de estabilidade e limitações das fontes.</p>
-        <h3>Column analysis: a tabela de campos</h3>
-        <p>Use <strong>Search columns</strong>, <strong>Column status</strong> e <strong>Order columns</strong> para buscar, filtrar e ordenar por diferenças/desconhecidos, nome ou menor taxa. A consulta tem paginação de 50 pares.</p>
+        <p><strong>succeeded</strong> significa que a execução publicou um resultado; esse resultado ainda pode apontar diferenças. <strong>Meta atingida</strong> indica atendimento da referência de Taxa de correspondência de linhas com avaliação completa, sem dispensar divergências nas outras métricas. Consulte a configuração da meta em Configurações.</p>
+        <h3>Dimensões da qualidade e Cobertura da análise</h3>
+        <p>Clique nos indicadores do resumo ou expanda uma dimensão para ver os detalhes. <strong>Volume</strong> trata das contagens; <strong>Cobertura de chaves</strong>, da presença das chaves; <strong>Consistência</strong>, da correspondência de registros; <strong>Integridade</strong>, de nulos e duplicidades na chave; <strong>Compatibilidade técnica</strong>, de pares sem correspondência ou incompatíveis. Compatibilidade é um diagnóstico sem percentual próprio.</p>
+        <p><strong>Aprovado</strong> indica requisito atendido; <strong>Atenção</strong> destaca diferenças de volume ou conteúdo; <strong>Crítico</strong> sinaliza problemas como identidade inválida, ausências de chave ou impedimentos estruturais; <strong>Não calculado</strong> indica cálculo/avaliação insuficiente. A disponibilidade do cálculo e o status de validação são informações distintas.</p>
+        <p>Em Cobertura da análise, confira população A/B, posições selecionadas e cobertura da avaliação. Abra Consistência e limitações para ler os avisos de estabilidade e limitações das fontes.</p>
+        <h3>Análise por coluna: a tabela de campos</h3>
+        <p>Use <strong>Buscar colunas</strong>, <strong>Estado da coluna</strong> e <strong>Ordenar colunas</strong> para buscar, filtrar e ordenar por diferenças/desconhecidos, nome ou menor taxa. A consulta tem paginação de 50 pares.</p>
         <div class="manual-table" tabindex="0" role="region" aria-label="Colunas da análise por campo">
           <table>
-            <caption>Como ler Column analysis</caption>
+            <caption>Como ler Análise por coluna</caption>
             <thead><tr><th scope="col">Coluna</th><th scope="col">Uso</th></tr></thead>
             <tbody>
-              <tr><th scope="row">Column A / B</th><td>Par comparado. Expanda para ver tipos e Calculation details. Missing indica lado sem coluna correspondente.</td></tr>
-              <tr><th scope="row">Match rate</th><td>Column Match Rate e informações de avaliação daquele par.</td></tr>
-              <tr><th scope="row">Differences</th><td>Quantidade de valores divergentes; unknown identifica valores não avaliados.</td></tr>
-              <tr><th scope="row">Status</th><td>Passed, Attention, Critical ou Not calculated, conforme a evidência e a compatibilidade.</td></tr>
-              <tr><th scope="row">Inspect</th><td>Inspect column abre os registros capturados com diferença ou indisponibilidade nesse par. Fica indisponível quando não há evidência consultável.</td></tr>
+              <tr><th scope="row">Coluna A / B</th><td>Par comparado. Expanda para ver tipos e Detalhes do cálculo. Ausente indica lado sem coluna correspondente.</td></tr>
+              <tr><th scope="row">Taxa de correspondência</th><td>Taxa de correspondência por coluna e informações de avaliação daquele par.</td></tr>
+              <tr><th scope="row">Diferenças</th><td>Quantidade de valores divergentes; unknown identifica valores não avaliados.</td></tr>
+              <tr><th scope="row">Status</th><td>Aprovado, Atenção, Crítico ou Não calculado, conforme a evidência e a compatibilidade.</td></tr>
+              <tr><th scope="row">Inspecionar</th><td>Inspecionar coluna abre os registros capturados com diferença ou indisponibilidade nesse par. Fica indisponível quando não há evidência consultável.</td></tr>
             </tbody>
           </table>
         </div>
-        <h3>Divergence diagnosis</h3>
-        <p>Os cartões separam Missing in source A/B, Different paired records, Unclassified row positions, Duplicate key groups, Rows with null key components e Unpaired or incompatible columns. Eles informam quantidade e alcance. Categorias podem se sobrepor: <strong>não some seus totais como registros distintos</strong>.</p>
-        <p><strong>Inspect records</strong> aplica um filtro na evidência quando a categoria possui registros alinhados capturados. Violações de identidade no recorte completo e incompatibilidades de schema podem ser mostradas apenas como diagnóstico agregado.</p>
+        <h3>Diagnóstico de divergências</h3>
+        <p>Os cartões separam Ausentes na fonte A/B, Registros pareados diferentes, Posições de linha não classificadas, Grupos de chaves duplicadas, Linhas com componentes nulos na chave e Colunas sem par ou incompatíveis. Eles informam quantidade e alcance. Categorias podem se sobrepor: <strong>não some seus totais como registros distintos</strong>.</p>
+        <p><strong>Inspecionar registros</strong> aplica um filtro na evidência quando a categoria possui registros alinhados capturados. Violações de identidade no recorte completo e incompatibilidades de schema podem ser mostradas apenas como diagnóstico agregado.</p>
       </section>
 
       <section class="manual-section" id="manual-evidencias" aria-labelledby="manual-evidencias-titulo">
         <span class="manual-number">11 · Evidências</span>
         <h2 id="manual-evidencias-titulo">Inspecione registros e exporte resultados</h2>
-        <p><strong>Record inspection</strong> consulta registros congelados da execução, sem reler a fonte. A tabela representa a evidência capturada da amostra, que pode ser menor que a seleção usada nos agregados. A captura tem limite de 10.000 posições e 32 MiB por execução; quando necessário, prioriza divergências e ausências.</p>
+        <p><strong>Inspeção de registros</strong> consulta registros congelados da execução, sem reler a fonte. A tabela representa a evidência capturada da amostra, que pode ser menor que a seleção usada nos agregados. A captura tem limite de 10.000 posições e 32 MiB por execução; quando necessário, prioriza divergências e ausências.</p>
         <div class="manual-table" tabindex="0" role="region" aria-label="Estados da evidência">
           <table>
             <caption>Disponibilidade dos registros individuais</caption>
@@ -392,32 +392,32 @@
             <tbody>
               <tr><th scope="row">Captured sample / available</th><td>Há evidência capturada disponível; não representa a população inteira.</td></tr>
               <tr><th scope="row">Partial capture / partial</th><td>Limites de captura foram atingidos. Tabela e download abrangem apenas posições armazenadas, sem alterar as métricas agregadas.</td></tr>
-              <tr><th scope="row">Not captured</th><td>Execução histórica contém somente agregados. Os registros não são reconstruídos por nova consulta à fonte.</td></tr>
+              <tr><th scope="row">Não capturado</th><td>Execução histórica contém somente agregados. Os registros não são reconstruídos por nova consulta à fonte.</td></tr>
               <tr><th scope="row">Expired</th><td>A retenção de 30 dias terminou. Os agregados e a configuração permanecem disponíveis.</td></tr>
-              <tr><th scope="row">Unavailable</th><td>Não foi possível capturar evidência consultável, por exemplo sem identidade válida. Leia a razão apresentada.</td></tr>
+              <tr><th scope="row">Indisponível</th><td>Não foi possível capturar evidência consultável, por exemplo sem identidade válida. Leia a razão apresentada.</td></tr>
             </tbody>
           </table>
         </div>
         <ol>
-          <li>Em <strong>Record state</strong>, filtre All records, Equal, Different, Only source A, Only source B ou Not evaluated.</li>
-          <li>Em <strong>Affected column</strong>, limite a registros com diferença ou indisponibilidade em um par específico.</li>
-          <li>Para procurar uma chave, use <strong>Exact key</strong> com um array JSON de todos os componentes na ordem exibida. Exemplo simples: <code>["123"]</code>; composta: <code>["BR", "123"]</code>. Preserve caixa e espaços; strings preservam a precisão de números longos. Clique em <strong>Search key</strong>.</li>
-          <li>A tabela mostra <strong>Key</strong>, <strong>State</strong>, <strong>Affected fields</strong> e <strong>Details</strong>. Use <strong>Inspect record</strong> para abrir os campos lado a lado: Column A / B, Source A, Source B e State. A paginação percorre 50 registros por página.</li>
-          <li><strong>Clear filters</strong> limpa a pesquisa e os filtros. Uma busca sem resultados significa que não há evidência capturada correspondente; não prova ausência da chave na população inteira.</li>
+          <li>Em <strong>Estado do registro</strong>, filtre Todos os registros, Igual, Diferente, Somente na fonte A, Somente na fonte B ou Não avaliado.</li>
+          <li>Em <strong>Coluna afetada</strong>, limite a registros com diferença ou indisponibilidade em um par específico.</li>
+          <li>Para procurar uma chave, use <strong>Exact key</strong> com um array JSON de todos os componentes na ordem exibida. Exemplo simples: <code>["123"]</code>; composta: <code>["BR", "123"]</code>. Preserve caixa e espaços; strings preservam a precisão de números longos. Clique em <strong>Buscar chave</strong>.</li>
+          <li>A tabela mostra <strong>Chave</strong>, <strong>Estado</strong>, <strong>Campos afetados</strong> e <strong>Detalhes</strong>. Use <strong>Inspecionar registro</strong> para abrir os campos lado a lado: Coluna A / B, Fonte A, Fonte B e Estado. A paginação percorre 50 registros por página.</li>
+          <li><strong>Limpar filtros</strong> limpa a pesquisa e os filtros. Uma busca sem resultados significa que não há evidência capturada correspondente; não prova ausência da chave na população inteira.</li>
         </ol>
-        <p>Na inspeção, <strong>NULL</strong>, <strong>Empty string ("")</strong>, <strong>Whitespace</strong>, <strong>Record / column absent</strong> e <strong>Unavailable</strong> têm significados distintos. <strong>Compared as</strong>, quando exibido, mostra a representação usada na comparação, além do valor original.</p>
+        <p>Na inspeção, <strong>NULL</strong>, <strong>Texto vazio ("")</strong>, <strong>Whitespace</strong>, <strong>Registro / coluna ausente</strong> e <strong>Indisponível</strong> têm significados distintos. <strong>Compared as</strong>, quando exibido, mostra a representação usada na comparação, além do valor original.</p>
         <h3>Dois downloads com finalidades diferentes</h3>
         <ul>
-          <li><strong>Download captured records:</strong> JSON dos registros capturados que atendem aos filtros atuais, acompanhado de informações de captura/limitação. Não se limita à página visível e não exporta a população inteira.</li>
-          <li><strong>Download result:</strong> na página do run, JSON do resultado agregado e seus detalhes técnicos. Não substitui o arquivo de registros individuais.</li>
+          <li><strong>Baixar registros capturados:</strong> JSON dos registros capturados que atendem aos filtros atuais, acompanhado de informações de captura/limitação. Não se limita à página visível e não exporta a população inteira.</li>
+          <li><strong>Baixar resultado:</strong> na página do run, JSON do resultado agregado e seus detalhes técnicos. Não substitui o arquivo de registros individuais.</li>
         </ul>
         <p>A evidência é armazenada cifrada e o acesso/exportação é auditado. Todos os perfis com leitura de resultados podem inspecionar e baixar a evidência disponível; os arquivos baixados contêm valores de negócio. A expiração na aplicação não remove cópias já exportadas.</p>
       </section>
 
       <section class="manual-section" id="manual-runs" aria-labelledby="manual-runs-titulo">
         <span class="manual-number">12 · Execuções</span>
-        <h2 id="manual-runs-titulo">Runs: histórico e estados técnicos</h2>
-        <p><strong>Run history</strong> lista execuções e permite filtrar Execution state. Na tabela, <strong>Comparison</strong> identifica a execução com um link e o início do ID; <strong>Requested</strong> mostra quando foi solicitada; <strong>Duration</strong> mostra o tempo entre início e fim, quando disponível; <strong>State</strong> mostra o estado técnico; <strong>Conclusion</strong> mostra a conclusão analítica, quando disponível. A listagem e os estados em andamento são atualizados periodicamente.</p>
+        <h2 id="manual-runs-titulo">Execuções: histórico e estados técnicos</h2>
+        <p><strong>Histórico de execuções</strong> lista execuções e permite filtrar Estado da execução. Na tabela, <strong>Comparação</strong> identifica a execução com um link e o início do ID; <strong>Solicitada em</strong> mostra quando foi solicitada; <strong>Duração</strong> mostra o tempo entre início e fim, quando disponível; <strong>Estado</strong> mostra o estado técnico; <strong>Conclusão</strong> mostra a conclusão analítica, quando disponível. A listagem e os estados em andamento são atualizados periodicamente.</p>
         <div class="manual-table" tabindex="0" role="region" aria-label="Estados técnicos dos runs">
           <table>
             <caption>Estado da execução, separado da qualidade dos dados</caption>
@@ -430,19 +430,19 @@
             </tbody>
           </table>
         </div>
-        <p>Em <strong>Comparison result</strong>, <strong>Open comparison quality</strong> abre a comparação com esse run selecionado. Para resultado concluído, Execution details permite expandir <strong>Frozen configuration</strong> e <strong>Aggregated result and query audit</strong>, além de Download result. Run history retorna à lista.</p>
-        <p>Para repetir depois de uma correção, use <strong>Run comparison</strong> nos detalhes da comparação, quando tiver permissão. Isso cria uma nova execução; não altera o resultado anterior.</p>
+        <p>Em <strong>Resultado da comparação</strong>, <strong>Abrir qualidade da comparação</strong> abre a comparação com esse run selecionado. Para resultado concluído, Detalhes da execução permite expandir <strong>Configuração congelada</strong> e <strong>Resultado agregado e auditoria de consultas</strong>, além de Baixar resultado. Histórico de execuções retorna à lista.</p>
+        <p>Para repetir depois de uma correção, use <strong>Executar comparação</strong> nos detalhes da comparação, quando tiver permissão. Isso cria uma nova execução; não altera o resultado anterior.</p>
       </section>
 
       <section class="manual-section" id="manual-schedules" aria-labelledby="manual-schedules-titulo">
         <span class="manual-number">13 · Automação</span>
-        <h2 id="manual-schedules-titulo">Schedules</h2>
-        <p>Um agendamento executa uma comparação já cadastrada. Abra Schedules e use <strong>New schedule</strong>; informe Schedule name e Comparison. Search schedules busca pelo nome. Um link com comparison_id pode limitar a lista; All schedules remove esse contexto.</p>
+        <h2 id="manual-schedules-titulo">Agendamentos</h2>
+        <p>Um agendamento executa uma comparação já cadastrada. Abra Agendamentos e use <strong>Novo agendamento</strong>; informe Nome do agendamento e Comparação. Buscar agendamentos busca pelo nome. Um link com comparison_id pode limitar a lista; Todos os agendamentos remove esse contexto.</p>
         <ol>
-          <li>Escolha <strong>Guided</strong> para Every N minutes, Hourly, Daily, Weekly ou Monthly; informe os campos de intervalo, horário e dia correspondentes.</li>
-          <li>Ou escolha <strong>Cron expression</strong> e forneça cinco campos: minuto, hora, dia do mês, mês e dia da semana. Não há campo de segundos nem comandos.</li>
-          <li>Confira <strong>Timezone</strong>, a expressão em <strong>Effective cron</strong> e os três horários em <strong>Next occurrences</strong>.</li>
-          <li>Defina <strong>Schedule enabled</strong> e clique em <strong>Save schedule</strong>. A prévia precisa ser válida antes de salvar.</li>
+          <li>Escolha <strong>Guiado</strong> para A cada N minutos, A cada hora, Diário, Semanal ou Mensal; informe os campos de intervalo, horário e dia correspondentes.</li>
+          <li>Ou escolha <strong>Expressão cron</strong> e forneça cinco campos: minuto, hora, dia do mês, mês e dia da semana. Não há campo de segundos nem comandos.</li>
+          <li>Confira <strong>Fuso horário</strong>, a expressão em <strong>Effective cron</strong> e os três horários em <strong>Próximo occurrences</strong>.</li>
+          <li>Defina <strong>Agendamento ativado</strong> e clique em <strong>Salvar agendamento</strong>. A prévia precisa ser válida antes de salvar.</li>
         </ol>
         <div class="manual-table" tabindex="0" role="region" aria-label="Exemplos de agendamento">
           <table>
@@ -457,56 +457,57 @@
             </tbody>
           </table>
         </div>
-        <p>Quando dia do mês e dia da semana estão restritos, vale <strong>um OU outro</strong>. Meses sem o dia solicitado são pulados. O fuso escolhido determina os horários e suas transições. Ao mudar de uma expressão personalizada para Guided, as seleções guiadas substituem a expressão.</p>
-        <p>O cartão mostra cron, fuso e Next occurrence. <strong>Edit</strong> altera a definição; <strong>Pause / Resume</strong> pausa ou retoma ocorrências futuras. Pausar não cancela um run já enfileirado nem um envio em andamento.</p>
-        <h3>Dispatch history</h3>
-        <p>A tabela apresenta Scheduled time, Delivery, Attempts, Details e Run. <strong>pending</strong> aguarda entrega; <strong>dispatched</strong> foi entregue à fila; <strong>skipped</strong> foi pulado; <strong>failed</strong> falhou na entrega. Open run leva ao processamento e à análise. Dispatched não significa succeeded nem aprovação dos dados.</p>
+        <p>Quando dia do mês e dia da semana estão restritos, vale <strong>um OU outro</strong>. Meses sem o dia solicitado são pulados. O fuso escolhido determina os horários e suas transições. Ao mudar de uma expressão personalizada para Guiado, as seleções guiadas substituem a expressão.</p>
+        <p>O cartão mostra cron, fuso e Próxima ocorrência. <strong>Editar</strong> altera a definição; <strong>Pausar / Retomar</strong> pausa ou retoma ocorrências futuras. Pausar não cancela um run já enfileirado nem um envio em andamento.</p>
+        <h3>Histórico de disparos</h3>
+        <p>A tabela apresenta Horário agendado, Entrega, Tentativas, Detalhes e Execução. <strong>pending</strong> aguarda entrega; <strong>dispatched</strong> foi entregue à fila; <strong>skipped</strong> foi pulado; <strong>failed</strong> falhou na entrega. Abrir execução leva ao processamento e à análise. Dispatched não significa succeeded nem aprovação dos dados.</p>
         <p>Uma comparação já queued/running faz a ocorrência ser pulada com comparison_busy. Falhas transitórias de entrega têm até cinco tentativas. Controller, engine e worker precisam estar ativos; sem worker os runs ficam na fila. Após parada, considera-se uma ocorrência vencida por agendamento, sem reproduzir todas as ocorrências perdidas. Desativar o usuário criador não pausa automaticamente os agendamentos do ambiente.</p>
       </section>
 
       <section class="manual-section" id="manual-settings" aria-labelledby="manual-settings-titulo">
         <span class="manual-number">14 · Configurações</span>
-        <h2 id="manual-settings-titulo">Settings e administração</h2>
-        <h3>Personal → Profile</h3>
-        <p>Account details mostra Name, Email, Role e Group. Para trocar a senha, preencha Current password, New password e Confirm new password e use Change password. A senha nova deve ter de 12 a 128 caracteres. A mudança encerra todas as suas sessões e exige nova entrada. Uma senha temporária precisa ser substituída antes do uso operacional.</p>
-        <h3>Personal → Appearance e menu Theme</h3>
-        <p>Escolha <strong>System</strong> (acompanha o dispositivo), <strong>Light</strong> ou <strong>Dark</strong>. A preferência é salva automaticamente nesse navegador e compartilhada com o submenu Theme do usuário. O manual integrado acompanha o mesmo tema; a cópia HTML independente acompanha a preferência do dispositivo.</p>
-        <h3>Quality → Quality target</h3>
-        <p><strong>Enable quality target</strong> ativa a referência. Informe Minimum Row Match Rate (%) entre 0 e 100, com até quatro casas decimais, e use Save target. O valor inicial é 95%. Desmarque para desativar e salve. Results Viewer consulta; Quality Manager, Data Developer e Platform Administrator podem alterar.</p>
+        <h2 id="manual-settings-titulo">Configurações e administração</h2>
+        <h3>Pessoal → Perfil</h3>
+        <p>Dados da conta mostra Nome, E-mail, Perfil de acesso e Grupo. Para trocar a senha, preencha Senha atual, Nova senha e Confirme a nova senha e use Alterar senha. A senha nova deve ter de 12 a 128 caracteres. A mudança encerra todas as suas sessões e exige nova entrada. Uma senha temporária precisa ser substituída antes do uso operacional.</p>
+        <h3>Pessoal → Idioma</h3><p>Escolha English ou Português (Brasil). O inglês é o padrão inicial. A troca é imediata, fica salva neste navegador e é sincronizada entre abas. Também se aplica à entrada, a este manual e ao HTML baixado. Se o armazenamento estiver bloqueado, a escolha permanece apenas em memória. Nomes cadastrados, valores das fontes e JSONs técnicos são preservados. A página de idioma fica disponível durante a troca obrigatória de senha.</p>
+        <h3>Pessoal → Aparência e menu Tema</h3>
+        <p>Escolha <strong>Sistema</strong> (acompanha o dispositivo), <strong>Claro</strong> ou <strong>Escuro</strong>. A preferência é salva automaticamente nesse navegador e compartilhada com o submenu Tema do usuário. O manual integrado acompanha o mesmo tema; a cópia HTML independente acompanha a preferência do dispositivo.</p>
+        <h3>Qualidade → Meta de qualidade</h3>
+        <p><strong>Ativar meta de qualidade</strong> ativa a referência. Informe Correspondência mínima de linhas (%) entre 0 e 100, com até quatro casas decimais, e use Salvar meta. O valor inicial é 95%. Desmarque para desativar e salve. Leitor de resultados consulta; Gestor de qualidade, Desenvolvedor de dados e Administrador da plataforma podem alterar.</p>
         <div class="manual-table" tabindex="0" role="region" aria-label="Estados de atendimento da meta">
           <table>
             <caption>A meta não altera as conclusões analíticas salvas</caption>
             <thead><tr><th scope="col">Estado</th><th scope="col">Leitura</th></tr></thead>
             <tbody>
-              <tr><th scope="row">Target met</th><td>Taxa igual ou superior à meta com avaliação completa.</td></tr>
-              <tr><th scope="row">Below target</th><td>Taxa calculada abaixo da referência.</td></tr>
-              <tr><th scope="row">Partial · above target</th><td>Taxa calculada atende ao mínimo, mas há posições não avaliadas; não recebe Target met.</td></tr>
-              <tr><th scope="row">Not evaluated / Unavailable</th><td>Não há cálculo utilizável ou informação válida suficiente.</td></tr>
-              <tr><th scope="row">Target disabled</th><td>A referência está desativada.</td></tr>
+              <tr><th scope="row">Meta atingida</th><td>Taxa igual ou superior à meta com avaliação completa.</td></tr>
+              <tr><th scope="row">Abaixo da meta</th><td>Taxa calculada abaixo da referência.</td></tr>
+              <tr><th scope="row">Parcial · acima da meta</th><td>Taxa calculada atende ao mínimo, mas há posições não avaliadas; não recebe Meta atingida.</td></tr>
+              <tr><th scope="row">Não avaliado / Indisponível</th><td>Não há cálculo utilizável ou informação válida suficiente.</td></tr>
+              <tr><th scope="row">Meta desativada</th><td>A referência está desativada.</td></tr>
             </tbody>
           </table>
         </div>
-        <p>A meta é única no ambiente, aplica-se apenas a Row Match Rate e não modifica fórmulas, tolerâncias ou conclusões. Alcançá-la não elimina diferenças de volume, chave ou coluna. O Overview compara o histórico com a meta atual.</p>
-        <h3>Administration → Groups</h3>
-        <p>Platform Administrator cria grupos com Name, Description e Access profile. Cada grupo tem um dos quatro perfis fixos; cada usuário pertence a exatamente um grupo. Não há ajustes individuais de permissões. Mudar o perfil do grupo encerra as sessões dos membros; renomear o grupo não muda as permissões.</p>
-        <p>A lista mostra nome/descrição, perfil e quantidade de usuários. <strong>Edit group</strong> edita; <strong>Delete group</strong> só permite excluir grupo sem usuários, incluindo inativos. O último administrador ativo não pode perder acesso por alteração do perfil do grupo.</p>
-        <h3>Administration → Users</h3>
-        <p>Em <strong>New user</strong>, informe nome, e-mail, grupo, estado Active e Temporary password de 12 a 128 caracteres. Use Save e entregue a senha ao usuário por um canal externo aprovado pela sua organização. A aplicação não a envia automaticamente.</p>
-        <p>A tabela mostra nome, e-mail, grupo/perfil, estado e exigência de troca de senha. <strong>Edit user</strong> altera dados, grupo ou ativação; <strong>Reset password</strong> define uma nova senha temporária, revoga sessões e exige troca na próxima entrada; <strong>Revoke sessions</strong> encerra as sessões existentes. Usuários são desativados, sem exclusão permanente. Mudança de grupo ou desativação também revoga sessões. O último Platform Administrator ativo é protegido contra desativação ou rebaixamento.</p>
-        <h3>Administration → Security audit</h3>
-        <p>A lista paginada permite consultar eventos administrativos e de acesso. As colunas apresentam horário, identificação do ator (ou Unauthenticated), ação, recurso, outcome e request ID. Ela ajuda a rastrear alterações e recusas de acesso. Não é a tabela de diferenças dos dados nem o query audit de uma execução.</p>
-        <h3>Help → Manual de uso</h3>
+        <p>A meta é única no ambiente, aplica-se apenas a Taxa de correspondência de linhas e não modifica fórmulas, tolerâncias ou conclusões. Alcançá-la não elimina diferenças de volume, chave ou coluna. O Visão geral compara o histórico com a meta atual.</p>
+        <h3>Administração → Grupos</h3>
+        <p>Administrador da plataforma cria grupos com Nome, Descrição e Perfil de acesso. Cada grupo tem um dos quatro perfis fixos; cada usuário pertence a exatamente um grupo. Não há ajustes individuais de permissões. Mudar o perfil do grupo encerra as sessões dos membros; renomear o grupo não muda as permissões.</p>
+        <p>A lista mostra nome/descrição, perfil e quantidade de usuários. <strong>Editar grupo</strong> edita; <strong>Excluir grupo</strong> só permite excluir grupo sem usuários, incluindo inativos. O último administrador ativo não pode perder acesso por alteração do perfil do grupo.</p>
+        <h3>Administração → Usuários</h3>
+        <p>Em <strong>Novo usuário</strong>, informe nome, e-mail, grupo, estado Ativo e Senha temporária de 12 a 128 caracteres. Use Salvar e entregue a senha ao usuário por um canal externo aprovado pela sua organização. A aplicação não a envia automaticamente.</p>
+        <p>A tabela mostra nome, e-mail, grupo/perfil, estado e exigência de troca de senha. <strong>Editar usuário</strong> altera dados, grupo ou ativação; <strong>Redefinir senha</strong> define uma nova senha temporária, revoga sessões e exige troca na próxima entrada; <strong>Revogar sessões</strong> encerra as sessões existentes. Usuários são desativados, sem exclusão permanente. Mudança de grupo ou desativação também revoga sessões. O último Administrador da plataforma ativo é protegido contra desativação ou rebaixamento.</p>
+        <h3>Administração → Auditoria de segurança</h3>
+        <p>A lista paginada permite consultar eventos administrativos e de acesso. As colunas apresentam horário, identificação do ator (ou Não autenticado), ação, recurso, outcome e request ID. Ela ajuda a rastrear alterações e recusas de acesso. Não é a tabela de diferenças dos dados nem o query audit de uma execução.</p>
+        <h3>Ajuda → Manual de uso</h3>
         <p>Esta página reúne o índice e os procedimentos de uso. Baixar HTML gera um arquivo completo com estilos locais, sem necessidade de acesso à aplicação para leitura. Links do índice funcionam na cópia; ações de consulta aos dados continuam na aplicação autenticada.</p>
       </section>
 
       <section class="manual-section" id="manual-exclusoes" aria-labelledby="manual-exclusoes-titulo">
         <span class="manual-number">15 · Ciclo de vida</span>
         <h2 id="manual-exclusoes-titulo">Desativação e exclusões</h2>
-        <p>As janelas de exclusão verificam dependências atuais antes da confirmação. Use Cancel para voltar; Retry dependency check ou Refresh dependencies atualiza uma verificação que falhou ou está bloqueada.</p>
+        <p>As janelas de exclusão verificam dependências atuais antes da confirmação. Use Cancelar para voltar; Repetir verificação de dependências ou Atualizar dependências atualiza uma verificação que falhou ou está bloqueada.</p>
         <ul>
-          <li><strong>Conexão:</strong> datasets e comparações vinculados impedem Delete. Deactivate mantém o cadastro e o histórico e impede novas operações que dependem da fonte ativa.</li>
-          <li><strong>Dataset:</strong> comparações atuais ou históricas impedem a exclusão, mesmo inativas. A exclusão permitida remove o cadastro da tabela na aplicação, sem apagar a tabela ou os dados na fonte.</li>
-          <li><strong>Comparação:</strong> agendamentos atuais ou históricos impedem a exclusão, inclusive pausados. Runs queued/running também bloqueiam; aguarde o término. Quando permitida, Delete comparison and run history remove permanentemente a definição, seus runs, resultados e evidências.</li>
+          <li><strong>Conexão:</strong> datasets e comparações vinculados impedem Excluir. Desativar mantém o cadastro e o histórico e impede novas operações que dependem da fonte ativa.</li>
+          <li><strong>Conjunto de dados:</strong> comparações atuais ou históricas impedem a exclusão, mesmo inativas. A exclusão permitida remove o cadastro da tabela na aplicação, sem apagar a tabela ou os dados na fonte.</li>
+          <li><strong>Comparação:</strong> agendamentos atuais ou históricos impedem a exclusão, inclusive pausados. Execuções queued/running também bloqueiam; aguarde o término. Quando permitida, Excluir comparação e histórico de execuções remove permanentemente a definição, seus runs, resultados e evidências.</li>
           <li><strong>Grupo:</strong> só pode ser excluído sem nenhum usuário vinculado, incluindo inativos. Usuários podem ser desativados; não há exclusão permanente de usuário nessa tela.</li>
         </ul>
         <div class="manual-note">Desativar uma comparação preserva sua configuração e seus resultados. Excluir uma comparação com histórico é irreversível na interface. Confira o nome e as quantidades exibidas antes de confirmar.</div>
@@ -515,16 +516,16 @@
       <section class="manual-section" id="manual-duvidas" aria-labelledby="manual-duvidas-titulo">
         <span class="manual-number">16 · Ajuda prática</span>
         <h2 id="manual-duvidas-titulo">Dúvidas e diagnóstico</h2>
-        <details><summary>O run terminou com succeeded. Os dados foram aprovados?</summary><p>Confira a conclusão em Comparison Quality. Succeeded é sucesso técnico; difference_observed indica divergência comprovada e inconclusive indica evidência insuficiente. Atendimento da meta é uma terceira informação independente.</p></details>
-        <details><summary>Row Match Rate é 100%, mas há uma divergência.</summary><p>Verifique volume, duplicidade/nulos da chave, as duas direções de cobertura e as colunas. O percentual descreve posições avaliadas da amostra. Contagens diferentes ou impedimentos em outras dimensões continuam relevantes. Confira também não avaliados e execução selecionada.</p></details>
-        <details><summary>Uma taxa de 0% significa falha?</summary><p>Em Duplicate Key Rate, zero significa ausência de excesso duplicado nas linhas avaliadas. Na diferença percentual de Row Count Match, zero significa volumes iguais. Em Row Match Rate ou Column Match Rate com denominador positivo, zero significa que nenhuma posição avaliada foi igual. Not evaluated/Unavailable não equivale a zero.</p></details>
+        <details><summary>O run terminou com succeeded. Os dados foram aprovados?</summary><p>Confira a conclusão em Qualidade da comparação. Succeeded é sucesso técnico; difference_observed indica divergência comprovada e inconclusive indica evidência insuficiente. Atendimento da meta é uma terceira informação independente.</p></details>
+        <details><summary>Taxa de correspondência de linhas é 100%, mas há uma divergência.</summary><p>Verifique volume, duplicidade/nulos da chave, as duas direções de cobertura e as colunas. O percentual descreve posições avaliadas da amostra. Contagens diferentes ou impedimentos em outras dimensões continuam relevantes. Confira também não avaliados e execução selecionada.</p></details>
+        <details><summary>Uma taxa de 0% significa falha?</summary><p>Em Taxa de duplicidade de chaves, zero significa ausência de excesso duplicado nas linhas avaliadas. Na diferença percentual de Correspondência de contagem de linhas, zero significa volumes iguais. Em Taxa de correspondência de linhas ou Taxa de correspondência por coluna com denominador positivo, zero significa que nenhuma posição avaliada foi igual. Não avaliado/Indisponível não equivale a zero.</p></details>
         <details><summary>A chave foi rejeitada ou as métricas de linhas ficaram indisponíveis.</summary><p>Confira se os pares da chave têm tipos aceitos, nenhum componente nulo e unicidade no recorte completo. Escolha uma chave de negócio adequada, simples ou composta. Atualize metadados se a estrutura mudou e crie uma nova execução depois da correção. Aumentar a amostra não corrige identidade inválida.</p></details>
-        <details><summary>As datas parecem iguais, mas aparecem como diferentes.</summary><p>Confira o tipo, o offset e Timestamp timezone de cada coluna. Um horário gravado em UTC e outro em hora local podem precisar de interpretações distintas. O fuso da janela filtra o período; o fuso da coluna interpreta o instante. Não escolha ambos apenas pelo local do navegador.</p></details>
-        <details><summary>A amostra excede o limite ou o orçamento de captura.</summary><p>O percentual é calculado sobre o maior volume A/B e arredondado para cima. Use Number of keys até 10.000 ou reduza o percentual/recorte. Confira Maximum cells e Maximum captured bytes e a quantidade de colunas incluídas. A aplicação não transforma silenciosamente um pedido acima do limite em uma amostra menor.</p></details>
-        <details><summary>Não consigo inspecionar registros de um resultado antigo.</summary><p>Confira Not captured, Expired ou Unavailable. Resultados antigos podem conter apenas agregados; evidências expiram em 30 dias. Não há reconstrução histórica por releitura. Uma nova execução captura um novo estado das fontes e não repõe a evidência antiga.</p></details>
-        <details><summary>O gráfico tem espaços vazios ou perdeu o ponto de um dia.</summary><p>Um dia sem avaliação é lacuna. Se a última execução terminal do dia falhou, ela substitui o sucesso anterior como referência diária, sem reutilizar sua taxa. Consulte Runs para verificar o histórico.</p></details>
-        <details><summary>O run permanece queued ou o agendamento não entregou.</summary><p>Queued aguarda o worker; solicite ao administrador que confira os serviços. No agendamento, abra Dispatch history e veja Details: comparison_busy indica comparação já em processamento; fonte/comparação inativa exige revisar os cadastros. Após parada dos serviços, todas as ocorrências antigas não são reproduzidas.</p></details>
-        <details><summary>Uma tela não aparece ou recebo recusa de acesso.</summary><p>Confira seu grupo/perfil em Profile e se há troca de senha temporária pendente. Quality Manager usa datasets registrados; Data Developer administra fontes; Platform Administrator administra usuários. Se necessário, peça ao administrador para revisar o grupo. Sessões podem ser revogadas após alterações de acesso.</p></details>
+        <details><summary>As datas parecem iguais, mas aparecem como diferentes.</summary><p>Confira o tipo, o offset e Fuso do timestamp de cada coluna. Um horário gravado em UTC e outro em hora local podem precisar de interpretações distintas. O fuso da janela filtra o período; o fuso da coluna interpreta o instante. Não escolha ambos apenas pelo local do navegador.</p></details>
+        <details><summary>A amostra excede o limite ou o orçamento de captura.</summary><p>O percentual é calculado sobre o maior volume A/B e arredondado para cima. Use Quantidade de chaves até 10.000 ou reduza o percentual/recorte. Confira Maximum cells e Máximo de bytes capturados e a quantidade de colunas incluídas. A aplicação não transforma silenciosamente um pedido acima do limite em uma amostra menor.</p></details>
+        <details><summary>Não consigo inspecionar registros de um resultado antigo.</summary><p>Confira Não capturado, Expired ou Indisponível. Resultados antigos podem conter apenas agregados; evidências expiram em 30 dias. Não há reconstrução histórica por releitura. Uma nova execução captura um novo estado das fontes e não repõe a evidência antiga.</p></details>
+        <details><summary>O gráfico tem espaços vazios ou perdeu o ponto de um dia.</summary><p>Um dia sem avaliação é lacuna. Se a última execução terminal do dia falhou, ela substitui o sucesso anterior como referência diária, sem reutilizar sua taxa. Consulte Execuções para verificar o histórico.</p></details>
+        <details><summary>O run permanece queued ou o agendamento não entregou.</summary><p>Queued aguarda o worker; solicite ao administrador que confira os serviços. No agendamento, abra Histórico de disparos e veja Detalhes: comparison_busy indica comparação já em processamento; fonte/comparação inativa exige revisar os cadastros. Após parada dos serviços, todas as ocorrências antigas não são reproduzidas.</p></details>
+        <details><summary>Uma tela não aparece ou recebo recusa de acesso.</summary><p>Confira seu grupo/perfil em Perfil e se há troca de senha temporária pendente. Gestor de qualidade usa datasets registrados; Desenvolvedor de dados administra fontes; Administrador da plataforma administra usuários. Se necessário, peça ao administrador para revisar o grupo. Sessões podem ser revogadas após alterações de acesso.</p></details>
         <details><summary>Como comunicar um problema ao administrador?</summary><p>Informe a tela, nome da comparação, ID do run, horário/fuso, estado técnico, código/mensagem e request ID quando exibido. Para divergências, acrescente a métrica, numerador/denominador e cobertura. Esses dados ajudam a localizar a execução sem confundir falha de processamento com diferença nos dados.</p></details>
       </section>
 
@@ -536,18 +537,18 @@
             <caption>Termos usados na interface</caption>
             <thead><tr><th scope="col">Termo</th><th scope="col">Significado</th></tr></thead>
             <tbody>
-              <tr><th scope="row">Source A / reference; Source B / target</th><td>As duas fontes. A é a base do percentual de diferença de volume; ambas têm papéis próprios na cobertura direcional.</td></tr>
+              <tr><th scope="row">Fonte A / reference; Fonte B / target</th><td>As duas fontes. A é a base do percentual de diferença de volume; ambas têm papéis próprios na cobertura direcional.</td></tr>
               <tr><th scope="row">Scope / recorte</th><td>População de linhas incluída por período e filtros equivalentes.</td></tr>
-              <tr><th scope="row">Business key / identity</th><td>Campo ou combinação de campos que identifica um registro e permite alinhá-lo entre as fontes.</td></tr>
+              <tr><th scope="row">Chave de negócio / identity</th><td>Campo ou combinação de campos que identifica um registro e permite alinhá-lo entre as fontes.</td></tr>
               <tr><th scope="row">Mapping / pair</th><td>Associação explícita ou sugerida entre uma coluna A e uma coluna B.</td></tr>
               <tr><th scope="row">Seed</th><td>Semente usada na seleção reproduzível de chaves.</td></tr>
-              <tr><th scope="row">Numerator / denominator</th><td>Quantidade que atende ao critério / quantidade avaliada que serve de base à taxa.</td></tr>
-              <tr><th scope="row">Not evaluated / unknown</th><td>Posição sem avaliação conclusiva. Não conta automaticamente como igual.</td></tr>
+              <tr><th scope="row">Numerador / denominador</th><td>Quantidade que atende ao critério / quantidade avaliada que serve de base à taxa.</td></tr>
+              <tr><th scope="row">Não avaliado / unknown</th><td>Posição sem avaliação conclusiva. Não conta automaticamente como igual.</td></tr>
               <tr><th scope="row">Evidence</th><td>Valores individuais congelados da amostra, sujeitos a limites e retenção.</td></tr>
-              <tr><th scope="row">Frozen configuration</th><td>Configuração preservada para aquela execução, independente da edição posterior da definição.</td></tr>
+              <tr><th scope="row">Configuração congelada</th><td>Configuração preservada para aquela execução, independente da edição posterior da definição.</td></tr>
               <tr><th scope="row">Dispatch</th><td>Tentativa de um agendamento entregar uma execução à fila.</td></tr>
               <tr><th scope="row">IANA timezone</th><td>Identificador de fuso, como America/Sao_Paulo, UTC ou Europe/Lisbon.</td></tr>
-              <tr><th scope="row">Query audit / Security audit</th><td>Informações técnicas de consultas da execução / eventos administrativos e de acesso do ambiente.</td></tr>
+              <tr><th scope="row">Query audit / Auditoria de segurança</th><td>Informações técnicas de consultas da execução / eventos administrativos e de acesso do ambiente.</td></tr>
             </tbody>
           </table>
         </div>

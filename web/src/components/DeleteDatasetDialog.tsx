@@ -1,3 +1,4 @@
+import { useLanguage } from "../i18n/LanguageProvider";
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -11,6 +12,7 @@ export function DeleteDatasetDialog({dataset, onClose, onDeleted, returnFocus}: 
   onDeleted: () => void;
   returnFocus: () => HTMLElement | null;
 }) {
+  const { t: tr } = useLanguage();
   const [offset, setOffset] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -43,30 +45,30 @@ export function DeleteDatasetDialog({dataset, onClose, onDeleted, returnFocus}: 
     }
   }
   return <Dialog open onOpenChange={open => {if (!open && !locked.current) onClose();}}>
-    <DialogContent title="Delete dataset" description="Review linked comparisons. Source tables and data will remain unchanged."
+    <DialogContent title={tr("Delete dataset")} description={tr("Review linked comparisons. Source tables and data will remain unchanged.")}
       returnFocus={() => deleted.current ? returnFocus() : null}>
       <div className="dataset-delete-dialog" aria-busy={busy}>
         <p className="dataset-delete-location"><strong>{[dataset.catalog_name,dataset.schema_name,dataset.table_name].filter(Boolean).join(".")}</strong></p>
         <ErrorBox error={q.error || error} />
-        {q.isPending ? <Loading /> : q.error ? <Button variant="outline" onClick={() => void q.refetch()}>Retry dependency check</Button> : q.data && <>
-          <p className="muted dataset-delete-location">Connection: {q.data.dataset.connection_name}</p>
-          <section aria-label="Linked comparisons" className="connection-dependencies">
-            <h3>Comparisons ({q.data.comparisons.total})</h3>
+        {q.isPending ? <Loading /> : q.error ? <Button variant="outline" onClick={() => void q.refetch()}>{tr("Retry dependency check")}</Button> : q.data && <>
+          <p className="muted dataset-delete-location">{tr("Connection: ")}{q.data.dataset.connection_name}</p>
+          <section aria-label={tr("Linked comparisons")} className="connection-dependencies">
+            <h3>{tr("Comparisons (")}{q.data.comparisons.total})</h3>
             {q.data.comparisons.items.length ? <ul>{q.data.comparisons.items.map(c => <li key={c.id}>
               <Link to={`/comparisons/${c.id}`} onClick={onClose}>{c.name}</Link>{" "}
               <Badge value={c.is_active ? "active" : "inactive"} />{" "}
-              <span className="muted">{[c.current && "Current",c.historical && "Historical"].filter(Boolean).join(" · ")}</span>
-            </li>)}</ul> : <p className="muted">No linked comparisons.</p>}
+              <span className="muted">{[c.current && tr("Current"),c.historical && tr("Historical")].filter(Boolean).join(" · ")}</span>
+            </li>)}</ul> : <p className="muted">{tr("No linked comparisons.")}</p>}
             <Pagination total={q.data.comparisons.total} offset={offset} setOffset={setOffset} />
           </section>
-          {!!q.data.comparisons.total && <p className="notice warning" role="status">This dataset is used by current or historical comparisons and cannot be deleted. Inactive comparisons also block deletion.</p>}
-          {!q.data.can_delete && <Button variant="outline" disabled={q.isFetching} onClick={() => void q.refetch()}>Refresh dependencies</Button>}
-          {q.data.can_delete && <p className="notice warning">This permanently deletes the dataset registration.</p>}
+          {!!q.data.comparisons.total && <p className="notice warning" role="status">{tr("This dataset is used by current or historical comparisons and cannot be deleted. Inactive comparisons also block deletion.")}</p>}
+          {!q.data.can_delete && <Button variant="outline" disabled={q.isFetching} onClick={() => void q.refetch()}>{tr("Refresh dependencies")}</Button>}
+          {q.data.can_delete && <p className="notice warning">{tr("This permanently deletes the dataset registration.")}</p>}
         </>}
         <div className="form-footer">
-          <Button variant="outline" disabled={busy} onClick={onClose}>Cancel</Button>
+          <Button variant="outline" disabled={busy} onClick={onClose}>{tr("Cancel")}</Button>
           <Button disabled={busy || q.isFetching || !!q.error || !q.data?.can_delete} onClick={() => void remove()}>
-            {busy ? "Deleting…" : "Delete dataset"}
+            {busy ? tr("Deleting…") : tr("Delete dataset")}
           </Button>
         </div>
       </div>

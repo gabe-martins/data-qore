@@ -14,6 +14,8 @@ async function mock(page: Page, user = adminUser) {
     if (path === "/auth/me") return send(user);
     if (path === "/auth/logout" || path === "/auth/change-password") return send({ status: "ok" });
     if (path === "/overview") return send({ row_match_rate: { percentage: 100, passed: 1, evaluated: 1, coverage_percentage: 100 }, active_comparisons: 1, latest_conclusions: {}, attention: [{ comparison_id: "comparison", name: "Finance comparison", state: "difference_observed" }], recent_runs: [] });
+    if (path === "/settings/quality") return send({ row_match_target_percentage: "95" });
+    if (path === "/overview/comparisons") return send({ items: [], total: 0, limit: 25, offset: 0 });
     if (path === "/overview/row-match-trend") return send({ overall: [] });
     if (req.method() === "POST" && path === "/groups") { const data = req.postDataJSON(); const g = { ...data, id: "new-group", permissions: viewer.permissions, user_count: 0 }; groups.push(g); return send(g, 201); }
     if (req.method() === "POST" && path === "/users") { const data = req.postDataJSON(); const u = { ...data, id: "new-user", group: groups.find(g => g.id === data.group_id), must_change_password: true }; delete u.temporary_password; users.push(u); return send(u, 201); }

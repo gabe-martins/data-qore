@@ -1352,3 +1352,10 @@ select:focus-visible {
 
 .overview-quality-table th,.overview-quality-table td{padding:14px 12px}.overview-quality-table td:first-child{min-width:180px;max-width:230px;overflow-wrap:anywhere}.overview-quality-table td:nth-child(2){min-width:155px}.overview-quality-table td:nth-child(2)>.target-status{margin-top:9px}.overview-execution{margin-top:10px}.overview-execution>.badge{font-size:.67rem}.overview-quality-table td:nth-child(6){min-width:150px}.overview-quality-table td:last-child{min-width:130px}
 .overview-stats>.card{margin:0}
+
+.language-choices { display: flex; flex-direction: column; gap: 16px; border: 0; margin: 20px 0; padding: 0; }
+.language-choices .check-label { padding: 14px 16px; border: 1px solid var(--semantic-border-default); border-radius: 8px; max-width: 480px; }
+.language-choices label:has(input:checked) { background: var(--semantic-status-success-background); border-color: var(--semantic-border-success); }
+.title-actions { flex-wrap: wrap; }
+.page-title > :first-child { flex: 1; }
+@media (max-width: 1100px) { .page-title { flex-wrap: wrap; } }

@@ -1,3 +1,5 @@
+import { errorText } from "../i18n/errors";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { Allowed } from "../lib/access";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -18,6 +20,7 @@ import {
   RunsTable,
 } from "../components/common";
 export function Runs() {
+  const { t: tr, reason } = useLanguage();
   const [status, setStatus] = useState("");
   const [offset, setOffset] = useState(0);
   const q = useQuery({
@@ -31,22 +34,20 @@ export function Runs() {
   return (
     <>
       <PageTitle
-        title="Run history"
-        subtitle="Comparison executions and saved critical metrics."
+        title={tr("Run history")}
+        subtitle={tr("Comparison executions and saved critical metrics.")}
       />
       <Card>
-        <label>
-          Execution state
-          <select
+        <label>{tr("Execution state")}<select
             value={status}
             onChange={(e) => {
               setStatus(e.target.value);
               setOffset(0);
             }}
           >
-            <option value="">All states</option>
+            <option value="">{tr("All states")}</option>
             {["queued", "running", "succeeded", "failed"].map((v) => (
-              <option key={v}>{v}</option>
+              <option key={v} value={v}>{reason(v)}</option>
             ))}
           </select>
         </label>
@@ -63,13 +64,14 @@ export function Runs() {
             />
           </>
         ) : (
-          <Empty title="No comparison runs" />
+          <Empty title={tr("No comparison runs")} />
         )}
       </Card>
     </>
   );
 }
 export function RunResult({ differences = false }: { differences?: boolean }) {
+  const { t: tr, locale } = useLanguage();
   const { id } = useParams();
   const run = useQuery({
     queryKey: ["run", id],
@@ -85,11 +87,11 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
   return (
     <>
       <PageTitle
-        title={differences ? "Comparison differences" : "Comparison result"}
-        subtitle="Execution state is separate from the analytical conclusion."
+        title={differences ? tr("Comparison differences") : tr("Comparison result")}
+        subtitle={tr("Execution state is separate from the analytical conclusion.")}
         action={
           <Button asChild>
-            <Link to="/runs">Run history</Link>
+            <Link to="/runs">{"Run history"}</Link>
           </Button>
         }
       />
@@ -106,16 +108,15 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
                   <Allowed permission="results.read">
                     <Link
                       to={`/comparisons/${run.data.comparison_id}?run_id=${run.data.id}${differences ? "#quality-records" : ""}`}
-                    >
-                      Open comparison quality
-                    </Link>
+                    >{tr("Open comparison quality")}</Link>
                   </Allowed>
                 </p>
               )}
               {run.data.status === "failed" && (
-                <p role="alert">
-                  {run.data.error_code}: {run.data.error_message}
-                </p>
+                <div role="alert">
+                  {run.data.error_code}: {errorText(run.data.error_code, run.data.error_message ?? "", locale)}
+                  {locale === "pt-BR" && <details><summary>{tr("Technical details")}</summary><p>{run.data.error_message}</p></details>}
+                </div>
               )}
               {(run.data.status === "queued" ||
                 run.data.status === "running") && (
@@ -124,17 +125,14 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
             </Card>
             {result.data && (
               <>
-                <p className="notice">
-                  Quality indicators and record inspection are available inside
-                  the comparison page, for this selected execution.
-                </p>
-                <Card title="Execution details">
+                <p className="notice">{tr("Quality indicators and record inspection are available inside the comparison page, for this selected execution.")}</p>
+                <Card title={tr("Execution details")}>
                   <details>
-                    <summary>Frozen configuration</summary>
+                    <summary>{tr("Frozen configuration")}</summary>
                     <JsonView value={run.data.parameters} />
                   </details>
                   <details>
-                    <summary>Aggregated result and query audit</summary>
+                    <summary>{tr("Aggregated result and query audit")}</summary>
                     <JsonView value={result.data.result} />
                   </details>
                   <Button
@@ -150,9 +148,7 @@ export function RunResult({ differences = false }: { differences?: boolean }) {
                       a.click();
                       URL.revokeObjectURL(url);
                     }}
-                  >
-                    Download result
-                  </Button>
+                  >{tr("Download result")}</Button>
                 </Card>
               </>
             )}

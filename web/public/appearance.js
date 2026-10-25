@@ -1,5 +1,9 @@
 // Runs synchronously before application CSS/React to avoid a light-theme flash.
 (() => {
+  try {
+    const language = localStorage.getItem('dataqore.ui.language');
+    document.documentElement.lang = language === 'pt-BR' ? 'pt-BR' : 'en-US';
+  } catch { document.documentElement.lang = 'en-US'; }
   let theme = 'system';
   try {
     const saved = localStorage.getItem('dataqore.ui.theme');

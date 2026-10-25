@@ -1,3 +1,4 @@
+import { useLanguage } from "../i18n/LanguageProvider";
 import type { Model } from "../api";
 import { Button, Card } from "./common";
 
@@ -31,16 +32,17 @@ function ColumnSelect({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const { t: tr } = useLanguage();
   return (
     <label>
-      {label}
+      {tr(label)}
       <select
         required
-        aria-label={label}
+        aria-label={tr(label)}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
-        <option value="">Choose column</option>
+        <option value="">{tr("Choose column")}</option>
         {Object.entries(columns).map(([name, info]) => (
           <option key={name} value={name}>
             {name} · {info.type}
@@ -52,6 +54,7 @@ function ColumnSelect({
 }
 
 export function ScopeEditor({ value, onChange, left, right }: Props) {
+  const { t: tr } = useLanguage();
   const scope = value.scope ?? {};
   const period = scope.period;
   const filters = scope.filters ?? [];
@@ -64,13 +67,11 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
     update({ ...scope, period: { ...period!, ...patch } });
   return (
     <Card
-      title="Equivalent scope"
-      subtitle="One logical period and set of criteria, applied to both sources with AND. No SQL input."
+      title={tr("Equivalent scope")}
+      subtitle={tr("One logical period and set of criteria, applied to both sources with AND. No SQL input.")}
     >
-      <label>
-        Period
-        <select
-          aria-label="Period"
+      <label>{tr("Period")}<select
+          aria-label={tr("Period")}
           value={period?.kind ?? "none"}
           onChange={(e) =>
             update({
@@ -93,16 +94,16 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
             })
           }
         >
-          <option value="none">All available dates</option>
-          <option value="fixed">Fixed period</option>
-          <option value="relative">Previous complete units</option>
+          <option value="none">{tr("All available dates")}</option>
+          <option value="fixed">{tr("Fixed period")}</option>
+          <option value="relative">{tr("Previous complete units")}</option>
         </select>
       </label>
       {period && (
         <>
           <div className="form-grid">
             <ColumnSelect
-              label="Period column A"
+              label={tr("Period column A")}
               columns={Object.fromEntries(
                 Object.entries(left).filter(([, v]) =>
                   /date|time/i.test(v.type ?? ""),
@@ -112,7 +113,7 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
               onChange={(v) => changePeriod({ left: v })}
             />
             <ColumnSelect
-              label="Period column B"
+              label={tr("Period column B")}
               columns={Object.fromEntries(
                 Object.entries(right).filter(([, v]) =>
                   /date|time/i.test(v.type ?? ""),
@@ -123,10 +124,8 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
             />
           </div>
           <div className="form-grid">
-            <label>
-              Scope timezone (IANA)
-              <input
-                aria-label="Scope timezone"
+            <label>{tr("Scope timezone (IANA)")}<input
+                aria-label={tr("Scope timezone")}
                 required
                 value={period.timezone ?? "America/Sao_Paulo"}
                 onChange={(e) => changePeriod({ timezone: e.target.value })}
@@ -134,10 +133,8 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
             </label>
             {period.kind === "relative" ? (
               <>
-                <label>
-                  Unit
-                  <select
-                    aria-label="Period unit"
+                <label>{tr("Unit")}<select
+                    aria-label={tr("Period unit")}
                     value={period.unit ?? "days"}
                     onChange={(e) =>
                       changePeriod({
@@ -145,15 +142,13 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
                       })
                     }
                   >
-                    <option value="hours">Hours</option>
-                    <option value="days">Days</option>
-                    <option value="months">Months</option>
+                    <option value="hours">{tr("Hours")}</option>
+                    <option value="days">{tr("Days")}</option>
+                    <option value="months">{tr("Months")}</option>
                   </select>
                 </label>
-                <label>
-                  Complete units
-                  <input
-                    aria-label="Complete units"
+                <label>{tr("Complete units")}<input
+                    aria-label={tr("Complete units")}
                     type="number"
                     required
                     min={1}
@@ -164,10 +159,8 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
                     }
                   />
                 </label>
-                <label>
-                  Safety delay (minutes)
-                  <input
-                    aria-label="Safety delay (minutes)"
+                <label>{tr("Safety delay (minutes)")}<input
+                    aria-label={tr("Safety delay (minutes)")}
                     type="number"
                     required
                     min={0}
@@ -183,23 +176,19 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
               </>
             ) : (
               <>
-                <label>
-                  Start (inclusive)
-                  <input
-                    aria-label="Start (inclusive)"
+                <label>{tr("Start (inclusive)")}<input
+                    aria-label={tr("Start (inclusive)")}
                     type="text"
-                    placeholder="YYYY-MM-DD or timestamp with offset"
+                    placeholder={tr("YYYY-MM-DD or timestamp with offset")}
                     required
                     value={period.start ?? ""}
                     onChange={(e) => changePeriod({ start: e.target.value })}
                   />
                 </label>
-                <label>
-                  End (exclusive)
-                  <input
-                    aria-label="End (exclusive)"
+                <label>{tr("End (exclusive)")}<input
+                    aria-label={tr("End (exclusive)")}
                     type="text"
-                    placeholder="YYYY-MM-DD or timestamp with offset"
+                    placeholder={tr("YYYY-MM-DD or timestamp with offset")}
                     required
                     value={period.end ?? ""}
                     onChange={(e) => changePeriod({ end: e.target.value })}
@@ -210,11 +199,10 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
           </div>
           <div className="form-grid">
             {sides.map((side, i) => (
-              <label key={side}>
-                Naive timestamp timezone {i ? "B" : "A"}
+              <label key={side}>{tr("Naive timestamp timezone ")}{i ? "B" : "A"}
                 <input
-                  aria-label={`Naive timestamp timezone ${i ? "B" : "A"}`}
-                  placeholder="Required for timestamps without timezone"
+                  aria-label={tr("Naive timestamp timezone {0}", {0: i ? "B" : "A"})}
+                  placeholder={tr("Required for timestamps without timezone")}
                   value={period[`${side}_naive_timezone`] ?? ""}
                   onChange={(e) =>
                     changePeriod({
@@ -225,16 +213,10 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
               </label>
             ))}
           </div>
-          <p className="notice">
-            The end is exclusive. Relative windows use complete hours, calendar
-            days or calendar months in the chosen timezone, after subtracting
-            the safety delay. A preview is provisional; execution freezes the
-            window when queued. Explicit timezone interpretation is required for
-            timestamps without a timezone.
-          </p>
+          <p className="notice">{tr("The end is exclusive. Relative windows use complete hours, calendar days or calendar months in the chosen timezone, after subtracting the safety delay. A preview is provisional; execution freezes the window when queued. Explicit timezone interpretation is required for timestamps without a timezone.")}</p>
         </>
       )}
-      <h3>Equivalent filters / batches</h3>
+      <h3>{tr("Equivalent filters / batches")}</h3>
       {filters.map((filter, index) => {
         function change(patch: Partial<typeof filter>) {
           update({
@@ -248,24 +230,22 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
           filter.operator === "is_null" || filter.operator === "is_not_null";
         return (
           <fieldset className="scope-filter" key={index}>
-            <legend>Criterion {index + 1}</legend>
+            <legend>{tr("Criterion ")}{index + 1}</legend>
             <div className="form-grid">
               <ColumnSelect
-                label={`Filter ${index + 1} column A`}
+                label={tr("Filter {0} column A", {0: index + 1})}
                 columns={left}
                 value={filter.left}
                 onChange={(v) => change({ left: v })}
               />
               <ColumnSelect
-                label={`Filter ${index + 1} column B`}
+                label={tr("Filter {0} column B", {0: index + 1})}
                 columns={right}
                 value={filter.right}
                 onChange={(v) => change({ right: v })}
               />
-              <label>
-                Operator
-                <select
-                  aria-label={`Filter ${index + 1} operator`}
+              <label>{tr("Operator")}<select
+                  aria-label={tr("Filter {0} operator", {0: index + 1})}
                   value={filter.operator}
                   onChange={(e) =>
                     change({
@@ -280,15 +260,15 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
                   }
                 >
                   {[
-                    ["eq", "Equals"],
-                    ["in", "In a list"],
-                    ["gte", "Greater than or equal"],
-                    ["lt", "Less than"],
-                    ["is_null", "Is null"],
-                    ["is_not_null", "Is not null"],
+                    ["eq", tr("Equals")],
+                    ["in", tr("In a list")],
+                    ["gte", tr("Greater than or equal")],
+                    ["lt", tr("Less than")],
+                    ["is_null", tr("Is null")],
+                    ["is_not_null", tr("Is not null")],
                   ].map(([v, label]) => (
                     <option key={v} value={v}>
-                      {label}
+                      {tr(label)}
                     </option>
                   ))}
                 </select>
@@ -296,9 +276,9 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
             </div>
             {!isNull && (
               <label>
-                {filter.operator === "in" ? "Values (one per line)" : "Value"}
+                {filter.operator === "in" ? tr("Values (one per line)") : tr("Value")}
                 <textarea
-                  aria-label={`Filter ${index + 1} value`}
+                  aria-label={tr("Filter {0} value", {0: index + 1})}
                   required
                   value={
                     Array.isArray(filter.value)
@@ -332,8 +312,7 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
                   filters: filters.filter((_, i) => i !== index),
                 })
               }
-            >
-              Remove criterion {index + 1}
+            >{tr("Remove criterion ")}{index + 1}
             </Button>
           </fieldset>
         );
@@ -351,44 +330,34 @@ export function ScopeEditor({ value, onChange, left, right }: Props) {
             ],
           })
         }
-      >
-        Add filter / batch
-      </Button>
-      <p className="muted small">
-        Use equality or a list for a batch. Decimal values use a dot and retain
-        their precision. Only compatible column types are accepted; no value
-        normalization or implicit type conversion.
-      </p>
+      >{tr("Add filter / batch")}</Button>
+      <p className="muted small">{tr("Use equality or a list for a batch. Decimal values use a dot and retain their precision. Only compatible column types are accepted; no value normalization or implicit type conversion.")}</p>
     </Card>
   );
 }
 
 export function ColumnsEditor({ value, onChange, left, right }: Props) {
+  const { t: tr } = useLanguage();
   return (
     <Card
-      title="Columns and timestamp interpretation"
-      subtitle="Explicit exclusions define which values participate in Row Match Rate and Column Match Rate."
+      title={tr("Columns and timestamp interpretation")}
+      subtitle={tr("Explicit exclusions define which values participate in Row Match Rate and Column Match Rate.")}
     >
-      <p className="notice">
-        Counts, filters and key validation still cover the entire selected
-        scope. Identity columns cannot be excluded. Exclude both sides of a
-        mapped pair when neither should participate; a remaining unpaired column
-        blocks full row evaluation.
-      </p>
+      <p className="notice">{tr("Counts, filters and key validation still cover the entire selected scope. Identity columns cannot be excluded. Exclude both sides of a mapped pair when neither should participate; a remaining unpaired column blocks full row evaluation.")}</p>
       {sides.map((side, index) => {
         const columns = index ? right : left;
         const excluded = value.excluded_columns?.[side] ?? [];
         const zones = value.timestamp_timezones?.[side] ?? {};
         return (
           <section key={side}>
-            <h3>Source {index ? "B" : "A"}</h3>
+            <h3>{tr("Source ")}{index ? "B" : "A"}</h3>
             <div className="table-scroll">
               <table>
                 <thead>
                   <tr>
-                    <th>Compare</th>
-                    <th>Column</th>
-                    <th>Timestamp timezone</th>
+                    <th>{tr("Compare")}</th>
+                    <th>{tr("Column")}</th>
+                    <th>{tr("Timestamp timezone")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -411,7 +380,7 @@ export function ColumnsEditor({ value, onChange, left, right }: Props) {
                         <td>
                           <input
                             type="checkbox"
-                            aria-label={`Compare ${index ? "B" : "A"} ${name}`}
+                            aria-label={tr("Compare {0} {1}", {0: index ? "B" : "A", 1: name})}
                             checked={!excluded.includes(name)}
                             disabled={!!identity && !excluded.includes(name)}
                             onChange={(e) => {
@@ -436,14 +405,14 @@ export function ColumnsEditor({ value, onChange, left, right }: Props) {
                           <small className="muted">
                             {" "}
                             · {info.type}
-                            {identity ? " · identity" : ""}
+                            {identity ? " · " + tr("identity") : ""}
                           </small>
                         </td>
                         <td>
                           {timestamp && !aware ? (
                             <input
-                              aria-label={`Timezone ${index ? "B" : "A"} ${name}`}
-                              placeholder="Unspecified — e.g. America/Sao_Paulo"
+                              aria-label={tr("Timezone {0} {1}", {0: index ? "B" : "A", 1: name})}
+                              placeholder={tr("Unspecified — e.g. America/Sao_Paulo")}
                               disabled={excluded.includes(name)}
                               value={zones[name] ?? ""}
                               onChange={(e) => {
@@ -460,7 +429,7 @@ export function ColumnsEditor({ value, onChange, left, right }: Props) {
                               }}
                             />
                           ) : timestamp ? (
-                            "Uses its stored offset"
+                            tr("Uses its stored offset")
                           ) : (
                             "—"
                           )}
@@ -474,13 +443,7 @@ export function ColumnsEditor({ value, onChange, left, right }: Props) {
           </section>
         );
       })}
-      <p className="notice">
-        Choose the timezone that the stored clock values represent, not your
-        browser timezone. UTC timestamps keep their instant. No timezone is
-        assumed for naive timestamps; ambiguous or nonexistent local times
-        remain not evaluated. The period timezone controls the window; timestamp
-        interpretation controls value equality.
-      </p>
+      <p className="notice">{tr("Choose the timezone that the stored clock values represent, not your browser timezone. UTC timestamps keep their instant. No timezone is assumed for naive timestamps; ambiguous or nonexistent local times remain not evaluated. The period timezone controls the window; timestamp interpretation controls value equality.")}</p>
     </Card>
   );
 }
@@ -514,6 +477,7 @@ export function suggestedPairs(
 }
 
 export function MappingEditor({ value, onChange, left, right }: Props) {
+  const { t: tr } = useLanguage();
   const manual = value.mapping ?? [],
     keys = value.business_key ?? [];
   const effective = suggestedPairs(left, right, manual);
@@ -521,16 +485,16 @@ export function MappingEditor({ value, onChange, left, right }: Props) {
     keys.some((k) => k.left === pair.left && k.right === pair.right);
   return (
     <Card
-      title="Column mapping & identity"
-      subtitle="Manual pairs take precedence; remaining unambiguous names match automatically."
+      title={tr("Column mapping & identity")}
+      subtitle={tr("Manual pairs take precedence; remaining unambiguous names match automatically.")}
     >
       <div className="table-scroll">
         <table>
           <thead>
             <tr>
-              <th>Source column A</th>
-              <th>Comparison column B</th>
-              <th>Business key</th>
+              <th>{tr("Source column A")}</th>
+              <th>{tr("Comparison column B")}</th>
+              <th>{tr("Business key")}</th>
             </tr>
           </thead>
           <tbody>
@@ -545,7 +509,7 @@ export function MappingEditor({ value, onChange, left, right }: Props) {
                   </td>
                   <td>
                     <select
-                      aria-label={`Map ${name}`}
+                      aria-label={tr("Map {0}", {0: name})}
                       value={selected?.right ?? ""}
                       onChange={(e) => {
                         const mapping = manual.filter((p) => p.left !== name);
@@ -565,8 +529,8 @@ export function MappingEditor({ value, onChange, left, right }: Props) {
                     >
                       <option value="">
                         {pair && !selected
-                          ? `Auto → ${pair.right}`
-                          : "Auto / no matching name"}
+                          ? tr("Auto → {0}", {0: pair.right})
+                          : tr("Auto / no matching name")}
                       </option>
                       {Object.entries(right).map(([target, targetInfo]) => (
                         <option
@@ -583,7 +547,7 @@ export function MappingEditor({ value, onChange, left, right }: Props) {
                   </td>
                   <td>
                     <input
-                      aria-label={`Business key ${name}`}
+                      aria-label={tr("Business key {0}", {0: name})}
                       type="checkbox"
                       disabled={!pair}
                       checked={!!pair && keyFor(pair)}
@@ -604,18 +568,8 @@ export function MappingEditor({ value, onChange, left, right }: Props) {
           </tbody>
         </table>
       </div>
-      <p className="notice">
-        Select one or more mapped pairs for a business key. Nulls and duplicates
-        are checked across the entire scope on both sources during execution.
-        Invalid keys prevent record alignment and are reported explicitly. With
-        no selection, compatible PK / non-null UNIQUE keys are discovered
-        automatically.
-      </p>
-      <p className="muted small">
-        Mapping preserves original values and native type differences. Columns
-        without a pair prevent a complete Row Match Rate evaluation. The preview
-        uses current metadata and is authoritative for matching.
-      </p>
+      <p className="notice">{tr("Select one or more mapped pairs for a business key. Nulls and duplicates are checked across the entire scope on both sources during execution. Invalid keys prevent record alignment and are reported explicitly. With no selection, compatible PK / non-null UNIQUE keys are discovered automatically.")}</p>
+      <p className="muted small">{tr("Mapping preserves original values and native type differences. Columns without a pair prevent a complete Row Match Rate evaluation. The preview uses current metadata and is authoritative for matching.")}</p>
     </Card>
   );
 }

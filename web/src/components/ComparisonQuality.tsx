@@ -1,3 +1,5 @@
+import { errorText } from "../i18n/errors";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { Fragment, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type Model, type Page } from "../api";
@@ -14,7 +16,6 @@ import {
 import { Rate } from "./CriticalMetrics";
 import { ComparisonRunAnimation } from "./ComparisonRunAnimation";
 
-const n = (value: number) => value.toLocaleString("en-US");
 const motion = (): ScrollBehavior =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches
     ? "auto"
@@ -32,24 +33,26 @@ const labels: Record<string, string> = {
   unknown: "Not evaluated",
 };
 function Status({ value }: { value: string }) {
+  const { t: tr } = useLanguage();
   return (
     <span
       className={`badge ${value === "passed" ? "success" : value === "critical" || value === "attention" ? "warning" : "info"}`}
     >
-      {labels[value] ?? value}
+      {tr(labels[value] ?? value)}
     </span>
   );
 }
 function Value({ value }: { value: any }) {
-  if (!value) return <span className="muted">Not captured</span>;
+  const { t: tr } = useLanguage();
+  if (!value) return <span className="muted">{tr("Not captured")}</span>;
   if (value.kind !== "value")
     return (
       <span className="cell-sentinel">
         {(
           {
             null: "NULL",
-            missing: "Record / column absent",
-            unavailable: "Unavailable",
+            missing: tr("Record / column absent"),
+            unavailable: tr("Unavailable"),
           } as Record<string, string>
         )[value.kind] ?? value.kind}
       </span>
@@ -64,9 +67,9 @@ function Value({ value }: { value: any }) {
       : JSON.stringify(value.raw);
   return (
     <span className="evidence-value">
-      {raw}
+      {value.raw === "" ? tr('Empty string ("")') : typeof value.raw === "string" && value.raw.trim() === "" ? tr("Whitespace ({0})", {0: JSON.stringify(value.raw)}) : raw}
       {value.normalized != null && value.normalized !== String(value.raw) && (
-        <small className="muted">Compared as: {value.normalized}</small>
+        <small className="muted">{tr("Compared as: ")}{value.normalized}</small>
       )}
     </span>
   );
@@ -84,29 +87,25 @@ function Explain({
   scope?: string;
   tolerances?: any;
 }) {
+  const { t: tr, locale, formatNumber, reason, decimal } = useLanguage();
   return (
     <details className="metric-explanation">
-      <summary>Calculation details</summary>
-      <p>{description}</p>
+      <summary>{tr("Calculation details")}</summary>
+      {locale === "pt-BR" && <p>{tr("English reference")}: <span lang="en-US">{formula.includes("equal_rows") ? "Row Match Rate" : formula.includes("equal_values") || !metric?.formula && metric?.left_column ? "Column Match Rate" : formula.includes("excess") ? "Duplicate Key Rate" : formula.includes("common keys") ? "Key Coverage" : formula.includes("B − A") ? "Row Count Match" : "Technical Compatibility"}</span></p>}
+      <p>{reason(description)}</p>
       <p>
-        <code>{formula}</code>
+        <code>{tr(formula)}</code>
       </p>
       {metric?.denominator != null && (
-        <p>
-          Numerator: {n(metric.numerator)} · denominator:{" "}
-          {n(metric.denominator)} · not evaluated: {n(metric.not_evaluated)}
+        <p>{tr("Numerator: ")}{formatNumber(metric.numerator)} · {tr("denominator:")}{" "}
+          {formatNumber(metric.denominator)} · {tr("not evaluated:")} {formatNumber(metric.not_evaluated)}
         </p>
       )}
-      <p>Scope: {(scope ?? metric?.scope ?? "sample").replaceAll("_", " ")}</p>
-      <p>
-        Numeric tolerances: absolute{" "}
-        {String(tolerances?.absolute_tolerance ?? 0)} · relative{" "}
-        {String(tolerances?.relative_tolerance ?? 0)} (fraction). Text remains
-        exact.
-      </p>
-      <p>
-        Passed requires complete evaluation without differences or technical
-        impediments. {metric?.reason?.replaceAll("_", " ")}
+      <p>{tr("Scope: ")}{reason(scope ?? metric?.scope ?? "sample")}</p>
+      <p>{tr("Numeric tolerances: absolute")}{" "}
+        {decimal(tolerances?.absolute_tolerance ?? 0)} · {tr("relative")}{" "}
+        {decimal(tolerances?.relative_tolerance ?? 0)}{tr(" (fraction). Text remains exact.")}</p>
+      <p>{tr("Passed requires complete evaluation without differences or technical impediments. ")}{metric?.reason && reason(metric.reason)}
       </p>
     </details>
   );
@@ -117,6 +116,7 @@ export function ExecutionContext({
 }: {
   quality: Model<"QualityOut">;
 }) {
+  const { t: tr, locale, decimal } = useLanguage();
   const run = quality.run,
     result: any = quality.result,
     p = run.parameters as any;
@@ -130,17 +130,17 @@ export function ExecutionContext({
           (new Date(run.finished_at).getTime() -
             new Date(run.started_at).getTime()) /
           1000
-        ).toFixed(1) + " seconds"
-      : "Pending";
+        ).toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " " + tr("seconds")
+      : tr("Pending");
   return (
     <Card
-      title="Execution information"
-      subtitle="Frozen configuration for the selected execution"
+      title={tr("Execution information")}
+      subtitle={tr("Frozen configuration for the selected execution")}
     >
       <Badge value={run.status} />
       <div className="form-grid comparison-settings">
         <p>
-          <strong>Sources</strong>
+          <strong>{tr("Sources")}</strong>
           <span>
             {sources
               .map(
@@ -154,16 +154,16 @@ export function ExecutionContext({
           </span>
         </p>
         <p>
-          <strong>Date and duration</strong>
+          <strong>{tr("Date and duration")}</strong>
           <span>
-            {new Date(run.requested_at).toLocaleString("en-US", {
+            {new Date(run.requested_at).toLocaleString(locale, {
               timeZone: "America/Sao_Paulo",
             })}{" "}
             · America/Sao_Paulo · {duration}
           </span>
         </p>
         <p>
-          <strong>Comparison key</strong>
+          <strong>{tr("Comparison key")}</strong>
           <span>
             {(result?.key_validation ?? [])
               .map((k: any) => k.columns.join(" + "))
@@ -171,27 +171,26 @@ export function ExecutionContext({
               frozen.business_key
                 ?.map((k: any) => `${k.left} ↔ ${k.right}`)
                 .join(", ") ||
-              "Discovered from metadata"}
+              tr("Discovered from metadata")}
           </span>
         </p>
         <p>
-          <strong>Data scope</strong>
+          <strong>{tr("Data scope")}</strong>
           <span>
             {scope?.period
-              ? `${scope.period.start} → ${scope.period.end} (end exclusive)`
-              : "Entire table"}{" "}
-            · {scope?.filters?.length ?? 0} equivalent filters
-          </span>
+              ? tr("{0} → {1} (end exclusive)", {0: scope.period.start, 1: scope.period.end})
+              : tr("Entire table")}{" "}
+            · {scope?.filters?.length ?? 0}{tr(" equivalent filters")}</span>
         </p>
         <p>
-          <strong>Exclusions</strong>
+          <strong>{tr("Exclusions")}</strong>
           <span>
-            A: {frozen.excluded_columns?.left?.join(", ") || "None"} · B:{" "}
-            {frozen.excluded_columns?.right?.join(", ") || "None"}
+            A: {frozen.excluded_columns?.left?.join(", ") || tr("None")} · B:{" "}
+            {frozen.excluded_columns?.right?.join(", ") || tr("None")}
           </span>
         </p>
         <p>
-          <strong>Timestamp interpretation</strong>
+          <strong>{tr("Timestamp interpretation")}</strong>
           <span>
             {Object.entries(frozen.timestamp_timezones ?? {})
               .flatMap(([side, zones]: any) =>
@@ -200,32 +199,30 @@ export function ExecutionContext({
                     `${side === "left" ? "A" : "B"}.${col}: ${zone}`,
                 ),
               )
-              .join(" · ") || "No explicit overrides"}
+              .join(" · ") || tr("No explicit overrides")}
           </span>
         </p>
         <p>
-          <strong>Numeric tolerances</strong>
-          <span>
-            Absolute:{" "}
-            {String(sample.absolute_tolerance ?? p.absolute_tolerance ?? 0)} ·
-            relative fraction:{" "}
-            {String(sample.relative_tolerance ?? p.relative_tolerance ?? 0)}
+          <strong>{tr("Numeric tolerances")}</strong>
+          <span>{tr("Absolute:")}{" "}
+            {decimal(sample.absolute_tolerance ?? p.absolute_tolerance ?? 0)} ·
+            {tr("relative fraction:")}{" "}
+            {decimal(sample.relative_tolerance ?? p.relative_tolerance ?? 0)}
           </span>
         </p>
         <p>
-          <strong>Sampling strategy</strong>
+          <strong>{tr("Sampling strategy")}</strong>
           <span>
-            {sample.algorithm ?? "Deterministic SHA-256 union selection"} · seed{" "}
-            {sample.seed ?? "Pending"}
+            {sample.algorithm ?? tr("Deterministic SHA-256 union selection")} · {tr("seed")}{" "}
+            {sample.seed ?? tr("Pending")}
           </span>
         </p>
       </div>
       {run.status === "failed" && (
-        <p className="notice warning" role="alert">
-          Execution incomplete: {run.error_code}. {run.error_message} No
-          data-quality score is assigned to this technical failure.
-        </p>
+        <p className="notice warning" role="alert">{tr("Execution incomplete: ")}{run.error_code}. {errorText(run.error_code, run.error_message ?? "", locale)}{tr(" No data-quality score is assigned to this technical failure.")}
+          </p>
       )}
+      {run.status === "failed" && locale === "pt-BR" && <details><summary>{tr("Technical details")}</summary><p>{run.error_message}</p></details>}
     </Card>
   );
 }
@@ -235,6 +232,7 @@ export function ComparisonQuality({
 }: {
   quality: Model<"QualityOut">;
 }) {
+  const { t: tr, locale, formatNumber, reason } = useLanguage();
   const [dimension, setDimension] = useState("consistency");
   const [search, setSearch] = useState(""),
     [columnStatus, setColumnStatus] = useState("all"),
@@ -306,14 +304,11 @@ export function ComparisonQuality({
   };
   if (!result)
     return (
-      <Card title="Comparison Quality">
+      <Card title={tr("Comparison Quality")}>
         {run.status === "queued" || run.status === "running" ? (
           <ComparisonRunAnimation state={run.status} />
         ) : (
-          <p>
-            Indicators unavailable. This execution did not publish a completed
-            result.
-          </p>
+          <p>{tr("Indicators unavailable. This execution did not publish a completed result.")}</p>
         )}
       </Card>
     );
@@ -323,7 +318,7 @@ export function ComparisonQuality({
     keys = m.key_coverage;
   const allColumns = result.column_directory.map((c: any) => ({
     id: c.id,
-    label: `${c.left_column ?? "Missing"} ↔ ${c.right_column ?? "Missing"}`,
+    label: `${c.left_column ?? tr("Missing")} ↔ ${c.right_column ?? tr("Missing")}`,
   }));
   const openDimension = (id: string) => {
     setDimension(id);
@@ -332,69 +327,63 @@ export function ComparisonQuality({
       ?.scrollIntoView({ behavior: motion(), block: "nearest" });
   };
   return (
-    <section aria-label="Comparison Quality" className="comparison-quality">
+    <section aria-label={tr("Comparison Quality")} className="comparison-quality">
       <Card
-        title="Comparison Quality"
-        subtitle="Indicators and diagnostics for this execution only"
+        title={tr("Comparison Quality")}
+        subtitle={tr("Indicators and diagnostics for this execution only")}
       >
         <Badge value={result.summary.status} />
         <div className="quality-headline">
           <div>
-            <span>Row Match Rate</span>
-            <strong>{percent(row.percentage)}</strong>
+            <span>{tr("Row Match Rate")}</span>
+            <strong>{percent(row.percentage, locale)}</strong>
             <Rate value={row} showValue={false} />
           </div>
           <div>
             <strong>
-              {n(row.numerator)} matching · {n(row.different_rows)} different
-            </strong>
+              {formatNumber(row.numerator)} {tr("matching")} · {formatNumber(row.different_rows)}{tr(" different")}</strong>
             <p>
-              {n(row.not_evaluated)} not evaluated · evaluation coverage{" "}
-              {percent(row.coverage_percentage)}
+              {formatNumber(row.not_evaluated)}{tr(" not evaluated · evaluation coverage")}{" "}
+              {percent(row.coverage_percentage, locale)}
             </p>
-            <p>Sample results do not certify equality of entire tables.</p>
+            <p>{tr("Sample results do not certify equality of entire tables.")}</p>
           </div>
         </div>
         <Explain
           metric={row}
           formula={row.formula}
-          description="A record matches only when all included fields match. Missing records count as differences; unknown records without a proven difference are excluded from the denominator."
+          description={tr("A record matches only when all included fields match. Missing records count as differences; unknown records without a proven difference are excluded from the denominator.")}
           tolerances={result.sampling_plan}
         />
         {row.not_evaluated > 0 && (
-          <p className="notice warning">
-            Partial evaluation. The rate applies to {n(row.denominator)}{" "}
-            evaluated positions, not all {n(row.total)} selected positions.
-          </p>
+          <p className="notice warning">{tr("Partial evaluation. The rate applies to ")}{formatNumber(row.denominator)}{" "}{tr("evaluated positions, not all ")}{formatNumber(row.total)}{tr(" selected positions.")}</p>
         )}
         {!row.total && (
-          <p className="notice warning">
-            No row positions available for evaluation.
-          </p>
+          <p className="notice warning">{tr("No row positions available for evaluation.")}</p>
         )}
         <div className="quality-indicators">
           <button type="button" onClick={() => openDimension("volume")}>
-            <span>Row Count Match</span>
-            <strong>{count.equal ? "Equal counts" : "Different counts"}</strong>
+            <span>{tr("Row Count Match")}</span>
+            <strong>{count.equal ? tr("Equal counts") : tr("Different counts")}</strong>
             <small>
-              A {n(count.reference_count)} · B {n(count.target_count)} ·
-              difference {n(count.absolute_difference)}
+              A {formatNumber(count.reference_count)} · B {formatNumber(count.target_count)} ·
+              {tr("difference")} {formatNumber(count.absolute_difference)}
             </small>
           </button>
           <button type="button" onClick={() => openDimension("keys")}>
-            <span>Key Coverage</span>
+            <span>{tr("Key Coverage")}</span>
             <strong>
-              {percent(keys.reference_to_target.percentage)} /{" "}
-              {percent(keys.target_to_reference.percentage)}
+              {percent(keys.reference_to_target.percentage, locale)} /{" "}
+              {percent(keys.target_to_reference.percentage, locale)}
             </strong>
-            <small>A → B / B → A · sample</small>
+            <small>{tr("A → B / B → A · sample")}</small>
           </button>
           <button type="button" onClick={() => openDimension("integrity")}>
-            <span>Duplicate Key Rate</span>
+            <span>{tr("Duplicate Key Rate")}</span>
             <strong>
-              {m.duplicate_key_rate.map((d: any) => percent(d)).join(" / ")}
+              {m.duplicate_key_rate.map((d: any) => percent(d, locale)).join(" / ")}
             </strong>
-            <small>A / B · 0% means no excess duplicate rows</small>
+            <small>{tr("A / B · 0% means no excess duplicate rows")}</small>
           </button>
           <button
             type="button"
@@ -404,21 +393,18 @@ export function ComparisonQuality({
                 ?.scrollIntoView({ behavior: motion() })
             }
           >
-            <span>Column Match Rate</span>
+            <span>{tr("Column Match Rate")}</span>
             <strong>
               {result.columns_requiring_review}{" "}
-              {result.columns_requiring_review === 1 ? "column" : "columns"}{" "}
-              requiring review
-            </strong>
+              {result.columns_requiring_review === 1 ? tr("column") : tr("columns")}{" "}{tr("requiring review")}</strong>
             <small>
-              {result.column_count} pairs · inspect individual rates
-            </small>
+              {result.column_count}{tr(" pairs · inspect individual rates")}</small>
           </button>
         </div>
       </Card>
       <Card
-        title="Quality dimensions"
-        subtitle="Observed indicators and validation status are separate. Lower duplicate and count-difference rates are better."
+        title={tr("Quality dimensions")}
+        subtitle={tr("Observed indicators and validation status are separate. Lower duplicate and count-difference rates are better.")}
       >
         <div className="quality-dimensions">
           {quality.dimensions.map((d: any) => (
@@ -428,19 +414,19 @@ export function ComparisonQuality({
                 aria-expanded={dimension === d.id}
                 onClick={() => setDimension(dimension === d.id ? "" : d.id)}
               >
-                <strong>{d.name}</strong>
+                <strong>{tr(d.name)}</strong>
                 <Status value={d.status} />
               </button>
               {dimension === d.id && (
                 <div className="quality-dimension-detail">
-                  <p>{d.description}</p>
+                  <p>{reason(d.description)}</p>
                   {d.measures.map((measure: any) => (
                     <div key={measure.label}>
-                      <span>{measure.label}: </span>
-                      <strong>{percent(measure)}</strong>
+                      <span>{reason(measure.label)}: </span>
+                      <strong>{percent(measure, locale)}</strong>
                       {measure.percentage != null && (
                         <meter
-                          aria-label={d.name + " " + measure.label}
+                          aria-label={tr(d.name) + " " + reason(measure.label)}
                           min={0}
                           max={Math.max(100, Number(measure.percentage))}
                           value={Number(measure.percentage)}
@@ -456,19 +442,12 @@ export function ComparisonQuality({
                     </div>
                   ))}
                   {d.id === "volume" && (
-                    <p>
-                      Signed difference B − A: {n(count.signed_difference)}. A
-                      0% count difference means equal volumes, not equal
-                      records.
-                    </p>
+                    <p>{tr("Signed difference B − A: ")}{formatNumber(count.signed_difference)}{tr(". A 0% count difference means equal volumes, not equal records.")}</p>
                   )}
                   {d.id === "integrity" &&
                     m.duplicate_key_rate.map((item: any) => (
-                      <p key={item.source}>
-                        Source {item.source}:{" "}
-                        {item.duplicate_groups ?? "Unavailable"} duplicate
-                        groups · {item.null_key_rows ?? "Unavailable"} rows with
-                        null key components. {item.columns.join(" + ")}
+                      <p key={item.source}>{tr("Source ")}{item.source}:{" "}
+                        {item.duplicate_groups ?? tr("Unavailable")} {tr("duplicate groups")} · {item.null_key_rows ?? tr("Unavailable")}{tr(" rows with null key components. ")}{item.columns.join(" + ")}
                       </p>
                     ))}
                   <Explain
@@ -484,7 +463,7 @@ export function ComparisonQuality({
                               ? row.formula
                               : "Frozen column mapping and type compatibility"
                     }
-                    description={d.description}
+                    description={reason(d.description)}
                     scope={
                       d.id === "volume" || d.id === "integrity"
                         ? "entire_selected_scope"
@@ -498,17 +477,17 @@ export function ComparisonQuality({
           ))}
         </div>
       </Card>
-      <Card title="Analysis coverage">
+      <Card title={tr("Analysis coverage")}>
         <div className="stats-grid">
           <div>
             <strong>
-              {n(count.reference_count)} / {n(count.target_count)}
+              {formatNumber(count.reference_count)} / {formatNumber(count.target_count)}
             </strong>
-            <p>Scoped population A / B</p>
+            <p>{tr("Scoped population A / B")}</p>
           </div>
           <div>
-            <strong>{n(keys.selected_keys)}</strong>
-            <p>Selected union-key positions</p>
+            <strong>{formatNumber(keys.selected_keys)}</strong>
+            <p>{tr("Selected union-key positions")}</p>
           </div>
           <div>
             <strong>
@@ -516,40 +495,31 @@ export function ComparisonQuality({
                 ? percent(
                     (100 * keys.selected_keys) /
                       result.sampling_plan.percentage_base,
-                  )
-                : "Not applicable"}
+                    locale)
+                : tr("Not applicable")}
             </strong>
-            <p>
-              Selected positions / larger scoped row count; not a union sampling
-              fraction
-            </p>
+            <p>{tr("Selected positions / larger scoped row count; not a union sampling fraction")}</p>
           </div>
           <div>
-            <strong>{percent(row.coverage_percentage)}</strong>
-            <p>Evaluation coverage within selected positions</p>
+            <strong>{percent(row.coverage_percentage, locale)}</strong>
+            <p>{tr("Evaluation coverage within selected positions")}</p>
           </div>
         </div>
-        <p>
-          Counts and key integrity cover the entire scope. Key Coverage, Row
-          Match Rate and Column Match Rate describe the selected sample. No
-          confidence interval is inferred.
-        </p>
+        <p>{tr("Counts and key integrity cover the entire scope. Key Coverage, Row Match Rate and Column Match Rate describe the selected sample. No confidence interval is inferred.")}</p>
         <details>
-          <summary>Consistency and limitations</summary>
+          <summary>{tr("Consistency and limitations")}</summary>
           {result.warnings.map((w: string, i: number) => (
-            <p key={i}>{w}</p>
+            <p key={i}>{reason(w)}</p>
           ))}
         </details>
       </Card>
       <div id="quality-columns">
         <Card
-          title="Column analysis"
-          subtitle="Filters, ordering and pagination are applied by the backend"
+          title={tr("Column analysis")}
+          subtitle={tr("Filters, ordering and pagination are applied by the backend")}
         >
           <div className="form-grid">
-            <label>
-              Search columns
-              <input
+            <label>{tr("Search columns")}<input
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -557,10 +527,8 @@ export function ComparisonQuality({
                 }}
               />
             </label>
-            <label>
-              Column status
-              <select
-                aria-label="Column status"
+            <label>{tr("Column status")}<select
+                aria-label={tr("Column status")}
                 value={columnStatus}
                 onChange={(e) => {
                   setColumnStatus(e.target.value);
@@ -575,24 +543,22 @@ export function ComparisonQuality({
                   "not_calculated",
                 ].map((v) => (
                   <option key={v} value={v}>
-                    {labels[v] ?? v}
+                    {locale === "pt-BR" && v === "all" ? tr("All columns") : tr(labels[v] ?? v)}
                   </option>
                 ))}
               </select>
             </label>
-            <label>
-              Order columns
-              <select
-                aria-label="Order columns"
+            <label>{tr("Order columns")}<select
+                aria-label={tr("Order columns")}
                 value={sort}
                 onChange={(e) => {
                   setSort(e.target.value);
                   setColumnOffset(0);
                 }}
               >
-                <option value="differences">Most differences / unknowns</option>
-                <option value="name">Column name</option>
-                <option value="match">Lowest match rate</option>
+                <option value="differences">{tr("Most differences / unknowns")}</option>
+                <option value="name">{tr("Column name")}</option>
+                <option value="match">{tr("Lowest match rate")}</option>
               </select>
             </label>
           </div>
@@ -605,11 +571,11 @@ export function ComparisonQuality({
                 <table>
                   <thead>
                     <tr>
-                      <th>Column A / B</th>
-                      <th>Match rate</th>
-                      <th>Differences</th>
-                      <th>Status</th>
-                      <th>Inspect</th>
+                      <th>{tr("Column A / B")}</th>
+                      <th>{tr("Match rate")}</th>
+                      <th>{tr("Differences")}</th>
+                      <th>{tr("Status")}</th>
+                      <th>{tr("Inspect")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -618,12 +584,11 @@ export function ComparisonQuality({
                         <td>
                           <details>
                             <summary>
-                              {c.left_column ?? "Missing"} ↔{" "}
-                              {c.right_column ?? "Missing"}
+                              {c.left_column ?? tr("Missing")} ↔{" "}
+                              {c.right_column ?? tr("Missing")}
                             </summary>
-                            <p>
-                              Types: {c.left_type ?? "Missing"} /{" "}
-                              {c.right_type ?? "Missing"}
+                            <p>{tr("Types: ")}{c.left_type ?? tr("Missing")} /{" "}
+                              {c.right_type ?? tr("Missing")}
                             </p>
                             <Explain
                               metric={c.metric}
@@ -631,7 +596,7 @@ export function ComparisonQuality({
                                 c.metric.formula ??
                                 "Unavailable: unpaired column"
                               }
-                              description="Equal values divided by evaluated positions; a missing record counts as a difference. Unknown values reduce evaluation coverage."
+                              description={tr("Equal values divided by evaluated positions; a missing record counts as a difference. Unknown values reduce evaluation coverage.")}
                               tolerances={result.sampling_plan}
                             />
                           </details>
@@ -640,11 +605,10 @@ export function ComparisonQuality({
                           <Rate value={c.metric} />
                         </td>
                         <td>
-                          {n(c.metric.different_values)}
+                          {formatNumber(c.metric.different_values)}
                           <small className="muted">
                             {" "}
-                            · {n(c.metric.not_evaluated)} unknown
-                          </small>
+                            · {formatNumber(c.metric.not_evaluated)}{" unknown"}</small>
                         </td>
                         <td>
                           <Status value={c.status} />
@@ -655,9 +619,7 @@ export function ComparisonQuality({
                             variant="outline"
                             disabled={!captured}
                             onClick={() => inspect("all", c.id)}
-                          >
-                            Inspect column
-                          </Button>
+                          >{tr("Inspect column")}</Button>
                         </td>
                       </tr>
                     ))}
@@ -675,8 +637,8 @@ export function ComparisonQuality({
         </Card>
       </div>
       <Card
-        title="Divergence diagnosis"
-        subtitle="Categories can overlap. Counts must not be summed as distinct records."
+        title={tr("Divergence diagnosis")}
+        subtitle={tr("Categories can overlap. Counts must not be summed as distinct records.")}
       >
         <div className="quality-diagnostics">
           {quality.diagnostics.map((d: any) => (
@@ -684,10 +646,10 @@ export function ComparisonQuality({
               key={d.id}
               data-selected={!!d.record_state && state === d.record_state}
             >
-              <strong>{d.label}</strong>
+              <strong>{tr(d.label)}</strong>
               <span>
-                {d.count == null ? "Unavailable" : n(d.count)} ·{" "}
-                {d.scope.replaceAll("_", " ")}
+                {d.count == null ? tr("Unavailable") : formatNumber(d.count)} ·{" "}
+                {reason(d.scope)}
               </span>
               <Status
                 value={
@@ -704,14 +666,12 @@ export function ComparisonQuality({
                   variant="outline"
                   aria-pressed={state === d.record_state}
                   onClick={() => inspect(d.record_state)}
-                >
-                  Inspect records
-                </Button>
+                >{tr("Inspect records")}</Button>
               ) : (
                 <small className="muted">
                   {d.record_state
-                    ? "Record evidence unavailable"
-                    : "Full-scope / technical diagnostic; individual aligned evidence does not identify these violations."}
+                    ? tr("Record evidence unavailable")
+                    : tr("Full-scope / technical diagnostic; individual aligned evidence does not identify these violations.")}
                 </small>
               )}
             </div>
@@ -720,11 +680,11 @@ export function ComparisonQuality({
       </Card>
       <div id="quality-records">
         <Card
-          title="Record inspection"
-          subtitle="Frozen evidence from this execution; no source queries are performed"
+          title={tr("Record inspection")}
+          subtitle={tr("Frozen evidence from this execution; no source queries are performed")}
         >
           <p className={`notice ${captured ? "" : "warning"}`}>
-            {(
+            {tr((
               {
                 not_captured:
                   "Not captured: this historical execution contains aggregated results only.",
@@ -737,26 +697,22 @@ export function ComparisonQuality({
                 available:
                   "Captured sample: this table is not the entire source population.",
               } as Record<string, string>
-            )[evidence.status] ?? evidence.status}{" "}
-            {evidence.reason?.replaceAll("_", " ")}
+            )[evidence.status] ?? evidence.status)}{" "}
+            {evidence.reason && reason(evidence.reason)}
           </p>
           {evidence.expires_at && (
-            <p>
-              Retention: 30 days · expires{" "}
-              {new Date(evidence.expires_at).toLocaleString("en-US", {
+            <p>{tr("Retention: 30 days · expires")}{" "}
+              {new Date(evidence.expires_at).toLocaleString(locale, {
                 timeZone: "America/Sao_Paulo",
               })}{" "}
-              · captured {n(evidence.stored_positions)} /{" "}
-              {n(evidence.selected_positions)} positions
-            </p>
+              · {tr("captured")} {formatNumber(evidence.stored_positions)} /{" "}
+              {formatNumber(evidence.selected_positions)}{tr(" positions")}</p>
           )}
           {captured && (
             <>
               <div className="form-grid">
-                <label>
-                  Record state
-                  <select
-                    aria-label="Record state"
+                <label>{tr("Record state")}<select
+                    aria-label={tr("Record state")}
                     value={state}
                     onChange={(e) => inspect(e.target.value, column)}
                   >
@@ -769,19 +725,17 @@ export function ComparisonQuality({
                       "unknown",
                     ].map((v) => (
                       <option key={v} value={v}>
-                        {labels[v]}
+                        {tr(labels[v])}
                       </option>
                     ))}
                   </select>
                 </label>
-                <label>
-                  Affected column
-                  <select
-                    aria-label="Affected column"
+                <label>{tr("Affected column")}<select
+                    aria-label={tr("Affected column")}
                     value={column}
                     onChange={(e) => inspect(state, e.target.value)}
                   >
-                    <option value="">All columns</option>
+                    <option value="">{tr("All columns")}</option>
                     {allColumns.map((c: any) => (
                       <option key={c.id} value={c.id}>
                         {c.label}
@@ -798,21 +752,16 @@ export function ComparisonQuality({
                   setExpanded(null);
                 }}
               >
-                <label>
-                  Exact key (JSON array; strings preserve precision)
-                  <input
+                <label>{tr("Exact key (JSON array; strings preserve precision)")}<input
                     value={keyInput}
                     onChange={(e) => setKeyInput(e.target.value)}
                     aria-describedby="evidence-key-help"
                   />
                 </label>
-                <small id="evidence-key-help">
-                  Component order:{" "}
-                  {result.key_validation[0]?.columns.join(" + ")}. Include every
-                  component, preserving case and spaces.
-                </small>
+                <small id="evidence-key-help">{tr("Component order:")}{" "}
+                  {result.key_validation[0]?.columns.join(" + ")}{tr(". Include every component, preserving case and spaces.")}</small>
                 <div className="form-footer">
-                  <Button type="submit">Search key</Button>
+                  <Button type="submit">{tr("Search key")}</Button>
                   <Button
                     type="button"
                     variant="outline"
@@ -821,9 +770,7 @@ export function ComparisonQuality({
                       setKeyFilter("");
                       inspect();
                     }}
-                  >
-                    Clear filters
-                  </Button>
+                  >{tr("Clear filters")}</Button>
                   <Button
                     type="button"
                     variant="outline"
@@ -852,7 +799,7 @@ export function ComparisonQuality({
                       }
                     }}
                   >
-                    {exporting ? "Preparing…" : "Download captured records"}
+                    {exporting ? tr("Preparing…") : tr("Download captured records")}
                   </Button>
                 </div>
               </form>
@@ -862,17 +809,15 @@ export function ComparisonQuality({
               ) : records.data?.items.length ? (
                 <>
                   <p>
-                    {n(records.data.total)} captured records match these
-                    filters.
-                  </p>
+                    {formatNumber(records.data.total)}{tr(" captured records match these filters.")}</p>
                   <div className="table-scroll">
                     <table>
                       <thead>
                         <tr>
-                          <th>Key</th>
-                          <th>State</th>
-                          <th>Affected fields</th>
-                          <th>Details</th>
+                          <th>{tr("Key")}</th>
+                          <th>{tr("State")}</th>
+                          <th>{tr("Affected fields")}</th>
+                          <th>{tr("Details")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -887,7 +832,7 @@ export function ComparisonQuality({
                                   </span>
                                 ))}
                               </td>
-                              <td>{labels[item.state]}</td>
+                              <td>{tr(labels[item.state])}</td>
                               <td>{item.affected_columns.length}</td>
                               <td>
                                 <Button
@@ -899,9 +844,7 @@ export function ComparisonQuality({
                                       expanded === item.id ? null : item.id,
                                     )
                                   }
-                                >
-                                  Inspect record
-                                </Button>
+                                >{tr("Inspect record")}</Button>
                               </td>
                             </tr>
                             {expanded === item.id && (
@@ -914,10 +857,10 @@ export function ComparisonQuality({
                                       <table className="evidence-cells">
                                         <thead>
                                           <tr>
-                                            <th>Column A / B</th>
-                                            <th>Source A</th>
-                                            <th>Source B</th>
-                                            <th>State</th>
+                                            <th>{tr("Column A / B")}</th>
+                                            <th>{tr("Source A")}</th>
+                                            <th>{tr("Source B")}</th>
+                                            <th>{tr("State")}</th>
                                           </tr>
                                         </thead>
                                         <tbody>
@@ -931,8 +874,8 @@ export function ComparisonQuality({
                                               }
                                             >
                                               <td>
-                                                {c.left_column ?? "Missing"} ↔{" "}
-                                                {c.right_column ?? "Missing"}
+                                                {c.left_column ?? tr("Missing")} ↔{" "}
+                                                {c.right_column ?? tr("Missing")}
                                               </td>
                                               <td>
                                                 <Value value={c.left} />
@@ -940,7 +883,7 @@ export function ComparisonQuality({
                                               <td>
                                                 <Value value={c.right} />
                                               </td>
-                                              <td>{labels[c.status]}</td>
+                                              <td>{tr(labels[c.status])}</td>
                                             </tr>
                                           ))}
                                         </tbody>
@@ -966,7 +909,7 @@ export function ComparisonQuality({
                   />
                 </>
               ) : (
-                <Empty title="No captured records match these filters" />
+                <Empty title={tr("No captured records match these filters")} />
               )}
             </>
           )}

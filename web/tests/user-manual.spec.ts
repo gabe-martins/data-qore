@@ -20,20 +20,22 @@ async function authenticate(page: Page, viewer = false, temporary = false) {
   return requests;
 }
 
-for (const mobile of [false, true]) {
-  test(`manual navigation, anchors and theme on ${mobile ? "mobile" : "desktop"}`, async ({ page }) => {
+for (const language of ["en-US", "pt-BR"] as const) for (const mobile of [false, true]) {
+  test(`${language}: manual navigation, anchors and theme on ${mobile ? "mobile" : "desktop"}`, async ({ page }) => {
     const requests = await authenticate(page, true);
+    const pt = language === "pt-BR";
+    await page.addInitScript(locale => localStorage.setItem("dataqore.ui.language", locale), language);
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
     if (mobile) await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/settings/profile");
-    if (mobile) await page.getByRole("button", { name: "Toggle navigation" }).click();
+    if (mobile) await page.getByRole("button", { name: pt ? "Abrir navegação" : "Toggle navigation" }).click();
     const sidebar = page.locator(mobile ? ".navigation-drawer" : ".sidebar-desktop");
-    await sidebar.getByRole("link", { name: "Manual de uso", exact: true }).click();
+    await sidebar.getByRole("link", { name: pt ? "Manual de uso" : "User manual", exact: true }).click();
     await expect(page).toHaveURL(/\/settings\/manual$/);
-    await expect(page.getByRole("heading", { name: "Manual de uso", exact: true })).toBeVisible();
-    await expect(page).toHaveTitle("Manual de uso · DataQore");
-    const index = page.getByRole("navigation", { name: "Índice do manual" });
+    await expect(page.getByRole("heading", { name: pt ? "Manual de uso" : "User manual", exact: true })).toBeVisible();
+    await expect(page).toHaveTitle(pt ? "Manual de uso · DataQore" : "User manual · DataQore");
+    const index = page.getByRole("navigation", { name: pt ? "Índice do manual" : "Manual index" });
     await expect(index.getByRole("link")).toHaveCount(17);
     expect(await page.locator(".user-manual").evaluate(root => {
       const ids = Array.from(root.querySelectorAll("[id]")).map(el => el.id);
@@ -41,21 +43,21 @@ for (const mobile of [false, true]) {
         !!root.querySelector(link.getAttribute("href")!),
       );
     })).toBe(true);
-    await index.getByRole("link", { name: "As cinco métricas" }).click();
+    await index.getByRole("link", { name: pt ? "As cinco métricas" : "The five metrics" }).click();
     await expect(page).toHaveURL(/#manual-metricas$/);
-    const heading = page.getByRole("heading", { name: "As cinco métricas: fórmula, escopo e interpretação" });
+    const heading = page.getByRole("heading", { name: pt ? "As cinco métricas: fórmula, escopo e interpretação" : "The five metrics: formulas, scope and interpretation" });
     await expect(heading).toBeInViewport();
     await page.reload();
     await expect(heading).toBeInViewport();
-    const table = page.getByRole("region", { name: "Tabela das cinco métricas", exact: true });
-    for (const metric of ["Row Count Match", "Key Coverage", "Duplicate Key Rate", "Row Match Rate", "Column Match Rate"])
+    const table = page.getByRole("region", { name: pt ? "Tabela das cinco métricas" : "The five metrics", exact: true });
+    for (const metric of pt ? ["Correspondência de contagem de linhas", "Cobertura de chaves", "Taxa de duplicidade de chaves", "Taxa de correspondência de linhas", "Taxa de correspondência por coluna"] : ["Row Count Match", "Key Coverage", "Duplicate Key Rate", "Row Match Rate", "Column Match Rate"])
       await expect(table.getByRole("rowheader", { name: metric, exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     for (const theme of ["light", "dark"] as const) {
       await page.emulateMedia({ colorScheme: theme });
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
       await page.locator("#manual-inicio").scrollIntoViewIfNeeded();
-      await page.screenshot({ path: `test-results/manual-${mobile ? "mobile" : "desktop"}-${theme}.png` });
+      await page.screenshot({ path: `test-results/manual-${language}-${mobile ? "mobile" : "desktop"}-${theme}.png` });
       expect(await page.locator(".user-manual").evaluate(el => {
         const text = getComputedStyle(el).color;
         const surface = getComputedStyle(el.querySelector(".manual-hero")!).backgroundColor;
@@ -63,7 +65,7 @@ for (const mobile of [false, true]) {
       })).toBe(true);
     }
     await page.locator("#manual-metricas").evaluate(el => el.scrollIntoView({ block: "start" }));
-    await page.screenshot({ path: `test-results/manual-metrics-${mobile ? "mobile" : "desktop"}.png` });
+    await page.screenshot({ path: `test-results/manual-metrics-${language}-${mobile ? "mobile" : "desktop"}.png` });
     await page.emulateMedia({ media: "print" });
     await expect(page.locator(".topbar")).toBeHidden();
     await expect(page.locator(".manual-tools")).toBeHidden();
@@ -74,13 +76,15 @@ for (const mobile of [false, true]) {
   });
 }
 
-test("download is a complete standalone HTML document with working index and no external resources", async ({ page, context }) => {
+for (const language of ["en-US", "pt-BR"] as const) test(`${language}: download is a complete standalone HTML document with working index and no external resources`, async ({ page, context }) => {
+  const pt = language === "pt-BR";
   await authenticate(page);
+  await page.addInitScript(locale => localStorage.setItem("dataqore.ui.language", locale), language);
   await page.goto("/settings/manual");
   const pending = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Baixar HTML", exact: true }).click();
+  await page.getByRole("button", { name: pt ? "Baixar HTML" : "Download HTML", exact: true }).click();
   const download = await pending;
-  expect(download.suggestedFilename()).toBe("dataqore-manual-de-uso.html");
+  expect(download.suggestedFilename()).toBe(pt ? "dataqore-manual-de-uso.html" : "dataqore-user-manual.html");
   const html = await readFile((await download.path())!, "utf8");
   expect(html).toMatch(/^<!doctype html>/);
   const standalone = await context.newPage();
@@ -91,10 +95,10 @@ test("download is a complete standalone HTML document with working index and no 
     return route.abort();
   });
   await standalone.goto("http://manual.test/");
-  await expect(standalone.locator("html")).toHaveAttribute("lang", "pt-BR");
-  await expect(standalone.getByRole("heading", { name: "Manual de uso", exact: true })).toBeVisible();
-  await standalone.getByRole("link", { name: "Settings e administração", exact: true }).click();
-  await expect(standalone.getByRole("heading", { name: "Settings e administração", exact: true })).toBeInViewport();
+  await expect(standalone.locator("html")).toHaveAttribute("lang", language);
+  await expect(standalone.getByRole("heading", { name: pt ? "Manual de uso" : "User manual", exact: true })).toBeVisible();
+  await standalone.getByRole("link", { name: pt ? "Configurações e administração" : "Settings and administration", exact: true }).click();
+  await expect(standalone.getByRole("heading", { name: pt ? "Configurações e administração" : "Settings and administration", exact: true })).toBeInViewport();
   await standalone.setViewportSize({ width: 390, height: 844 });
   expect(await standalone.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await standalone.screenshot({ path: "test-results/manual-standalone-mobile.png" });
@@ -107,5 +111,5 @@ test("temporary password still requires changing credentials before opening the 
   await page.goto("/settings/manual");
   await expect(page).toHaveURL(/\/settings\/profile$/);
   await expect(page.getByRole("alert")).toContainText("Change your temporary password");
-  await expect(page.locator(".sidebar-desktop").getByRole("link", { name: "Manual de uso", exact: true })).toHaveCount(0);
+  await expect(page.locator(".sidebar-desktop").getByRole("link", { name: "User manual", exact: true })).toHaveCount(0);
 });

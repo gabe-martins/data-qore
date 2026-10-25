@@ -1,3 +1,4 @@
+import { useLanguage } from "../i18n/LanguageProvider";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -12,6 +13,7 @@ import {
   percent,
 } from "../components/common";
 export function QualitySettings() {
+  const { t: tr } = useLanguage();
   const q = useQuery({
     queryKey: ["quality-settings"],
     queryFn: () => api<Model<"QualitySettingsOut">>("/settings/quality"),
@@ -19,8 +21,8 @@ export function QualitySettings() {
   return (
     <>
       <PageTitle
-        title="Quality target"
-        subtitle="Set the Row Match Rate target displayed in Overview."
+        title={tr("Quality target")}
+        subtitle={tr("Set the Row Match Rate target displayed in Overview.")}
       />
       <ErrorBox error={q.error} />
       {q.isPending ? <Loading /> : q.data && <TargetForm settings={q.data} />}
@@ -28,6 +30,7 @@ export function QualitySettings() {
   );
 }
 function TargetForm({ settings }: { settings: Model<"QualitySettingsOut"> }) {
+  const { t: tr, locale } = useLanguage();
   const canEdit = useCan("quality_settings.manage"),
     cache = useQueryClient();
   const [enabled, setEnabled] = useState(
@@ -41,8 +44,8 @@ function TargetForm({ settings }: { settings: Model<"QualitySettingsOut"> }) {
     [saved, setSaved] = useState(false);
   return (
     <Card
-      title="Row Match Rate target"
-      subtitle="One environment-wide minimum, shown against the recorded rate of every comparison."
+      title={tr("Row Match Rate target")}
+      subtitle={tr("One environment-wide minimum, shown against the recorded rate of every comparison.")}
     >
       <form
         onSubmit={async (e) => {
@@ -51,9 +54,11 @@ function TargetForm({ settings }: { settings: Model<"QualitySettingsOut"> }) {
           setError(null);
           setSaved(false);
           try {
+            const numeric = Number(value.replace(",", "."));
+            if (enabled && (!/^\d+(?:[.,]\d{1,4})?$/.test(value) || !Number.isFinite(numeric) || numeric < 0 || numeric > 100)) throw new Error("Enter a value from 0 to 100 with at most four decimal places.");
             const result = await patch<Model<"QualitySettingsOut">>(
               "/settings/quality",
-              { row_match_target_percentage: enabled ? Number(value) : null },
+              { row_match_target_percentage: enabled ? Number(value.replace(",", ".")) : null },
             );
             setSaved(true);
             cache.setQueryData(["quality-settings"], result);
@@ -74,13 +79,11 @@ function TargetForm({ settings }: { settings: Model<"QualitySettingsOut"> }) {
               setEnabled(e.target.checked);
               setSaved(false);
             }}
-          />
-          Enable quality target
-        </label>
-        <label>
-          Minimum Row Match Rate (%)
-          <input
-            type="number"
+          />{tr("Enable quality target")}</label>
+        <label>{tr("Minimum Row Match Rate (%)")}<input
+            type="text"
+            inputMode="decimal"
+            pattern="[0-9]+([.,][0-9]{1,4})?"
             required={enabled}
             min="0"
             max="100"
@@ -93,37 +96,25 @@ function TargetForm({ settings }: { settings: Model<"QualitySettingsOut"> }) {
             }}
           />
         </label>
-        <p className="muted">
-          Current saved target:{" "}
+        <p className="muted">{tr("Current saved target:")}{" "}
           {settings.row_match_target_percentage == null
-            ? "Disabled"
-            : percent(settings.row_match_target_percentage)}
-          . The initial target is 95%. You can choose any value from 0 to 100%
-          or disable it.
-        </p>
-        <p className="notice">
-          This target applies to Row Match Rate only. It does not replace
-          volume, key integrity or coverage checks, and does not change saved
-          analytical conclusions. The daily chart uses the current target as a
-          reference for the entire displayed period.
-        </p>
+            ? tr("Disabled")
+            : percent(settings.row_match_target_percentage, locale)}{tr(". The initial target is 95%. You can choose any value from 0 to 100% or disable it.")}</p>
+        <p className="notice">{tr("This target applies to Row Match Rate only. It does not replace volume, key integrity or coverage checks, and does not change saved analytical conclusions. The daily chart uses the current target as a reference for the entire displayed period.")}</p>
         {!canEdit && (
-          <p className="muted">
-            You can view this setting. A Quality Manager or Platform
-            Administrator can update it.
-          </p>
+          <p className="muted">{tr("You can view this setting. A Quality Manager or Platform Administrator can update it.")}</p>
         )}
         <div className="actions">
           {canEdit && (
             <Button disabled={busy} type="submit">
-              {busy ? "Saving…" : "Save target"}
+              {busy ? tr("Saving…") : tr("Save target")}
             </Button>
           )}
           <Button variant="outline" asChild>
-            <Link to="/">View Overview</Link>
+            <Link to="/">{tr("View Overview")}</Link>
           </Button>
         </div>
-        {saved && <p role="status">Quality target saved.</p>}
+        {saved && <p role="status">{tr("Quality target saved.")}</p>}
       </form>
     </Card>
   );
