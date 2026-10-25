@@ -53,21 +53,47 @@ run a comparison, then visit **Runs** to review progress and results.
 Access tokens stay in memory; session renewal uses an HttpOnly cookie.
 Saved connection passwords are not displayed when editing a connection.
 
-Comparison rules show **Absolute tolerance (units)** and **Relative tolerance (%)**.
-Enter `1` for 1% relative tolerance. Dot/comma decimals are accepted without
-thousands separators. Absolute values retain the column's units. Help buttons
-explain how the larger of the two limits is applied to numeric values and can
-be opened with hover, focus or tap and closed with Escape. The API still uses
-decimal fractions as strings; editing an existing comparison preserves its
-numeric meaning. These limits do not represent a percentage of differing rows.
+Open **Settings → Personal → Language** to choose **English** (the default)
+or **Português (Brasil)**. Changes apply immediately and persist on this browser
+under `dataqore.ui.language`, including cross-tab synchronization and the sign-in
+screen. Language preferences need no database migration or account changes.
+
+The user manual in **Settings → Help → User manual** (`/settings/manual`) follows
+the selected language, including its topic index, HTML download and printing.
+Its documents are [`English`](src/content/user-manual.en-US.html) and
+[`Português (Brasil)`](src/content/user-manual.html). Both work offline.
+
+Application copy is maintained in `src/i18n/pt-BR.ts`, with the original English
+messages as stable keys. The language context and typed catalogs cover UI copy,
+metric explanations, diagnostics, accessibility text and locale formatting.
+Use interpolation for dynamic text and translate when rendering, so cached
+results and drafts can switch language without being recreated. Never translate
+source names, row values, SQL, API identifiers, JSON downloads or stored results.
+Unknown technical errors retain their original details and request ID.
+
+Comparison rules show **Absolute tolerance** and **Relative tolerance (fraction)**.
+Enter `0.01` for 1% relative tolerance. Dot/comma decimals are accepted without
+thousands separators. Absolute values retain the column's units. The form explains
+fractions and the manual provides a worked example: the allowed difference is
+the maximum of the absolute tolerance and the relative tolerance times the
+larger absolute value. API tolerances use
+decimal fractions as strings. These limits do not represent a percentage of
+differing rows.
 
 Exact conversion checks (no database required):
 
 ```bash
-node --experimental-strip-types web/unit/tolerances.test.ts
+node --experimental-strip-types --test web/unit/tolerances.test.ts web/unit/language.test.ts
 ```
 
 ## Browser checks
+
+Frontend regression and bilingual acceptance (API fixtures, no source writes):
+
+```bash
+npm run test:e2e --prefix web -- language.spec.ts user-manual.spec.ts settings.spec.ts access-control.spec.ts comparison-animation.spec.ts navigation-branding.spec.ts
+```
+
 
 Install the test browser once:
 

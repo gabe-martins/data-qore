@@ -1,3 +1,4 @@
+import { useLanguage } from "../i18n/LanguageProvider";
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -11,6 +12,7 @@ export function DeleteComparisonDialog({comparison,onClose,onDeleted,returnFocus
   onDeleted: () => void;
   returnFocus: () => HTMLElement | null;
 }) {
+  const { t: tr } = useLanguage();
   const [offset,setOffset]=useState(0);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState<unknown>(null);
@@ -34,36 +36,36 @@ export function DeleteComparisonDialog({comparison,onClose,onDeleted,returnFocus
     } finally {locked.current=false;setBusy(false);}
   }
   return <Dialog open onOpenChange={open=>{if(!open&&!locked.current)onClose();}}>
-    <DialogContent title="Delete comparison" description="Review schedules and execution history before permanently deleting this comparison."
+    <DialogContent title={tr("Delete comparison")} description={tr("Review schedules and execution history before permanently deleting this comparison.")}
       returnFocus={()=>deleted.current?returnFocus():null}>
       <div className="comparison-delete-dialog" aria-busy={busy}>
         <p className="dataset-delete-location"><strong>{comparison.name}</strong> <Badge value={comparison.is_active?"active":"inactive"}/></p>
         <ErrorBox error={q.error||error}/>
-        {q.isPending?<Loading/>:q.error?<Button variant="outline" onClick={()=>void q.refetch()}>Retry dependency check</Button>:q.data&&<>
-          <section aria-label="Linked schedules" className="connection-dependencies">
-            <h3>Schedules ({q.data.schedules.total})</h3>
+        {q.isPending?<Loading/>:q.error?<Button variant="outline" onClick={()=>void q.refetch()}>{tr("Retry dependency check")}</Button>:q.data&&<>
+          <section aria-label={tr("Linked schedules")} className="connection-dependencies">
+            <h3>{tr("Schedules (")}{q.data.schedules.total})</h3>
             {q.data.schedules.items.length?<ul>{q.data.schedules.items.map(s=><li key={s.id}>
               <Link to={`/schedules?comparison_id=${s.comparison_id}`} onClick={onClose}>{s.name}</Link>{" "}
               <Badge value={s.is_active?"active":"inactive"}/>{" "}
-              <span className="muted">{[s.current&&"Current",s.historical&&"Historical"].filter(Boolean).join(" · ")}</span>
-            </li>)}</ul>:<p className="muted">No linked schedules.</p>}
+              <span className="muted">{[s.current&&tr("Current"),s.historical&&tr("Historical")].filter(Boolean).join(" · ")}</span>
+            </li>)}</ul>:<p className="muted">{tr("No linked schedules.")}</p>}
             <Pagination total={q.data.schedules.total} offset={offset} setOffset={setOffset}/>
           </section>
-          <section aria-label="Comparison execution history" className="connection-dependencies">
-            <h3>Execution history</h3>
+          <section aria-label={tr("Comparison execution history")} className="connection-dependencies">
+            <h3>{tr("Execution history")}</h3>
             <dl className="dataset-delete-counts">
-              <div><dt>Runs</dt><dd>{q.data.history.runs}</dd></div>
-              <div><dt>Results</dt><dd>{q.data.history.results}</dd></div>
+              <div><dt>{tr("Runs")}</dt><dd>{q.data.history.runs}</dd></div>
+              <div><dt>{tr("Results")}</dt><dd>{q.data.history.results}</dd></div>
             </dl>
           </section>
-          {!!q.data.schedules.total&&<p className="notice warning" role="status">This comparison has current or historical schedules and cannot be deleted. Paused schedules also block deletion.</p>}
-          {!!q.data.active_runs&&<p className="notice warning" role="status">{q.data.active_runs} queued or running run(s). Wait for them to finish before deleting.</p>}
-          {!q.data.can_delete&&<Button variant="outline" disabled={q.isFetching} onClick={()=>void q.refetch()}>Refresh dependencies</Button>}
-          {q.data.can_delete&&<p className="notice warning" role="status">This permanently deletes the comparison and all its runs and results. This cannot be undone. Datasets, connections, source data will remain unchanged.</p>}
+          {!!q.data.schedules.total&&<p className="notice warning" role="status">{tr("This comparison has current or historical schedules and cannot be deleted. Paused schedules also block deletion.")}</p>}
+          {!!q.data.active_runs&&<p className="notice warning" role="status">{q.data.active_runs}{tr(" queued or running run(s). Wait for them to finish before deleting.")}</p>}
+          {!q.data.can_delete&&<Button variant="outline" disabled={q.isFetching} onClick={()=>void q.refetch()}>{tr("Refresh dependencies")}</Button>}
+          {q.data.can_delete&&<p className="notice warning" role="status">{tr("This permanently deletes the comparison and all its runs and results. This cannot be undone. Datasets, connections, source data will remain unchanged.")}</p>}
         </>}
         <div className="form-footer">
-          <Button variant="outline" disabled={busy} onClick={onClose}>Cancel</Button>
-          <Button disabled={busy||q.isFetching||!!q.error||!q.data?.can_delete} onClick={()=>void remove()}>{busy?"Deleting…":"Delete comparison and run history"}</Button>
+          <Button variant="outline" disabled={busy} onClick={onClose}>{tr("Cancel")}</Button>
+          <Button disabled={busy||q.isFetching||!!q.error||!q.data?.can_delete} onClick={()=>void remove()}>{busy?tr("Deleting…"):tr("Delete comparison and run history")}</Button>
         </div>
       </div>
     </DialogContent>

@@ -1,3 +1,4 @@
+import { useLanguage } from "../i18n/LanguageProvider";
 import { percent } from "./common";
 export function Rate({
   value,
@@ -8,7 +9,8 @@ export function Rate({
   lowerIsBetter?: boolean;
   showValue?: boolean;
 }) {
-  if (!value) return <span>Not evaluated</span>;
+  const { t: tr, locale, reason } = useLanguage();
+  if (!value) return <span>{tr("Not evaluated")}</span>;
   return (
     <>
       {showValue && (
@@ -23,19 +25,19 @@ export function Rate({
                 : "metric-attention"
           }
         >
-          {value.percentage == null ? "Not evaluated" : percent(value)}
+          {value.percentage == null ? tr("Not evaluated") : percent(value, locale)}
         </strong>
       )}
       <small className="muted" style={{ display: "block" }}>
-        {value.numerator.toLocaleString("en-US")} /{" "}
-        {value.denominator.toLocaleString("en-US")} evaluated ·{" "}
-        {value.not_evaluated.toLocaleString("en-US")} not evaluated · coverage{" "}
+        {value.numerator.toLocaleString(locale)} /{" "}
+        {value.denominator.toLocaleString(locale)}{tr(" evaluated ·")}{" "}
+        {value.not_evaluated.toLocaleString(locale)}{tr(" not evaluated · coverage")}{" "}
         {value.coverage_percentage == null
           ? "—"
-          : percent(String(value.coverage_percentage))}
+          : percent(String(value.coverage_percentage), locale)}
       </small>
       {value.reason && (
-        <small>{String(value.reason).replaceAll("_", " ")}</small>
+        <small>{reason(String(value.reason))}</small>
       )}
     </>
   );

@@ -1,3 +1,4 @@
+import { useLanguage } from "../i18n/LanguageProvider";
 import { Allowed } from "../lib/access";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -70,7 +71,6 @@ const colors = [
   "var(--semantic-chart-series-1)",
   "var(--semantic-chart-series-2)",
 ];
-const n = (value: number) => value.toLocaleString("en-US");
 function TargetBadge({
   rate,
   target,
@@ -86,21 +86,23 @@ function TargetBadge({
     | undefined;
   target: string | null | undefined;
 }) {
+  const { t: tr } = useLanguage();
   const status = targetState(rate, target);
   return (
     <span className="target-status" data-state={status.state}>
-      {status.label}
+      {tr(status.label)}
     </span>
   );
 }
 function MiniTrend({ points }: { points: Comparison["points"] }) {
+  const { t: tr } = useLanguage();
   const available = points.some((p) => p.percentage != null);
-  if (!available) return <span className="muted">No evaluations</span>;
+  if (!available) return <span className="muted">{tr("No evaluations")}</span>;
   return (
     <div
       className="overview-spark"
       role="img"
-      aria-label="Daily Row Match Rate; days without an evaluation remain gaps"
+      aria-label={tr("Daily Row Match Rate; days without an evaluation remain gaps")}
     >
       <ResponsiveContainer>
         <LineChart
@@ -132,6 +134,7 @@ function TrendChart({
   days: number;
   target: string | null | undefined;
 }) {
+  const { t: tr, locale, formatNumber, reason } = useLanguage();
   const [metric, setMetric] = useState<Metric>("row_match_rate"),
     [column, setColumn] = useState("");
   const pairs = comparison.column_pairs;
@@ -179,13 +182,16 @@ function TrendChart({
   const hasData = data.some((p) =>
     labels.some((_, i) => p[`series_${i}` as keyof typeof p] != null),
   );
+  const chartLabel = (label: string) => metric === "column_match_rate"
+    ? `${selectedPair?.left_column ?? tr("Unpaired")} → ${selectedPair?.right_column ?? tr("Unpaired")}`
+    : reason(label);
   const lower = metric === "duplicate_key_rate" || metric === "row_count_match";
   return (
     <>
       <div
         className="overview-metric-tabs"
         role="group"
-        aria-label="Chart metric"
+        aria-label={tr("Chart metric")}
       >
         {metrics.map((m) => (
           <button
@@ -194,25 +200,22 @@ function TrendChart({
             aria-pressed={m.id === metric}
             onClick={() => setMetric(m.id)}
           >
-            {m.name}
+            {tr(m.name)}
           </button>
         ))}
       </div>
       <div className="overview-chart-caption">
         <p className="muted">
-          {metrics.find((m) => m.id === metric)!.description}
+          {tr(metrics.find((m) => m.id === metric)!.description)}
+          {locale === "pt-BR" && <small>{tr("English reference")}: <span lang="en-US">{metrics.find(m => m.id === metric)!.name}</span></small>}
         </p>
         {lower && (
-          <span className="target-status" data-state="neutral">
-            Lower is better
-          </span>
+          <span className="target-status" data-state="neutral">{tr("Lower is better")}</span>
         )}
       </div>
       {metric === "column_match_rate" && (
-        <label>
-          Column pair
-          <select
-            aria-label="Column pair"
+        <label>{tr("Column pair")}<select
+            aria-label={tr("Column pair")}
             value={
               selectedPair
                 ? JSON.stringify([
@@ -228,7 +231,7 @@ function TrendChart({
                 key={JSON.stringify([p.left_column, p.right_column])}
                 value={JSON.stringify([p.left_column, p.right_column])}
               >
-                {p.left_column ?? "Unpaired"} → {p.right_column ?? "Unpaired"}
+                {p.left_column ?? tr("Unpaired")} → {p.right_column ?? tr("Unpaired")}
               </option>
             ))}
           </select>
@@ -242,7 +245,7 @@ function TrendChart({
           <div
             className="overview-chart"
             role="img"
-            aria-label={`${metrics.find((m) => m.id === metric)!.name} by day for ${comparison.name}`}
+            aria-label={tr("{0} by day for {1}", {0: tr(metrics.find((m) => m.id === metric)!.name), 1: comparison.name})}
           >
             <ResponsiveContainer>
               <LineChart
@@ -255,7 +258,7 @@ function TrendChart({
                 />
                 <XAxis
                   dataKey="day"
-                  tickFormatter={(v) => String(v).slice(5)}
+                  tickFormatter={(v) => locale === "pt-BR" ? String(v).slice(5).split("-").reverse().join("/") : String(v).slice(5)}
                   tick={{ fontSize: 12 }}
                   minTickGap={24}
                 />
@@ -265,7 +268,7 @@ function TrendChart({
                       ? [0, (max: number) => Math.max(100, max)]
                       : [0, 100]
                   }
-                  tickFormatter={(v) => `${v}%`}
+                  tickFormatter={(v) => percent(v, locale)}
                   tick={{ fontSize: 12 }}
                   width={58}
                 />
@@ -275,24 +278,23 @@ function TrendChart({
                     const point = q.data?.points.find((p) => p.day === label);
                     return (
                       <div className="overview-tooltip">
-                        <strong>{label}</strong>
+                        <strong>{locale === "pt-BR" && /^\d{4}-\d{2}-\d{2}$/.test(String(label)) ? String(label).split("-").reverse().join("/") : label}</strong>
                         {point?.values.map((v) => (
-                          <div key={v.label}>
+                          <div key={chartLabel(v.label)}>
                             <span>
-                              {v.label}:{" "}
-                              <strong>{percent(v.percentage)}</strong>
+                              {chartLabel(v.label)}:{" "}
+                              <strong>{percent(v.percentage, locale)}</strong>
                             </span>
                             <small>
-                              {n(v.numerator)} / {n(v.denominator)}
+                              {formatNumber(v.numerator)} / {formatNumber(v.denominator)}
                               {metric === "row_count_match"
-                                ? " · difference / source A"
-                                : " evaluated"}{" "}
-                              · {n(v.not_evaluated)} not evaluated
-                            </small>
+                                ? tr(" · difference / source A")
+                                : tr(" evaluated")}{" "}
+                              · {formatNumber(v.not_evaluated)}{tr(" not evaluated")}</small>
                             <small>
-                              {v.scope.replaceAll("_", " ")}
+                              {reason(v.scope)}
                               {v.reason
-                                ? ` · ${v.reason.replaceAll("_", " ")}`
+                                ? ` · ${reason(v.reason)}`
                                 : ""}
                             </small>
                           </div>
@@ -307,7 +309,7 @@ function TrendChart({
                     stroke="var(--semantic-text-secondary)"
                     strokeDasharray="6 4"
                     label={{
-                      value: `Target ${percent(target)}`,
+                      value: tr("Target {0}", {0: percent(target, locale)}),
                       position: "insideBottomRight",
                       fill: "var(--semantic-text-secondary)",
                       fontSize: 12,
@@ -319,7 +321,7 @@ function TrendChart({
                     key={label}
                     type="linear"
                     dataKey={`series_${i}`}
-                    name={label}
+                    name={chartLabel(label)}
                     stroke={colors[i % colors.length]}
                     strokeWidth={2.5}
                     dot={{ r: 4, strokeWidth: 2 }}
@@ -335,34 +337,30 @@ function TrendChart({
             {labels.map((label, i) => (
               <span key={label}>
                 <i style={{ background: colors[i % colors.length] }} />
-                {label}
+                {chartLabel(label)}
               </span>
             ))}
             {metric === "row_match_rate" && target != null && (
-              <span className="muted">
-                Dashed line: current target {percent(target)}
+              <span className="muted">{tr("Dashed line: current target ")}{percent(target, locale)}
               </span>
             )}
           </div>
         </>
       ) : (
-        <Empty title="No evaluated points in this period">
-          Choose another metric, comparison or period. Missing evaluations are
-          never plotted as zero.
-        </Empty>
+        <Empty title={tr("No evaluated points in this period")}>{tr("Choose another metric, comparison or period. Missing evaluations are never plotted as zero.")}</Empty>
       )}
       <details className="overview-daily">
-        <summary>Daily values and denominators</summary>
+        <summary>{tr("Daily values and denominators")}</summary>
         <div className="table-scroll">
           <table>
             <thead>
               <tr>
-                <th>Day</th>
-                <th>Execution</th>
-                <th>Direction / pair</th>
-                <th>Rate</th>
-                <th>Numerator / denominator</th>
-                <th>Not evaluated</th>
+                <th>{tr("Day")}</th>
+                <th>{tr("Execution")}</th>
+                <th>{tr("Direction / pair")}</th>
+                <th>{tr("Rate")}</th>
+                <th>{tr("Numerator / denominator")}</th>
+                <th>{tr("Not evaluated")}</th>
               </tr>
             </thead>
             <tbody>
@@ -370,7 +368,7 @@ function TrendChart({
                 p.values.length
                   ? p.values.map((v) => (
                       <tr key={p.day + v.label}>
-                        <td>{p.day}</td>
+                        <td>{locale === "pt-BR" ? p.day.split("-").reverse().join("/") : p.day}</td>
                         <td>
                           <Link
                             to={`/comparisons/${comparison.comparison_id}?run_id=${p.run_id}`}
@@ -378,19 +376,19 @@ function TrendChart({
                             <Badge value={p.status} />
                           </Link>
                         </td>
-                        <td>{v.label}</td>
-                        <td>{percent(v.percentage)}</td>
+                        <td>{chartLabel(v.label)}</td>
+                        <td>{percent(v.percentage, locale)}</td>
                         <td>
-                          {n(v.numerator)} / {n(v.denominator)}
+                          {formatNumber(v.numerator)} / {formatNumber(v.denominator)}
                         </td>
-                        <td>{n(v.not_evaluated)}</td>
+                        <td>{formatNumber(v.not_evaluated)}</td>
                       </tr>
                     ))
                   : [
-                      <tr key={p.day}>
-                        <td>{p.day}</td>
-                        <td>{p.status ?? "No execution"}</td>
-                        <td colSpan={4}>Not evaluated</td>
+                      <tr key={locale === "pt-BR" ? p.day.split("-").reverse().join("/") : p.day}>
+                        <td>{locale === "pt-BR" ? p.day.split("-").reverse().join("/") : p.day}</td>
+                        <td>{p.status ?? tr("No execution")}</td>
+                        <td colSpan={4}>{tr("Not evaluated")}</td>
                       </tr>,
                     ],
               )}
@@ -402,6 +400,7 @@ function TrendChart({
   );
 }
 export function Overview() {
+  const { t: tr, locale, formatNumber } = useLanguage();
   const [days, setDays] = useState(7),
     [search, setSearch] = useState(""),
     [offset, setOffset] = useState(0),
@@ -447,13 +446,13 @@ export function Overview() {
   return (
     <>
       <PageTitle
-        title="Overview"
+        title={tr("Overview")}
         eyebrow="COMPARISON HEALTH"
-        subtitle="Track daily quality, investigate changes and follow your Row Match Rate target."
+        subtitle={tr("Track daily quality, investigate changes and follow your Row Match Rate target.")}
         action={
           <Allowed permission="comparisons.manage">
             <Button asChild>
-              <Link to="/comparisons/new">New comparison</Link>
+              <Link to="/comparisons/new">{"New comparison"}</Link>
             </Button>
           </Allowed>
         }
@@ -465,47 +464,45 @@ export function Overview() {
         d && (
           <div className="stats-grid four overview-stats">
             <Stat
-              label="Row Match Rate"
-              value={percent(d.row_match_rate.percentage)}
-              detail={`${n(d.row_match_rate.passed)} / ${n(d.row_match_rate.evaluated)} evaluated · ${percent(d.row_match_rate.coverage_percentage)} coverage`}
+              label={tr("Row Match Rate")}
+              value={percent(d.row_match_rate.percentage, locale)}
+              detail={tr("{0} / {1} evaluated · {2} coverage", {0: formatNumber(d.row_match_rate.passed), 1: formatNumber(d.row_match_rate.evaluated), 2: percent(d.row_match_rate.coverage_percentage, locale)})}
             />
             <Card className="overview-target">
               <div className="overview-stat-label">
-                <Target size={17} />
-                Quality target
-              </div>
+                <Target size={17} />{tr("Quality target")}</div>
               <strong className="overview-target-value">
                 {settings.isPending
-                  ? "Loading…"
+                  ? tr("Loading…")
                   : settings.isError
-                    ? "Unavailable"
+                    ? tr("Unavailable")
                     : target == null
-                      ? "Disabled"
-                      : percent(target)}
+                      ? tr("Disabled")
+                      : percent(target, locale)}
               </strong>
               {!settings.isPending && !settings.isError && (
                 <TargetBadge rate={globalRate} target={target} />
               )}
               <Link to="/settings/quality">
                 {settings.isPending
-                  ? "Quality settings"
-                  : "View target settings"}
+                  ? tr("Quality settings")
+                  : tr("View target settings")}
                 <ArrowUpRight size={14} />
               </Link>
             </Card>
             <Stat
-              label="Active comparisons"
+              label={tr("Active comparisons")}
               value={d.active_comparisons}
-              detail={`${d.evaluated_comparisons} with an evaluated latest result`}
+              detail={tr("{0} with an evaluated latest result", {0: d.evaluated_comparisons})}
             />
             <Stat
-              label="Requires investigation"
+              label={tr("Requires investigation")}
               value={
                 (d.latest_conclusions.difference_observed ?? 0) +
                 (d.latest_conclusions.inconclusive ?? 0) +
                 (d.latest_conclusions.failed ?? 0)
               }
-              detail={`${d.latest_conclusions.difference_observed ?? 0} differences · ${d.latest_conclusions.inconclusive ?? 0} inconclusive · ${d.latest_conclusions.failed ?? 0} failed`}
+              detail={tr("{0} differences · {1} inconclusive · {2} failed", {0: d.latest_conclusions.difference_observed ?? 0, 1: d.latest_conclusions.inconclusive ?? 0, 2: d.latest_conclusions.failed ?? 0})}
             />
           </div>
         )
@@ -514,26 +511,17 @@ export function Overview() {
         <div className="overview-section-heading">
           <div>
             <div className="overview-stat-label">
-              <TrendingUp size={17} />
-              DAILY EVOLUTION
-            </div>
-            <h2>Comparison quality over time</h2>
-            <p className="muted">
-              Last terminal execution per day · America/Sao_Paulo · today is
-              partial
-            </p>
+              <TrendingUp size={17} />{tr("DAILY EVOLUTION")}</div>
+            <h2>{tr("Comparison quality over time")}</h2>
+            <p className="muted">{tr("Last terminal execution per day · America/Sao_Paulo · today is partial")}</p>
           </div>
           <div className="overview-controls">
-            <label>
-              Comparison
-              <select
-                aria-label="Comparison"
+            <label>{tr("Comparison")}<select
+                aria-label={tr("Comparison")}
                 value={current?.comparison_id ?? ""}
                 onChange={(e) => setSelected(e.target.value)}
               >
-                <option disabled value="">
-                  Select a comparison
-                </option>
+                <option disabled value="">{tr("Select a comparison")}</option>
                 {items.map((c) => (
                   <option key={c.comparison_id} value={c.comparison_id}>
                     {c.name}
@@ -541,17 +529,14 @@ export function Overview() {
                 ))}
               </select>
             </label>
-            <label>
-              Period
-              <select
-                aria-label="Period"
+            <label>{tr("Period")}<select
+                aria-label={tr("Period")}
                 value={days}
                 onChange={(e) => setDays(Number(e.target.value))}
               >
                 {[7, 15, 30].map((n) => (
                   <option key={n} value={n}>
-                    {n} days
-                  </option>
+                    {n}{tr(" days")}</option>
                 ))}
               </select>
             </label>
@@ -567,28 +552,17 @@ export function Overview() {
             target={settings.isError ? null : target}
           />
         ) : (
-          <Empty title="No comparisons to display">
-            Existing active comparisons and their recorded history appear here.
-          </Empty>
+          <Empty title={tr("No comparisons to display")}>{tr("Existing active comparisons and their recorded history appear here.")}</Empty>
         )}
-        <p className="overview-footnote">
-          Rates use saved executions only. Days without an evaluation and failed
-          executions remain gaps. The target line shows the current setting, not
-          historical targets. A sample does not prove equality of entire tables.
-        </p>
+        <p className="overview-footnote">{tr("Rates use saved executions only. Days without an evaluation and failed executions remain gaps. The target line shows the current setting, not historical targets. A sample does not prove equality of entire tables.")}</p>
       </Card>
       <Card className="overview-comparisons">
         <div className="overview-section-heading">
           <div>
-            <h2>Comparisons at a glance</h2>
-            <p className="muted">
-              Latest terminal result per active comparison. Target attainment is
-              separate from the analytical conclusion.
-            </p>
+            <h2>{tr("Comparisons at a glance")}</h2>
+            <p className="muted">{tr("Latest terminal result per active comparison. Target attainment is separate from the analytical conclusion.")}</p>
           </div>
-          <label>
-            Search comparisons
-            <input
+          <label>{tr("Search comparisons")}<input
               type="search"
               value={search}
               maxLength={255}
@@ -596,7 +570,7 @@ export function Overview() {
                 setSearch(e.target.value);
                 setOffset(0);
               }}
-              placeholder="Search by name…"
+              placeholder={tr("Search by name…")}
             />
           </label>
         </div>
@@ -607,21 +581,17 @@ export function Overview() {
             <table className="overview-quality-table">
               <thead>
                 <tr>
-                  <th>Comparison</th>
-                  <th>Row Match Rate</th>
-                  <th>Daily curve</th>
-                  <th>
-                    Key Coverage
-                    <br />
+                  <th>{tr("Comparison")}</th>
+                  <th>{tr("Row Match Rate")}</th>
+                  <th>{tr("Daily curve")}</th>
+                  <th>{tr("Key Coverage")}<br />
                     <small>A → B / B → A</small>
                   </th>
-                  <th>
-                    Duplicate Key Rate
-                    <br />
-                    <small>A / B · lower is better</small>
+                  <th>{tr("Duplicate Key Rate")}<br />
+                    <small>{tr("A / B · lower is better")}</small>
                   </th>
-                  <th>Row Count Match</th>
-                  <th>Column Match Rate</th>
+                  <th>{tr("Row Count Match")}</th>
+                  <th>{tr("Column Match Rate")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -652,9 +622,7 @@ export function Overview() {
                         <button
                           className="overview-text-button"
                           onClick={() => setSelected(c.comparison_id)}
-                        >
-                          Show daily chart
-                        </button>
+                        >{tr("Show daily chart")}</button>
                         <div className="overview-execution">
                           <Badge
                             value={c.conclusion ?? c.status ?? "not_evaluated"}
@@ -670,7 +638,7 @@ export function Overview() {
                           <small>
                             {c.finished_at
                               ? new Date(c.finished_at).toLocaleString(
-                                  "en-US",
+                                  locale,
                                   {
                                     timeZone: "America/Sao_Paulo",
                                     month: "short",
@@ -679,26 +647,23 @@ export function Overview() {
                                     minute: "2-digit",
                                   },
                                 )
-                              : "No completed execution"}
+                              : tr("No completed execution")}
                           </small>
                         </div>
                       </td>
                       <td>
                         <strong className="overview-rate">
-                          {percent(rate)}
+                          {percent(rate, locale)}
                         </strong>
                         {rate && (
                           <small>
-                            {n(rate.numerator)} / {n(rate.denominator)}{" "}
-                            evaluated
-                            <br />
-                            {n(rate.not_evaluated)} not evaluated
-                          </small>
+                            {formatNumber(rate.numerator)} / {formatNumber(rate.denominator)}{" "}{tr("evaluated")}<br />
+                            {formatNumber(rate.not_evaluated)}{tr(" not evaluated")}</small>
                         )}
                         {settings.isPending ? (
-                          "Loading target…"
+                          tr("Loading target…")
                         ) : settings.isError ? (
-                          <span>Unavailable</span>
+                          <span>{tr("Unavailable")}</span>
                         ) : (
                           <TargetBadge rate={rate} target={target} />
                         )}
@@ -708,52 +673,47 @@ export function Overview() {
                       </td>
                       <td>
                         {m
-                          ? `${percent(m.key_coverage.reference_to_target.percentage)} / ${percent(m.key_coverage.target_to_reference.percentage)}`
-                          : "Not evaluated"}
-                        <small>Selected key sample</small>
+                          ? `${percent(m.key_coverage.reference_to_target.percentage, locale)} / ${percent(m.key_coverage.target_to_reference.percentage, locale)}`
+                          : tr("Not evaluated")}
+                        <small>{tr("Selected key sample")}</small>
                       </td>
                       <td>
                         {m
                           ? m.duplicate_key_rate
-                              .map((p) => percent(p))
+                              .map((p) => percent(p, locale))
                               .join(" / ")
-                          : "Not evaluated"}
-                        <small>Complete scoped data</small>
+                          : tr("Not evaluated")}
+                        <small>{tr("Complete scoped data")}</small>
                       </td>
                       <td>
                         {m ? (
                           <>
                             <strong>
                               {m.row_count_match.equal
-                                ? "Equal counts"
-                                : "Different counts"}
+                                ? tr("Equal counts")
+                                : tr("Different counts")}
                             </strong>
                             <small>
-                              A {n(m.row_count_match.reference_count)} · B{" "}
-                              {n(m.row_count_match.target_count)}
+                              A {formatNumber(m.row_count_match.reference_count)} · B{" "}
+                              {formatNumber(m.row_count_match.target_count)}
                             </small>
                             <small>
-                              Δ {n(m.row_count_match.signed_difference)} ·{" "}
-                              {percent(m.row_count_match.percentage_difference)}{" "}
-                              absolute / A
-                            </small>
+                              Δ {formatNumber(m.row_count_match.signed_difference)} ·{" "}
+                              {percent(m.row_count_match.percentage_difference, locale)}{" "}{tr("absolute / A")}</small>
                           </>
                         ) : (
-                          "Not evaluated"
+                          tr("Not evaluated")
                         )}
                       </td>
                       <td>
                         {m ? (
                           <>
                             <strong>
-                              {review} / {columns.length} pairs to review
-                            </strong>
-                            <small>
-                              Individual rates in comparison details
-                            </small>
+                              {review} / {columns.length}{tr(" pairs to review")}</strong>
+                            <small>{tr("Individual rates in comparison details")}</small>
                           </>
                         ) : (
-                          "Not evaluated"
+                          tr("Not evaluated")
                         )}
                       </td>
                     </tr>
@@ -763,33 +723,27 @@ export function Overview() {
             </table>
           </div>
         ) : (
-          <Empty title="No matching comparisons">
-            Adjust the search or create your first comparison.
-          </Empty>
+          <Empty title={tr("No matching comparisons")}>{tr("Adjust the search or create your first comparison.")}</Empty>
         )}
         {comparisons.data && (
           <div className="pagination">
             <span className="muted">
               {comparisons.data.total
-                ? `${offset + 1}–${Math.min(offset + 25, comparisons.data.total)} of ${comparisons.data.total}`
-                : "0 comparisons"}
+                ? tr("{0}–{1} of {2}", {0: offset + 1, 1: Math.min(offset + 25, comparisons.data.total), 2: comparisons.data.total})
+                : tr("0 comparisons")}
             </span>
             <Button
               variant="outline"
               disabled={!offset || comparisons.isFetching}
               onClick={() => setOffset(Math.max(0, offset - 25))}
-            >
-              Previous
-            </Button>
+            >{tr("Previous")}</Button>
             <Button
               variant="outline"
               disabled={
                 offset + 25 >= comparisons.data.total || comparisons.isFetching
               }
               onClick={() => setOffset(offset + 25)}
-            >
-              Next
-            </Button>
+            >{tr("Next")}</Button>
           </div>
         )}
       </Card>

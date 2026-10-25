@@ -1,3 +1,4 @@
+import { useLanguage } from "../i18n/LanguageProvider";
 import { Allowed, useCan } from "../lib/access";
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -22,11 +23,13 @@ export function Catalog() {
   return canExplore ? <LiveCatalog /> : <RegisteredDatasets />;
 }
 function RegisteredDatasets() {
+  const { t: tr } = useLanguage();
   const [offset, setOffset] = useState(0);
   const q = useQuery({ queryKey: ["registered-datasets", offset], queryFn: () => api<Page<Model<"DatasetOut">>>("/datasets?limit=20&offset=" + offset) });
-  return <><PageTitle title="Catalog" subtitle="Registered datasets available for comparison." /><ErrorBox error={q.error} />{q.isPending ? <Loading /> : <Card title="Registered datasets">{q.data?.items.map(d => <p key={d.id}><Link to={`/datasets/${d.id}`}>{[d.catalog_name, d.schema_name, d.table_name].filter(Boolean).join(".")}</Link></p>)}<Pagination total={q.data?.total ?? 0} offset={offset} setOffset={setOffset} /></Card>}</>;
+  return <><PageTitle title={tr("Catalog")} subtitle={tr("Registered datasets available for comparison.")} /><ErrorBox error={q.error} />{q.isPending ? <Loading /> : <Card title={tr("Registered datasets")}>{q.data?.items.map(d => <p key={d.id}><Link to={`/datasets/${d.id}`}>{[d.catalog_name, d.schema_name, d.table_name].filter(Boolean).join(".")}</Link></p>)}<Pagination total={q.data?.total ?? 0} offset={offset} setOffset={setOffset} /></Card>}</>;
 }
 function LiveCatalog() {
+  const { t: tr } = useLanguage();
   const [connection, setConnection] = useState("");
   const [catalog, setCatalog] = useState("");
   const [schema, setSchema] = useState("");
@@ -75,8 +78,8 @@ function LiveCatalog() {
   return (
     <>
       <PageTitle
-        title="Catalog"
-        subtitle="Explore live source metadata and register tables for comparison."
+        title={tr("Catalog")}
+        subtitle={tr("Explore live source metadata and register tables for comparison.")}
       />
       <ErrorBox
         error={
@@ -88,13 +91,11 @@ function LiveCatalog() {
           datasets.error
         }
       />
-      <Card title="Source catalog">
+      <Card title={tr("Source catalog")}>
         <div className="form-grid">
-          <label>
-            Connection
-            <select
+          <label>{tr("Connection")}<select
               ref={connectionSelect}
-              aria-label="Connection"
+              aria-label={tr("Connection")}
               value={connection}
               onChange={(e) => {
                 setConnection(e.target.value);
@@ -103,7 +104,7 @@ function LiveCatalog() {
                 setOffset(0);
               }}
             >
-              <option value="">Select a connection</option>
+              <option value="">{tr("Select a connection")}</option>
               {connections.data?.items
                 .filter((c) => c.is_active)
                 .map((c) => (
@@ -114,10 +115,8 @@ function LiveCatalog() {
             </select>
           </label>
           {databricks && (
-            <label>
-              Catalog
-              <select
-                aria-label="Unity catalog"
+            <label>{tr("Catalog")}<select
+                aria-label={tr("Unity catalog")}
                 value={catalog}
                 onChange={(e) => {
                   setCatalog(e.target.value);
@@ -125,17 +124,15 @@ function LiveCatalog() {
                   setOffset(0);
                 }}
               >
-                <option value="">Select a catalog</option>
+                <option value="">{tr("Select a catalog")}</option>
                 {catalogs.data?.items.map((c) => (
                   <option key={c}>{c}</option>
                 ))}
               </select>
             </label>
           )}
-          <label>
-            Schema
-            <select
-              aria-label="Schema"
+          <label>{tr("Schema")}<select
+              aria-label={tr("Schema")}
               value={schema}
               disabled={!connection || (databricks && !catalog)}
               onChange={(e) => {
@@ -144,7 +141,7 @@ function LiveCatalog() {
               }}
             >
               <option value="">
-                {databricks ? "Select a schema" : "All schemas"}
+                {databricks ? tr("Select a schema") : tr("All schemas")}
               </option>
               {schemas.data?.items.filter(Boolean).map((s) => (
                 <option key={s}>{s}</option>
@@ -153,13 +150,9 @@ function LiveCatalog() {
           </label>
         </div>
         {!connection ? (
-          <Empty title="Choose a source">
-            Only table metadata is queried. No rows are displayed.
-          </Empty>
+          <Empty title={tr("Choose a source")}>{tr("Only table metadata is queried. No rows are displayed.")}</Empty>
         ) : databricks && (!catalog || !schema) ? (
-          <Empty title="Choose a catalog and schema">
-            Select the Unity Catalog location to list tables and views.
-          </Empty>
+          <Empty title={tr("Choose a catalog and schema")}>{tr("Select the Unity Catalog location to list tables and views.")}</Empty>
         ) : tables.isPending ? (
           <Loading />
         ) : tables.data?.items.length ? (
@@ -168,10 +161,10 @@ function LiveCatalog() {
               <table>
                 <thead>
                   <tr>
-                    <th>Schema</th>
-                    <th>Table / view</th>
-                    {databricks && <th>Type</th>}
-                    <th>Action</th>
+                    <th>{tr("Schema")}</th>
+                    <th>{tr("Table / view")}</th>
+                    {databricks && <th>{tr("Type")}</th>}
+                    <th>{tr("Action")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -211,8 +204,8 @@ function LiveCatalog() {
                           }}
                         >
                           {busy === t.table_name
-                            ? "Registering…"
-                            : "Register dataset"}
+                            ? tr("Registering…")
+                            : tr("Register dataset")}
                         </Button>
                       </td>
                     </tr>
@@ -227,14 +220,12 @@ function LiveCatalog() {
             />
           </>
         ) : (
-          <Empty title="No tables available">
-            Check the selected schema and source permissions.
-          </Empty>
+          <Empty title={tr("No tables available")}>{tr("Check the selected schema and source permissions.")}</Empty>
         )}
       </Card>
       <Card
-        title="Registered datasets"
-        subtitle="Open a dataset to inspect metadata and create comparisons."
+        title={tr("Registered datasets")}
+        subtitle={tr("Open a dataset to inspect metadata and create comparisons.")}
       >
         {datasets.isPending ? (
           <Loading />
@@ -244,11 +235,11 @@ function LiveCatalog() {
               <table>
                 <thead>
                   <tr>
-                    <th>Table / view</th>
-                    <th>Type</th>
-                    <th>Location</th>
-                    <th>Metadata</th>
-                    <th>Action</th>
+                    <th>{tr("Table / view")}</th>
+                    <th>{tr("Type")}</th>
+                    <th>{tr("Location")}</th>
+                    <th>{tr("Metadata")}</th>
+                    <th>{tr("Action")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -264,16 +255,13 @@ function LiveCatalog() {
                           .join(".") || "—"}
                       </td>
                       <td>
-                        {Object.keys((d.metadata as any)?.columns ?? {}).length}{" "}
-                        columns
-                      </td>
+                        {Object.keys((d.metadata as any)?.columns ?? {}).length}{" "}{tr("columns")}</td>
                       <td>
                         <Button
                           variant="outline"
                           onClick={() => setDeleting(d)}
                         >
-                          <Trash2 size={16} aria-hidden="true" /> Delete
-                        </Button>
+                          <Trash2 size={16} aria-hidden="true" />{tr(" Delete")}</Button>
                       </td>
                     </tr>
                   ))}
@@ -287,9 +275,7 @@ function LiveCatalog() {
             />
           </>
         ) : (
-          <Empty title="No registered datasets">
-            Choose a table from the source catalog.
-          </Empty>
+          <Empty title={tr("No registered datasets")}>{tr("Choose a table from the source catalog.")}</Empty>
         )}
       </Card>
       {deleting && (
@@ -318,6 +304,7 @@ function LiveCatalog() {
   );
 }
 export function DatasetDetail() {
+  const { t: tr, locale } = useLanguage();
   const { id } = useParams();
   const cache = useQueryClient();
   const [error, setError] = useState<unknown>(null);
@@ -331,8 +318,8 @@ export function DatasetDetail() {
   return (
     <>
       <PageTitle
-        title={d?.table_name ?? "Dataset"}
-        subtitle="Source metadata and comparison identity."
+        title={d?.table_name ?? tr("Dataset")}
+        subtitle={tr("Source metadata and comparison identity.")}
         action={
           <Allowed permission="datasets.manage"><Button
             disabled={busy}
@@ -349,8 +336,7 @@ export function DatasetDetail() {
               }
             }}
           >
-            <RefreshCw size={16} /> Refresh metadata
-          </Button></Allowed>
+            <RefreshCw size={16} />{" Refresh metadata"}</Button></Allowed>
         }
       />
       <ErrorBox error={error || q.error} />
@@ -359,26 +345,26 @@ export function DatasetDetail() {
       ) : (
         d && (
           <>
-            <Card title="Dataset">
+            <Card title={tr("Dataset")}>
               <p>
                 {[d.catalog_name, d.schema_name, d.table_name]
                   .filter(Boolean)
                   .join(".")}
               </p>
-              <p>{Object.keys(columns).length} columns</p>
+              <p>{Object.keys(columns).length}{tr(" columns")}</p>
               <Button asChild>
-                <Link to="/comparisons/new">New comparison</Link>
+                <Link to="/comparisons/new">{tr("New comparison")}</Link>
               </Button>
             </Card>
-            <Card title="Column metadata">
+            <Card title={tr("Column metadata")}>
               <div className="table-scroll">
                 <table>
                   <thead>
                     <tr>
-                      <th>Column</th>
-                      <th>Type</th>
-                      <th>Nullable</th>
-                      <th>Primary key</th>
+                      <th>{tr("Column")}</th>
+                      <th>{tr("Type")}</th>
+                      <th>{tr("Nullable")}</th>
+                      <th>{tr("Primary key")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -386,8 +372,8 @@ export function DatasetDetail() {
                       <tr key={name}>
                         <td>{name}</td>
                         <td>{info.type}</td>
-                        <td>{String(info.nullable ?? "Unknown")}</td>
-                        <td>{info.primary_key ? "Yes" : "—"}</td>
+                        <td>{locale === "pt-BR" && typeof info.nullable === "boolean" ? tr(info.nullable ? "Yes" : "No") : String(info.nullable ?? tr("Unknown"))}</td>
+                        <td>{info.primary_key ? tr("Yes") : "—"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -395,7 +381,7 @@ export function DatasetDetail() {
               </div>
             </Card>
             {d.metadata.table_details && (
-              <Card title="Table details">
+              <Card title={tr("Table details")}>
                 <JsonView value={d.metadata.table_details} />
               </Card>
             )}

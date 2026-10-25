@@ -1,0 +1,10 @@
+.manual-tools { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+@media print {
+  .app-shell:has(.user-manual) { display: block; }
+  .app-shell:has(.user-manual) .topbar,
+  .app-shell:has(.user-manual) .sidebar,
+  .app-shell:has(.user-manual) .app-footer,
+  .app-shell:has(.user-manual) .manual-tools { display: none !important; }
+  .app-shell:has(.user-manual) .app-main { margin: 0; padding: 0; }
+  .app-shell:has(.user-manual) .page { max-width: none; min-height: 0; padding: 0; margin: 0; }
+}

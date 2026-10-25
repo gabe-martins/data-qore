@@ -1,4 +1,5 @@
 import React from "react";
+import { LanguageProvider } from "./i18n/LanguageProvider";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
@@ -17,10 +18,10 @@ const queryClient = new QueryClient({
 });
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <AppearanceProvider><QueryClientProvider client={queryClient}>
+    <LanguageProvider><AppearanceProvider><QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <App />
       </BrowserRouter>
-    </QueryClientProvider></AppearanceProvider>
+    </QueryClientProvider></AppearanceProvider></LanguageProvider>
   </React.StrictMode>,
 );

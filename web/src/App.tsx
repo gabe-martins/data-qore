@@ -1,3 +1,4 @@
+import { useLanguage } from "./i18n/LanguageProvider";
 import { AccessContext, Protected, profileLabels } from "./lib/access";
 import { lazy, Suspense, useEffect, useState } from "react";
 import {
@@ -13,6 +14,7 @@ import * as NavigationDialog from "@radix-ui/react-dialog";
 import { SettingsSidebar } from "./components/SettingsSidebar";
 import { UserMenu } from "./components/UserMenu";
 import { Appearance } from "./pages/Appearance";
+import { Language } from "./pages/Language";
 import { QualitySettings } from "./pages/QualitySettings";
 import { SidebarContent } from "./components/Sidebar";
 import { ThemeControl } from "./components/ThemeControl";
@@ -37,6 +39,9 @@ const AccessManagement = lazy(() =>
   import("./pages/AccessManagement").then((m) => ({
     default: m.AccessManagement,
   })),
+);
+const UserManual = lazy(() =>
+  import("./pages/UserManual").then((m) => ({ default: m.UserManual })),
 );
 const Overview = lazy(() =>
   import("./pages/Overview").then((m) => ({ default: m.Overview })),
@@ -69,6 +74,7 @@ const RunResult = lazy(() =>
   import("./pages/Runs").then((m) => ({ default: m.RunResult })),
 );
 export function App() {
+  const { t: tr, locale } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -85,6 +91,9 @@ export function App() {
     desktop.addEventListener("change", changed);
     return () => desktop.removeEventListener("change", changed);
   }, []);
+  useEffect(() => {
+    if (location.pathname !== "/settings/manual") document.title = locale === "pt-BR" ? "DataQore · Qualidade avançada de dados" : "DataQore · Advanced Data Quality";
+  }, [locale, location.pathname]);
   const cache = useQueryClient();
   const navigate = useNavigate();
   function expire() {
@@ -138,7 +147,7 @@ export function App() {
               <button
                 type="button"
                 className="icon-button mobile-menu"
-                aria-label="Toggle navigation"
+                aria-label={tr("Toggle navigation")}
                 aria-controls="mobile-navigation"
               >
                 <Menu />
@@ -154,7 +163,7 @@ export function App() {
               "sidebar sidebar-desktop" + (settings ? " settings-sidebar" : "")
             }
             data-compact={!settings && sidebar === "collapsed"}
-            aria-label="Desktop sidebar"
+            aria-label={tr("Desktop sidebar")}
           >
             {settings ? (
               <SettingsSidebar onNavigate={() => {}} />
@@ -181,12 +190,8 @@ export function App() {
                 }
               }}
             >
-              <NavigationDialog.Title className="sr-only">
-                Main navigation
-              </NavigationDialog.Title>
-              <NavigationDialog.Description className="sr-only">
-                Choose a page.
-              </NavigationDialog.Description>
+              <NavigationDialog.Title className="sr-only">{tr("Main navigation")}</NavigationDialog.Title>
+              <NavigationDialog.Description className="sr-only">{tr("Choose a page.")}</NavigationDialog.Description>
               {settings ? (
                 <SettingsSidebar mobile onNavigate={() => setMenu(false)} />
               ) : (
@@ -302,7 +307,12 @@ export function App() {
                     path="/settings"
                     element={<Navigate to="/settings/profile" replace />}
                   />
+                  <Route path="/settings/language" element={<Language />} />
                   <Route path="/settings/appearance" element={<Appearance />} />
+                  <Route
+                    path="/settings/manual"
+                    element={<Protected permission="dashboard.read"><UserManual /></Protected>}
+                  />
                   <Route path="/settings/quality" element={<Protected permission="dashboard.read"><QualitySettings /></Protected>} />
                   <Route
                     path="/account"
@@ -348,9 +358,7 @@ export function App() {
                 </Routes>
               </Suspense>
             </main>
-            <footer className="app-footer">
-              DataQore · ADQ · Sample-based evidence, with context and coverage.
-            </footer>
+            <footer className="app-footer">{tr("DataQore · ADQ · Sample-based evidence, with context and coverage.")}</footer>
           </div>
         </div>
       </NavigationDialog.Root>
@@ -358,6 +366,7 @@ export function App() {
   );
 }
 function Login({ onLogin }: { onLogin: (u: User) => void }) {
+  const { t: tr } = useLanguage();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   return (
@@ -372,12 +381,8 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
           />
         </div>
         <p className="eyebrow">DATAQORE / ADQ</p>
-        <h1>Trust your data.</h1>
-        <p>
-          Understand quality. Compare with evidence.
-          <br />
-          Make every result count.
-        </p>
+        <h1>{tr("Trust your data.")}</h1>
+        <p>{tr("Understand quality. Compare with evidence.")}<br />{tr("Make every result count.")}</p>
         <div className="login-lines" aria-hidden="true">
           <i />
           <i />
@@ -409,16 +414,12 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
           }}
         >
           <BrandLogo className="login-mobile-logo" width={230} />
-          <p className="eyebrow">ADVANCED DATA QUALITY</p>
-          <h1>Welcome back</h1>
-          <p className="muted">Sign in to your local DataQore account.</p>
-          <label>
-            Email
-            <input name="email" type="email" autoComplete="username" required />
+          <p className="eyebrow">{tr("ADVANCED DATA QUALITY")}</p>
+          <h1>{tr("Welcome back")}</h1>
+          <p className="muted">{tr("Sign in to your local DataQore account.")}</p>
+          <label>{tr("Email")}<input name="email" type="email" autoComplete="username" required />
           </label>
-          <label>
-            Password
-            <input
+          <label>{tr("Password")}<input
               name="password"
               type="password"
               autoComplete="current-password"
@@ -427,43 +428,39 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
             />
           </label>
           <ErrorBox error={error} />
-          <Button disabled={busy}>{busy ? "Signing in…" : "Sign in"}</Button>
-          <p className="muted small">
-            First time here? Create your administrator using the local setup
-            command.
-          </p>
+          <Button disabled={busy}>{busy ? tr("Signing in…") : tr("Sign in")}</Button>
+          <p className="muted small">{tr("First time here? Create your administrator using the local setup command.")}</p>
         </form>
       </section>
     </div>
   );
 }
 function Account({ user, onChanged }: { user: User; onChanged: () => void }) {
+  const { t: tr } = useLanguage();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   return (
     <>
-      <PageTitle title="Profile" subtitle="Manage your account credentials." />
+      <PageTitle title={tr("Profile")} subtitle={tr("Manage your account credentials.")} />
       {user.must_change_password && (
-        <p className="notice" role="alert">
-          Change your temporary password before accessing the application.
-        </p>
+        <p className="notice" role="alert">{tr("Change your temporary password before accessing the application.")}</p>
       )}
       <div className="two-columns settings-profile">
-        <Card title="Account details">
+        <Card title={tr("Account details")}>
           <dl>
-            <dt>Name</dt>
+            <dt>{tr("Name")}</dt>
             <dd>{user.display_name}</dd>
-            <dt>Email</dt>
+            <dt>{tr("Email")}</dt>
             <dd>{user.email}</dd>
-            <dt>Role</dt>
-            <dd>{profileLabels[user.profile] ?? user.profile}</dd>
-            <dt>Group</dt>
+            <dt>{tr("Role")}</dt>
+            <dd>{tr(profileLabels[user.profile] ?? user.profile)}</dd>
+            <dt>{tr("Group")}</dt>
             <dd>{user.group.name}</dd>
           </dl>
         </Card>
         <Card
-          title="Change password"
-          subtitle="Changing your password signs out all sessions."
+          title={tr("Change password")}
+          subtitle={tr("Changing your password signs out all sessions.")}
         >
           <form
             onSubmit={async (e) => {
@@ -488,18 +485,14 @@ function Account({ user, onChanged }: { user: User; onChanged: () => void }) {
               }
             }}
           >
-            <label>
-              Current password
-              <input
+            <label>{tr("Current password")}<input
                 name="current_password"
                 type="password"
                 autoComplete="current-password"
                 required
               />
             </label>
-            <label>
-              New password
-              <input
+            <label>{tr("New password")}<input
                 name="new_password"
                 type="password"
                 autoComplete="new-password"
@@ -508,9 +501,7 @@ function Account({ user, onChanged }: { user: User; onChanged: () => void }) {
                 required
               />
             </label>
-            <label>
-              Confirm new password
-              <input
+            <label>{tr("Confirm new password")}<input
                 name="confirm"
                 type="password"
                 autoComplete="new-password"
@@ -520,7 +511,7 @@ function Account({ user, onChanged }: { user: User; onChanged: () => void }) {
               />
             </label>
             <ErrorBox error={error} />
-            <Button disabled={busy}>Change password</Button>
+            <Button disabled={busy}>{tr("Change password")}</Button>
           </form>
         </Card>
       </div>
