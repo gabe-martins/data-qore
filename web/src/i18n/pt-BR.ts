@@ -1,5 +1,6 @@
 /** Application-owned copy only. Source names and evidence values never pass through this catalog. */
 export const ptBR = {
+    "United States": "Estados Unidos", "Brazil": "Brasil",
     "Language": "Idioma", "English": "English", "Português (Brasil)": "Português (Brasil)",
     "Choose the language used on this browser.": "Escolha o idioma usado neste navegador.",
     "Your choice is saved automatically on this browser and shared between its tabs.": "Sua escolha é salva automaticamente neste navegador e compartilhada entre as abas.",
