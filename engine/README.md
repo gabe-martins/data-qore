@@ -121,3 +121,23 @@ e aplique a revisão `0003_databricks` antes de iniciar.
 [Contrato, amostragem reproduzível e reinício operacional](../docs/CRITICAL_METRICS.md).
 Aplique as revisões 0005_critical_metrics (engine) e 3_critical_metrics (app).
 Perfis estatísticos e regras de negócio foram removidos.
+
+
+## Sensitive JSON and transport
+
+Literal operands (`value`, `values`, `allowed_values`, `examples`, `sample_rows`)
+are encrypted inside persisted JSON, including frozen parameters and results.
+The engine derives a separate Fernet key from `CONNECTIONS_ENCRYPTION_KEY` with
+HKDF-SHA-256 and a domain-specific label. Preserve this root key; replacing it
+alone is not rotation. With services stopped and a verified backup, run
+`tools/migrations.py engine apply` with the original key and engine migrator DSN
+to backfill old documents transactionally, then `engine verify`.
+
+New PostgreSQL/MySQL/Oracle connections default to `verify-full`. MySQL honors
+TLS modes and rejects servers without TLS in `require`/verification modes.
+Oracle uses TCPS in those modes: configure its actual TLS listener port. Private
+CAs must be trusted by the installed driver/runtime. Existing credentials retain
+their configured mode; review insecure exceptions explicitly. These settings do
+not provide HTTPS for the public endpoint or encrypt Docker networking, database
+volumes, exported files or old backups. Keep operational labels free of personal
+information and protect storage/exports separately.

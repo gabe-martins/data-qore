@@ -25,6 +25,7 @@ Configure `controller.env` using [the example](../controller.env.example):
 | `ENGINE_API_KEY` | Internal secret shared with the engine |
 | `JWT_SECRET` | Random signing secret of at least 32 characters |
 | `WEB_ORIGIN` | Exact browser origin; locally `http://127.0.0.1:5173` |
+| `CONTROLLER_HOST` | Exported listen address; default `127.0.0.1`, set to `0.0.0.0` inside Docker |
 | `ACCESS_TOKEN_SECONDS` | Access token lifetime; default `900` |
 | `REFRESH_TOKEN_SECONDS` | Session renewal lifetime; default `604800` |
 
@@ -98,3 +99,34 @@ O processo do controller também executa o agendador de comparações, com cron
 tradicional de cinco campos, fuso IANA e outbox persistida no app. Aplique a
 nova migration `1_schedules` antes de iniciar esta versão. O comando de
 execução continua o mesmo; não há processo extra. Veja [operação e políticas](../docs/SCHEDULES.md).
+
+
+## User identity encryption
+
+Names/emails use versioned AES-256-GCM bound to the user UUID. Login and
+uniqueness use a separate HMAC-SHA-256 blind index. Set
+`IDENTITY_ENCRYPTION_KEY` to 32 random bytes encoded as unpadded base64url,
+independent of JWT/API secrets. Preserve it in a restricted secret store outside
+database backups. Local setup generates it only for an empty user database and
+never replaces a configured key. Substring search decrypts batches in memory
+before filtering/pagination and costs O(number of users).
+
+Before rollout, stop controller access, verify a restorable backup, and provide
+the key to both controller and migrator. From the root, use the wrapper:
+
+```bash
+engine/.venv/bin/python tools/migrations.py app apply
+engine/.venv/bin/python tools/migrations.py app verify
+```
+
+It applies `6_identity_encryption`, transactionally encrypts existing identities
+and validates the database constraint. Failed backfills roll back identity
+updates and return failure; retry with the original key before starting the
+controller. Successful SQL schema changes remain recorded: do not downgrade or
+reset data. Running Prisma deploy directly omits this required backfill.
+
+For rotation with services stopped, supply the new key as
+`IDENTITY_ENCRYPTION_KEY` and the original as
+`IDENTITY_PREVIOUS_ENCRYPTION_KEY` to the same wrapper. After success, start the
+controller with the new key and remove the previous key from its environment.
+Password hashes, UUIDs, groups and sessions are preserved.

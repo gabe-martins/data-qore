@@ -2,7 +2,7 @@
 import os
 import subprocess
 import unittest
-from postgres_fixture import TemporaryPostgres, ROOT
+from postgres_fixture import sealed_user, TemporaryPostgres, ROOT
 
 
 @unittest.skipUnless(os.environ.get('DATAQORE_PG_BIN'), 'Disposable PostgreSQL required')
@@ -11,7 +11,7 @@ class AccessControlTests(TemporaryPostgres):
         self.command('app', 'baseline')
         self.command('app', 'apply')
         with self.connect('app') as connection:
-            connection.execute("INSERT INTO app.users(email,display_name,password_hash,group_id) SELECT 'fixture@access.test','Fixture admin','unused-fixture-hash',id FROM app.access_groups WHERE profile='platform_admin'")
+            connection.execute("INSERT INTO app.users(id,email_lookup,identity_ciphertext,password_hash,group_id) SELECT %s,%s,%s,'unused-fixture-hash',id FROM app.access_groups WHERE profile='platform_admin'",sealed_user('fixture@access.test','Fixture admin'))
         environment = {**os.environ, 'DATAQORE_ISOLATED_TEST': '1',
             'DATAQORE_ENV_FILE': str(self.directory / 'absent.env'),
             'DATABASE_URL': f'postgresql://srv_dataqore_app@127.0.0.1:{self.port}/dataqore_app',

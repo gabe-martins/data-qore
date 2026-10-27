@@ -30,7 +30,7 @@ LEFT JOIN LATERAL (SELECT jsonb_build_object('run_id',r.id,'conclusion',coalesce
 
 def register_read_api(router,engine):
     @router.get('/overview/row-match-trend',tags=['overview'],response_model=RowMatchTrendOut)
-    def row_match_trend(days:int=Query(7,enum=[7,15,30]),
+    def row_match_trend(days:int=Query(7,json_schema_extra={'enum':[7,15,30]}),
                       timezone:str=Query('America/Sao_Paulo',min_length=1,max_length=100)):
         from .storage import DomainError
         if days not in (7,15,30):

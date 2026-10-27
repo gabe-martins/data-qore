@@ -33,9 +33,11 @@ def json_safe(value):
 
 def database_engine(settings):
     url=make_url(settings.database_url).set(drivername="postgresql+psycopg")
+    from .document_crypto import DocumentCrypto
+    documents=DocumentCrypto(settings.encryption_key)
     return create_engine(url,pool_pre_ping=True,pool_size=5,max_overflow=5,hide_parameters=True,
         connect_args={"connect_timeout":10},
-        json_serializer=lambda v:json.dumps(json_safe(v),allow_nan=False))
+        json_serializer=documents.dumps,json_deserializer=documents.loads)
 
 
 class Repository:

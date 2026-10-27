@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { resolve, dirname } from "node:path";
 import { parse } from "dotenv";
 import { z } from "zod";
+import { identityKey } from "./identity.js";
 let location = dirname(fileURLToPath(import.meta.url));
 while (
   !existsSync(resolve(location, "engine.env.example")) &&
@@ -15,6 +16,7 @@ export interface Config {
   engineUrl: string;
   engineKey: string;
   jwtSecret: string;
+  identityKey: string;
   webOrigin: string;
   accessSeconds: number;
   refreshSeconds: number;
@@ -58,6 +60,8 @@ export function loadConfig(): Config {
   }
   const engineKey = get("ENGINE_API_KEY");
   const jwtSecret = get("JWT_SECRET");
+  const identityEncryptionKey = get("IDENTITY_ENCRYPTION_KEY");
+  identityKey(identityEncryptionKey);
   if (engineKey.length < 16 || engineKey.startsWith("SUBSTITUIR"))
     throw Error("Configure ENGINE_API_KEY.");
   if (jwtSecret.length < 32 || jwtSecret.startsWith("SUBSTITUIR"))
@@ -68,6 +72,7 @@ export function loadConfig(): Config {
     engineUrl,
     engineKey,
     jwtSecret,
+    identityKey: identityEncryptionKey,
     webOrigin,
     accessSeconds: positive.parse(get("ACCESS_TOKEN_SECONDS", "900")),
     refreshSeconds: positive.parse(get("REFRESH_TOKEN_SECONDS", "604800")),

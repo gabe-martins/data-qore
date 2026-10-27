@@ -2723,7 +2723,7 @@ export interface components {
             password?: string | null;
             /**
              * Sslmode
-             * @default prefer
+             * @default verify-full
              * @enum {string}
              */
             sslmode: "disable" | "allow" | "prefer" | "require" | "verify-ca" | "verify-full";

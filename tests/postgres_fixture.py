@@ -1,5 +1,10 @@
 """PostgreSQL descartável compartilhado pelos testes; nunca usa .env reais."""
 import os
+import base64,hashlib,hmac,json,secrets
+from uuid import uuid4
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives import hashes
 from pathlib import Path
 import socket
 import subprocess
@@ -7,6 +12,21 @@ import sys
 import tempfile
 import unittest
 import psycopg
+
+IDENTITY_KEY=secrets.token_urlsafe(32)
+os.environ['IDENTITY_ENCRYPTION_KEY']=IDENTITY_KEY
+from cryptography.fernet import Fernet
+os.environ['CONNECTIONS_ENCRYPTION_KEY']=Fernet.generate_key().decode()
+
+def sealed_user(email,name,identifier=None,key=IDENTITY_KEY):
+    identifier=identifier or str(uuid4());master=base64.urlsafe_b64decode(key+'=')
+    derive=lambda label:HKDF(algorithm=hashes.SHA256(),length=32,salt=b'dataqore.identity.v1',info=label).derive(master)
+    encode=lambda value:base64.urlsafe_b64encode(value).decode().rstrip('=')
+    nonce=secrets.token_bytes(12);email=email.strip().lower()
+    ciphertext=AESGCM(derive(b'aes-256-gcm')).encrypt(nonce,json.dumps({'email':email,'displayName':name},ensure_ascii=False).encode(),f'dataqore/users/{identifier}/identity/v1'.encode())
+    lookup=hmac.new(derive(b'email-lookup'),email.encode(),hashlib.sha256).hexdigest()
+    envelope=':'.join(['dqpii','1',hashlib.sha256(master).hexdigest()[:16],encode(nonce),encode(ciphertext[-16:]),encode(ciphertext[:-16])])
+    return identifier,lookup,envelope
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -62,6 +82,7 @@ class TemporaryPostgres(unittest.TestCase):
 
     def command(self, service, action, success=True):
         environment=os.environ.copy()
+        environment["DATAQORE_ENV_FILE"]="/dev/null"
         environment['MIGRATION_DATABASE_URL']=f'postgresql://srv_dataqore_{service}_migrator@127.0.0.1:{self.port}/dataqore_{service}'
         result=subprocess.run([sys.executable,str(ROOT/'tools/migrations.py'),service,action],
             cwd=ROOT,env=environment,capture_output=True,text=True)

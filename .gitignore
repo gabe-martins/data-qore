@@ -17,3 +17,4 @@ web/test-results/
 /test-results/
 *.tsbuildinfo
 .local/
+backups/

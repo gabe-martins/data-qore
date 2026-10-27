@@ -107,13 +107,14 @@ test("closed scope → repeatable sample → five saved metrics → edit → his
     0,
   );
   await expect(
-    page.getByText("18446744073709551615", { exact: true }),
+    page.getByText("sha256_bottom_k_union_v1 · seed 18446744073709551615", { exact: true }),
   ).toBeVisible();
   await page.screenshot({
     path: "test-results/critical-metrics-desktop.png",
     fullPage: true,
   });
   await page.getByRole("link", { name: "Edit", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Edit comparison", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await page
@@ -125,6 +126,7 @@ test("closed scope → repeatable sample → five saved metrics → edit → his
   await page
     .getByRole("button", { name: "Save comparison", exact: true })
     .click();
+  await expect(page).toHaveURL(/\/comparisons\/[0-9a-f-]+$/);
   const definitionResponse = await request.get(
     `${s.base}/comparisons/${new URL(page.url()).pathname.split("/").pop()}`,
     { headers: s.headers },
@@ -204,6 +206,7 @@ test("explicit column exclusion and timestamp timezone survive preview, executio
     "America/Sao_Paulo",
   );
   await page.getByRole("link", { name: "Edit", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Edit comparison", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(
     page.getByLabel("Compare B ingestion_datetime", { exact: true }),

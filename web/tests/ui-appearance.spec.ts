@@ -2,10 +2,12 @@ import { test, expect, type Page } from '@playwright/test';
 test.skip(process.env.DATAQORE_ISOLATED_TEST !== '1', 'Use the disposable full-stack fixture.');
 async function theme(page: Page, value: 'Light' | 'Dark' | 'System') {
   if (await page.getByRole('button', { name: 'User menu', exact: true }).count()) {
-    const previous = new URL(page.url()).pathname;
-    await page.goto('/settings/appearance');
+    // Exercise the in-app control: a reload discards preferences when storage is blocked.
+    await page.getByRole('button', { name: 'User menu', exact: true }).click();
+    await page.getByRole('button', { name: 'Theme', exact: true }).click();
     await page.getByRole('radio', { name: value, exact: true }).check();
-    await page.goto(previous);
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
   } else {
     await page.getByRole('button', { name: 'Theme', exact: true }).click();
     await page.getByRole('radio', { name: value, exact: true }).check();

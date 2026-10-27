@@ -362,7 +362,7 @@ class APITests(TemporaryPostgres):
             db.execute("INSERT INTO records VALUES(1,'PRIVATE_VALUE','2026-10-01'),(2,'same','2026-10-02')")
             db.execute('GRANT USAGE ON SCHEMA public TO critical_source_reader');db.execute('GRANT SELECT ON records TO critical_source_reader')
         c=self.definition()
-        connection=self.request('POST','/connections',201,json={'name':'Postgres','connector':'postgresql','credentials':{'hostname':'127.0.0.1','port':self.port,'database':'dataqore_source','username':'critical_source_reader','password':''}})
+        connection=self.request('POST','/connections',201,json={'name':'Postgres','connector':'postgresql','credentials':{'hostname':'127.0.0.1','port':self.port,'database':'dataqore_source','username':'critical_source_reader','password':'','sslmode':'disable'}})
         dataset=self.request('POST','/datasets',201,json={'connection_id':connection['id'],'schema_name':'public','table_name':'records'})
         c=self.request('PATCH',f"/comparisons/{c['id']}",json={'right_dataset_id':dataset['id']})
         _,r=self.finish(c);self.assertEqual(r['result']['metrics']['row_match_rate']['percentage'],'100.0000')

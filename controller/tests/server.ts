@@ -1,3 +1,4 @@
+import { IdentityCrypto } from "../src/identity.js";
 import { createApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { database } from "../src/db.js";
@@ -9,8 +10,7 @@ const db = database(c.databaseUrl);
 if (!(await db.user.count()))
   await db.user.create({
     data: {
-      email: "admin@dataqore.test",
-      displayName: "Test Administrator",
+      ...new IdentityCrypto(c.identityKey).seal("admin@dataqore.test", "Test Administrator"),
       groupId: (await db.accessGroup.findFirstOrThrow({ where: { profile: "platform_admin" } })).id,
       passwordHash: await hashPassword("DataQore-test-password-2026"),
     },

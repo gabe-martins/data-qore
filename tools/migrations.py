@@ -4,6 +4,9 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from dotenv import dotenv_values
+import re
+import base64
 from urllib.parse import unquote, urlsplit
 
 import psycopg
@@ -59,6 +62,14 @@ def run_tool(service, action, url):
         command = ["node", str(cli), "migrate"]
         command += ["resolve", "--applied", "0_initial"] if action == "baseline" else ["deploy"]
         environment["MIGRATION_DATABASE_URL"] = prisma_url(url)
+        if action == "apply":
+            key = os.environ.get("IDENTITY_ENCRYPTION_KEY")
+            if key is None:
+                config_path = Path(os.environ.get("DATAQORE_ENV_FILE", ROOT / "controller.env"))
+                key = (dotenv_values(config_path, interpolate=False).get("IDENTITY_ENCRYPTION_KEY") if config_path.exists() else None)
+            if not key or not re.fullmatch(r"[A-Za-z0-9_-]{43}", key) or base64.urlsafe_b64encode(base64.urlsafe_b64decode(key+"=")).decode().rstrip("=") != key:
+                raise ValueError("Configure IDENTITY_ENCRYPTION_KEY before applying app migrations; existing keys are never replaced.")
+            environment["IDENTITY_ENCRYPTION_KEY"] = key
         workdir = ROOT / "controller"
     else:
         command = [sys.executable, "-m", "alembic", "-c", str(ROOT / "engine/alembic.ini")]
@@ -73,6 +84,24 @@ def run_tool(service, action, url):
             output = output.replace(secret, "[REDACTED]")
     if output.strip():
         print(output.strip())
+    if not completed.returncode and service == "app" and action == "apply":
+        built = ROOT / "controller/dist/src/identity-migrate.js"
+        command = ["node", str(built)] if built.exists() else ["node", "--import", "tsx", "src/identity-migrate.ts"]
+        backfill = subprocess.run(command, cwd=ROOT / "controller", env=environment, capture_output=True, text=True)
+        if backfill.returncode:
+            raise ValueError("Identity encryption backfill failed; do not start the controller. Restore the original key and rerun apply. No identity updates were committed.")
+        print(backfill.stdout.strip())
+    if not completed.returncode and service == "engine" and action == "apply":
+        key = os.environ.get("CONNECTIONS_ENCRYPTION_KEY")
+        if key is None:
+            config_path = Path(os.environ.get("DATAQORE_ENV_FILE", ROOT / "engine.env"))
+            key = dotenv_values(config_path, interpolate=False).get("CONNECTIONS_ENCRYPTION_KEY") if config_path.exists() else None
+        try:
+            from tools.encrypt_documents import encrypt_documents
+            changed = encrypt_documents(url, key or "")
+        except Exception:
+            raise ValueError("Sensitive document encryption failed; all document changes rolled back. Check the original encryption key before starting the engine.") from None
+        print(f"Sensitive engine documents verified; {changed} encrypted.")
     if completed.returncode:
         raise ValueError("Ferramenta de migration terminou com erro; nenhum baseline será presumido.")
 
@@ -118,8 +147,12 @@ def execute(service, action):
                 ON n.oid=c.relnamespace WHERE n.nspname=%s AND c.relkind IN ('r','p'))""",(schema,)).fetchone()[0]
             if found:
                 raise ValueError("Database com tabelas e sem histórico: execute verify e baseline antes de apply.")
-        run_tool(service, action, url)
-        protect_history(connection, service)
+        try:
+            run_tool(service, action, url)
+        finally:
+            schema, table = ("app", "_prisma_migrations") if service == "app" else ("engine", "alembic_version")
+            if connection.execute("SELECT to_regclass(%s)",(f"{schema}.{table}",)).fetchone()[0]:
+                protect_history(connection, service)
         print("Baseline registrado." if action == "baseline" else "Migrations aplicadas; histórico protegido.")
 
 

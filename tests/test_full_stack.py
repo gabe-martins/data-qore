@@ -104,9 +104,9 @@ class FullStackTests(TemporaryPostgres):
         admin_cli('create',1)
         admin_cli('reset-password')
         with self.connect('app') as c:
-            self.assertTrue(c.execute("SELECT must_change_password FROM app.users WHERE email='admin@dataqore.test'").fetchone()[0])
+            self.assertTrue(c.execute("SELECT must_change_password FROM app.users WHERE is_active").fetchone()[0])
             # This fixture reuses its seeded password; lifecycle enforcement is tested separately.
-            c.execute("UPDATE app.users SET must_change_password=false WHERE email='admin@dataqore.test'")
+            c.execute("UPDATE app.users SET must_change_password=false WHERE is_active")
         handles=[]
         def start(command,environment,cwd,name):
             log=open(self.directory/(name+'.log'),'w+');p=subprocess.Popen(command,cwd=cwd,env=environment,stdout=log,stderr=subprocess.STDOUT)

@@ -175,7 +175,7 @@ export async function createApp(config: Config, db: DB) {
     res.clearCookie(COOKIE, { path: "/api/v1/auth" });
   }
   const operations: [string, string, (req: any, res: any) => Promise<any>][] = [
-    ...accessOperations(db),
+    ...accessOperations(db, auth.identity),
     ["get", "/api/v1/settings/quality", async () => readQualitySettings(db)],
     ["patch", "/api/v1/settings/quality", async req => {
       const values = qualityTargetSchema.parse(req.body);

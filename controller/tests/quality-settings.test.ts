@@ -1,3 +1,4 @@
+import { IdentityCrypto } from "../src/identity.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { qualityTargetSchema, qualitySettingsOut } from "../src/quality-settings.js";
@@ -37,8 +38,8 @@ test("real isolated controller: viewer is read-only, target persists and updates
   const tokens:Record<string,string>={};
   for(const profile of ["viewer","quality_manager"]){
    const group=await db.accessGroup.create({data:{name:`Target test ${randomUUID()}`,profile}});groups.push(group.id);
-   const user=await db.user.create({data:{email:`${randomUUID()}@target.test`,displayName:profile,groupId:group.id,passwordHash:await hashPassword(password)}});users.push(user.id);
-   tokens[profile]=(await auth.login({email:user.email,password},randomUUID())).body.access_token;
+   const user=await db.user.create({data:{...new IdentityCrypto(loadConfig().identityKey).seal(`${randomUUID()}@target.test`,profile),groupId:group.id,passwordHash:await hashPassword(password)}});users.push(user.id);
+   tokens[profile]=(await auth.login({email:new IdentityCrypto(loadConfig().identityKey).open(user).email,password},randomUUID())).body.access_token;
   }
   const request=(profile:string,method:"GET"|"PATCH",payload?:unknown)=>server.inject({method,url:"/api/v1/settings/quality",headers:{authorization:`Bearer ${tokens[profile]}`},...(payload===undefined?{}:{payload})});
   assert.equal((await request("viewer","GET")).statusCode,200);

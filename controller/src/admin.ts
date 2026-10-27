@@ -1,5 +1,6 @@
 import { createInterface } from "node:readline/promises";
 import { loadConfig } from "./config.js";
+import { IdentityCrypto } from "./identity.js";
 import { database } from "./db.js";
 import { hashPassword, passwordSchema } from "./auth.js";
 import { randomUUID } from "node:crypto";
@@ -48,7 +49,9 @@ if (!["create", "reset-password"].includes(command)) {
   console.error("Usage: npm run admin:create OR npm run admin:reset-password");
   process.exit(1);
 }
-const db = database(loadConfig().databaseUrl);
+const config = loadConfig();
+const identity = new IdentityCrypto(config.identityKey);
+const db = database(config.databaseUrl);
 try {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const email = z
@@ -73,7 +76,7 @@ try {
   await db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(80420,1)`;
     const existing = await tx.user.findFirst({
-      where: { email: { equals: email, mode: "insensitive" }, group: { profile: "platform_admin" } },
+      where: { emailLookup: identity.lookup(email), group: { profile: "platform_admin" } },
     });
     let user;
     if (command === "create") {
@@ -81,7 +84,7 @@ try {
         throw Error("An administrator already exists.");
       let group = await tx.accessGroup.findFirst({ where: { profile: "platform_admin" }, orderBy: { createdAt: "asc" } });
       if (!group) group = await tx.accessGroup.create({ data: { name: "Platform Administrators", profile: "platform_admin" } });
-      user = await tx.user.create({ data: { email, displayName: name, passwordHash, groupId: group.id } });
+      user = await tx.user.create({ data: { ...identity.seal(email, name), passwordHash, groupId: group.id } });
     } else {
       if (!existing) throw Error("Administrator not found.");
       await tx.$queryRaw`SELECT id FROM app.users WHERE id=${existing.id}::uuid FOR UPDATE`;

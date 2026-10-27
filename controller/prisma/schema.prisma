@@ -11,8 +11,8 @@ datasource db {
 // CHECKs, grants e índice por lower(email) ficam no SQL versionado.
 model User {
   id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email        String        @db.Text
-  displayName  String        @map("display_name") @db.Text
+  emailLookup  String        @unique(map: "users_email_lookup_unique") @map("email_lookup") @db.Text
+  identityCiphertext String   @map("identity_ciphertext") @db.Text
   passwordHash String        @map("password_hash") @db.Text
   groupId      String        @map("group_id") @db.Uuid
   group        AccessGroup   @relation(fields: [groupId], references: [id], onDelete: Restrict, onUpdate: NoAction)

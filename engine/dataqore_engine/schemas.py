@@ -22,7 +22,7 @@ class Credentials(Model):
     port: Annotated[int,Field(strict=True,ge=1,le=65535)] | None=None
     username: Annotated[str,Field(min_length=1,max_length=255)] | None=None
     password: SecretStr | None=None
-    sslmode: Literal["disable","allow","prefer","require","verify-ca","verify-full"]="prefer"
+    sslmode: Literal["disable","allow","prefer","require","verify-ca","verify-full"]="verify-full"
     trust_server_certificate: bool=False
 
 

@@ -67,6 +67,7 @@ class LauncherTests(unittest.TestCase):
             'WORKER_HEARTBEAT_SECONDS=5','WORKER_JOB_TIMEOUT_SECONDS=600','WORKER_POLL_SECONDS=1',''])
         app='\n'.join([
             'DATABASE_URL=postgresql://srv_dataqore_app:secret@configured-host/dataqore_app?schema=app',
+            'IDENTITY_ENCRYPTION_KEY='+__import__('secrets').token_urlsafe(32),
             'ENGINE_API_KEY=existing-api-key-0123456789','JWT_SECRET=existing-jwt-secret-01234567890123456789',
             'ENGINE_API_URL=http://127.0.0.1:8000','WEB_ORIGIN=http://127.0.0.1:5173',
             'ACCESS_TOKEN_SECONDS=900','REFRESH_TOKEN_SECONDS=604800',''])

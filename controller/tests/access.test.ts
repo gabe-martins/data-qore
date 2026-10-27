@@ -1,3 +1,4 @@
+import { IdentityCrypto } from "../src/identity.js";
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
@@ -62,8 +63,8 @@ test("real database: role matrix, upstream isolation, identity lifecycle and las
     const hash = await hashPassword(password);
     for (const profile of profiles) {
       const group = await db!.accessGroup.create({ data: { name: `Access test ${profile} ${randomUUID()}`, profile } }); groupIds.push(group.id);
-      const user = await db!.user.create({ data: { email: `${randomUUID()}@access.test`, displayName: profile, groupId: group.id, passwordHash: hash } }); userIds.push(user.id);
-      accounts[profile] = { group, user, token: await login(user.email) };
+      const user = await db!.user.create({ data: { ...new IdentityCrypto(loadConfig().identityKey).seal(`${randomUUID()}@access.test`, profile), groupId: group.id, passwordHash: hash } }); userIds.push(user.id);
+      accounts[profile] = { group, user, token: await login(new IdentityCrypto(loadConfig().identityKey).open(user).email) };
     }
     const admin = accounts.platform_admin;
     await t.test("all engine methods deny unauthenticated access and enforce all four profiles before forwarding", async () => {
@@ -106,6 +107,19 @@ test("real database: role matrix, upstream isolation, identity lifecycle and las
       const result = await request(admin.token, "POST", "/users", body); assert.equal(result.statusCode, 201, result.body);
       const created = result.json(); userIds.push(created.id);
       assert.doesNotMatch(result.body, /password_hash|passwordHash|Temporary-access/);
+      const stored = await db!.user.findUniqueOrThrow({ where: { id: created.id } });
+      assert.equal(JSON.stringify(stored).includes(body.email), false);
+      assert.equal(JSON.stringify(stored).includes(body.display_name), false);
+      assert.doesNotMatch(result.body, /identityCiphertext|emailLookup/);
+      const listed = (await request(admin.token, "GET", "/users?search=Created%20user&limit=1&offset=0")).json();
+      assert.equal(listed.total, 1); assert.equal(listed.items[0].email, body.email);
+      const later = (await request(admin.token, "GET", "/users?search=Created%20user&limit=1&offset=1")).json();
+      assert.equal(later.total, 1); assert.equal(later.items.length, 0);
+      const oldEmail = body.email;
+      body.email = `${randomUUID()}@access.test`;
+      assert.equal((await request(admin.token, "PATCH", `/users/${created.id}`, { email: body.email })).statusCode, 200);
+      await assert.rejects(login(oldEmail));
+      assert.equal((await db!.user.findUniqueOrThrow({ where: { id: created.id } })).emailLookup, new IdentityCrypto(config.identityKey).lookup(body.email));
       assert.equal((await request(admin.token, "POST", "/users", { ...body, email: body.email.toUpperCase() })).statusCode, 409);
       assert.equal((await request(admin.token, "POST", "/users", { ...body, profile: "platform_admin" })).statusCode, 422);
       const token = await login(body.email);
@@ -137,7 +151,7 @@ test("real database: role matrix, upstream isolation, identity lifecycle and las
       assert.equal((await request(admin.token, "PATCH", `/users/${created.id}`, { is_active: true })).statusCode, 200);
       next = await login(body.email);
       assert.equal((await request(next, "POST", "/auth/logout", {})).statusCode, 200);
-      next = await login(accounts.quality_manager.user.email);
+      next = await login(new IdentityCrypto(loadConfig().identityKey).open(accounts.quality_manager.user).email);
       assert.equal((await request(admin.token, "POST", `/users/${accounts.quality_manager.user.id}/revoke-sessions`, {})).statusCode, 200);
       assert.equal((await request(next, "GET", "/auth/me")).statusCode, 401);
     });
@@ -158,8 +172,8 @@ test("real database: role matrix, upstream isolation, identity lifecycle and las
     await t.test("concurrent self-demotions preserve the final administrator and rollback rejected audit", async () => {
       // Existing fixture admin stays restorable; only this disposable DB is used.
       await db!.user.update({ where: { id: original.id }, data: { isActive: false } });
-      const second = await db!.user.create({ data: { email: `${randomUUID()}@access.test`, displayName: "Second admin", passwordHash: hash, groupId: admin.group.id } }); userIds.push(second.id);
-      const secondToken = await login(second.email);
+      const second = await db!.user.create({ data: { ...new IdentityCrypto(loadConfig().identityKey).seal(`${randomUUID()}@access.test`, "Second admin"), passwordHash: hash, groupId: admin.group.id } }); userIds.push(second.id);
+      const secondToken = await login(new IdentityCrypto(loadConfig().identityKey).open(second).email);
       const results = await Promise.all([
         request(admin.token, "PATCH", `/users/${admin.user.id}`, { group_id: accounts.viewer.group.id }),
         request(secondToken, "PATCH", `/users/${second.id}`, { group_id: accounts.viewer.group.id }),

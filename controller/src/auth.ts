@@ -4,6 +4,7 @@ import argon2 from "argon2";
 import { z } from "zod";
 import type { DB } from "./db.js";
 import type { Config } from "./config.js";
+import { IdentityCrypto } from "./identity.js";
 import { permissionsFor } from "./permissions.js";
 export class PublicError extends Error {
   constructor(
@@ -32,12 +33,12 @@ export const hashPassword = (p: string) =>
     parallelism: 1,
   });
 const digest = (s: string) => createHash("sha256").update(s).digest("hex");
-export const safeUser = (u: {
-  id: string; email: string; displayName: string; mustChangePassword: boolean;
+export const safeUser = (stored: {
+  id: string; emailLookup: string; identityCiphertext: string; mustChangePassword: boolean;
   group: { id: string; name: string; profile: string };
-}) => ({ id: u.id, email: u.email, display_name: u.displayName,
+}, identity: IdentityCrypto) => { const u = identity.open(stored); return ({ id: u.id, email: u.email, display_name: u.displayName,
   group: { id: u.group.id, name: u.group.name }, profile: u.group.profile,
-  permissions: permissionsFor(u.group.profile), must_change_password: u.mustChangePassword });
+  permissions: permissionsFor(u.group.profile), must_change_password: u.mustChangePassword }); };
 const unauthorized = () =>
   new PublicError(
     401,
@@ -45,12 +46,14 @@ const unauthorized = () =>
     "Invalid credentials or expired session.",
   );
 export class Auth {
+  readonly identity: IdentityCrypto;
   private secret: Uint8Array;
   private dummy: Promise<string>;
   constructor(
     public db: DB,
     private config: Config,
   ) {
+    this.identity = new IdentityCrypto(config.identityKey);
     this.secret = new TextEncoder().encode(config.jwtSecret);
     this.dummy = hashPassword(randomBytes(32).toString("hex"));
   }
@@ -93,13 +96,13 @@ export class Auth {
       access_token,
       token_type: "Bearer",
       expires_in: this.config.accessSeconds,
-      user: safeUser(user),
+      user: safeUser(user, this.identity),
     };
   }
   async login(input: unknown, requestId: string) {
     const { email, password } = loginSchema.parse(input);
     const user = await this.db.user.findFirst({
-      where: { email: { equals: email.trim(), mode: "insensitive" } },
+      where: { emailLookup: this.identity.lookup(email) },
       include: { group: true },
     });
     const valid = await argon2.verify(
@@ -207,7 +210,7 @@ export class Auth {
       !session.user.isActive
     )
       throw unauthorized();
-    return { user: safeUser(session.user), sessionId: session.id };
+    return { user: safeUser(session.user, this.identity), sessionId: session.id };
   }
   async logout(
     session: { user: { id: string }; sessionId: string },

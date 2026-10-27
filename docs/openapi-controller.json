@@ -7607,7 +7607,7 @@
               "verify-full"
             ],
             "title": "Sslmode",
-            "default": "prefer"
+            "default": "verify-full"
           },
           "trust_server_certificate": {
             "type": "boolean",

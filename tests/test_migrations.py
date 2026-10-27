@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from tools.migration_config import load_url, postgres_url, prisma_url, sqlalchemy_url
 from tools.migrations import run_tool
-from postgres_fixture import TemporaryPostgres
+from postgres_fixture import sealed_user, TemporaryPostgres
 
 
 class ConfigurationTests(unittest.TestCase):
@@ -70,7 +70,7 @@ class PostgreSQLMigrationTests(TemporaryPostgres):
             row = c.execute("SELECT u.password_hash,u.must_change_password,g.profile FROM app.users u JOIN app.access_groups g ON g.id=u.group_id WHERE u.id=%s", (user,)).fetchone()
             self.assertEqual(row, ('original-hash', False, 'platform_admin'))
             with self.assertRaises(psycopg.errors.NotNullViolation):
-                c.execute("INSERT INTO app.users(email,display_name,password_hash) VALUES('missing@test.local','Missing group','hash')")
+                c.execute("INSERT INTO app.users(id,email_lookup,identity_ciphertext,password_hash) VALUES(%s,%s,%s,'hash')",sealed_user('missing@test.local','Missing group'))
 
     def test_new_schema_grants_and_idempotent_apply(self):
         for service in ('app','engine'):
@@ -96,7 +96,7 @@ class PostgreSQLMigrationTests(TemporaryPostgres):
         for service in ('app','engine'):
             self.command(service,'baseline');self.command(service,'apply')
         with self.connect('app') as c:
-            user=c.execute("INSERT INTO app.users(email,display_name,password_hash,group_id) SELECT 'reset@test.local','Admin','original-hash',id FROM app.access_groups WHERE profile='platform_admin' RETURNING id").fetchone()[0]
+            user=c.execute("INSERT INTO app.users(id,email_lookup,identity_ciphertext,password_hash,group_id) SELECT %s,%s,%s,'original-hash',id FROM app.access_groups WHERE profile='platform_admin' RETURNING id",sealed_user('reset@test.local','Admin')).fetchone()[0]
             c.execute("INSERT INTO app.auth_sessions(user_id,refresh_token_hash,expires_at) VALUES(%s,'session',now()+interval '1 day')",(user,))
             c.execute("INSERT INTO app.audit_log(action,resource_type,outcome) VALUES('test','test','success')")
             c.execute("INSERT INTO app.schedules(name,comparison_id,cron_expression,next_run_at) VALUES('test',gen_random_uuid(),'0 * * * *',now())")

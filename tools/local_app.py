@@ -21,7 +21,7 @@ SERVICES={
 }
 CLEAN_ENV=('DATABASE_URL','MIGRATION_DATABASE_URL','DATAQORE_ENV_FILE','ENGINE_API_KEY','CONNECTIONS_ENCRYPTION_KEY','EVIDENCE_ENCRYPTION_KEY',
     'CONNECTIONS_ENCRYPTION_KEY_VERSION','SQLITE_ALLOWED_ROOT','WORKER_HEARTBEAT_SECONDS','WORKER_JOB_TIMEOUT_SECONDS',
-    'WORKER_POLL_SECONDS','ENGINE_API_URL','JWT_SECRET','WEB_ORIGIN','ACCESS_TOKEN_SECONDS','REFRESH_TOKEN_SECONDS','DATAQORE_CONTROLLER_URL')
+    'WORKER_POLL_SECONDS','ENGINE_API_URL','IDENTITY_ENCRYPTION_KEY','JWT_SECRET','WEB_ORIGIN','ACCESS_TOKEN_SECONDS','REFRESH_TOKEN_SECONDS','DATAQORE_CONTROLLER_URL')
 
 
 def environment(filename=None):
@@ -90,6 +90,19 @@ def configure():
     if len(api_key)<16 or api_key.startswith('SUBSTITUIR'):
         api_key=secrets.token_urlsafe(48);e_updates['ENGINE_API_KEY']=api_key
     if controller.get('ENGINE_API_KEY')!=api_key:c_updates['ENGINE_API_KEY']=api_key
+    identity_key=controller.get('IDENTITY_ENCRYPTION_KEY') or ''
+    if not identity_key:
+        db_app=create_engine(make_url(controller['DATABASE_URL']).set(drivername='postgresql+psycopg'),hide_parameters=True,connect_args={'connect_timeout':5})
+        try:
+            with db_app.connect() as connection:
+                if connection.scalar(text('SELECT count(*) FROM app.users')):
+                    raise RuntimeError('Há usuários existentes. Configure ou recupere IDENTITY_ENCRYPTION_KEY e execute a migration antes de iniciar; nenhuma chave será criada automaticamente.')
+        finally:db_app.dispose()
+        c_updates['IDENTITY_ENCRYPTION_KEY']=secrets.token_urlsafe(32)
+    else:
+        import base64,re
+        if not re.fullmatch(r'[A-Za-z0-9_-]{43}',identity_key) or base64.urlsafe_b64encode(base64.urlsafe_b64decode(identity_key+'=')).decode().rstrip('=')!=identity_key:
+            raise RuntimeError('IDENTITY_ENCRYPTION_KEY inválida; a chave original não será substituída.')
     jwt=controller.get('JWT_SECRET') or ''
     if len(jwt)<32 or jwt.startswith('SUBSTITUIR'):c_updates['JWT_SECRET']=secrets.token_urlsafe(48)
     for key,value in [('CONNECTIONS_ENCRYPTION_KEY_VERSION','v1'),('WORKER_HEARTBEAT_SECONDS','5'),('WORKER_JOB_TIMEOUT_SECONDS','600'),('WORKER_POLL_SECONDS','1')]:

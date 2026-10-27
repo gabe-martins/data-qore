@@ -6,6 +6,7 @@ import importlib.util
 import json
 from pathlib import Path
 import sqlite3
+import ssl
 from time import monotonic
 
 from cryptography.fernet import Fernet,InvalidToken
@@ -26,19 +27,30 @@ def postgres(creds):
     driver=importlib.import_module("psycopg")
     return driver.connect(host=creds["hostname"],port=creds.get("port") or 5432,
         dbname=creds["database"],user=creds["username"],password=creds["password"],
-        sslmode=creds.get("sslmode","prefer"),connect_timeout=10)
+        sslmode=creds.get("sslmode","verify-full"),connect_timeout=10)
 
 
 def mysql(creds):
     driver=importlib.import_module("pymysql")
+    mode=creds.get("sslmode","verify-full")
+    options={}
+    if mode in {"require","verify-ca","verify-full"}:
+        context=ssl.create_default_context()
+        context.minimum_version=ssl.TLSVersion.TLSv1_2
+        context.check_hostname=mode=="verify-full"
+        if mode=="require":context.verify_mode=ssl.CERT_NONE
+        options['ssl']=context
+    elif mode=="disable":options['ssl_disabled']=True
     return driver.connect(host=creds["hostname"],port=creds.get("port") or 3306,
         database=creds["database"],user=creds["username"],password=creds["password"],
-        connect_timeout=10,read_timeout=30,write_timeout=30,autocommit=False)
+        connect_timeout=10,read_timeout=30,write_timeout=30,autocommit=False,**options)
 
 
 def oracle(creds):
     driver=importlib.import_module("oracledb")
-    params=driver.ConnectParams(host=creds["hostname"],port=creds.get("port") or 1521,
+    mode=creds.get("sslmode","verify-full")
+    secure=mode in {"require","verify-ca","verify-full"}
+    params=driver.ConnectParams(protocol="tcps" if secure else "tcp",ssl_server_dn_match=mode=="verify-full",host=creds["hostname"],port=creds.get("port") or 1521,
         service_name=creds["database"],tcp_connect_timeout=10)
     return driver.connect(user=creds["username"],password=creds["password"],params=params)
 

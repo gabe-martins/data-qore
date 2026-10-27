@@ -23,6 +23,12 @@ require the optional drivers described in the [engine setup guide](engine/README
 
 ## Get started
 
+For a new installation on a personal Linux server using Docker Compose,
+see the [Docker guide](docs/DOCKER.md). It packages the web app, controller,
+engine, worker and a persistent PostgreSQL database, with HTTP access on your LAN.
+
+The steps below describe the existing local launcher.
+
 ### 1. Check the requirements
 
 Use Linux with Python 3.12 or later (including `venv` and pip), Node.js 24 or
@@ -86,13 +92,14 @@ to follow progress and review results.
 ./dataqore.sh restart  # Reload after code or configuration changes
 ```
 
-DataQore currently runs locally. See the [launcher guide](scripts/README.md)
-for setup details and troubleshooting.
+See the [launcher guide](scripts/README.md) for local setup details and
+troubleshooting, or the [Docker guide](docs/DOCKER.md) for server installations.
 
 ## Project guides
 
 | Guide | What it covers |
 | --- | --- |
+| [Docker Compose](docs/DOCKER.md) | New server installations, persistent database and backups |
 | [Web app](web/README.md) | Frontend development and builds |
 | [Controller](controller/README.md) | Application configuration and account management |
 | [Engine](engine/README.md) | Service setup and optional connectors |

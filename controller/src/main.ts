@@ -8,9 +8,10 @@ try {
   const { app, auth } = await createApp(config, db);
   await db.schedule.count(); // Migration must already exist; never apply DDL at runtime.
   const scheduler = new Scheduler(db, config, auth);
-  await app.listen(3000, "127.0.0.1");
+  const host = process.env.CONTROLLER_HOST || "127.0.0.1";
+  await app.listen(3000, host);
   scheduler.start();
-  console.log("DataQore controller: http://127.0.0.1:3000");
+  console.log(`DataQore controller: http://${host}:3000`);
   for (const signal of ["SIGINT", "SIGTERM"])
     process.once(signal, () => {
       void app

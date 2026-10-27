@@ -219,7 +219,7 @@ function ConnectionForm({
         password: f.get("password"),
         port: Number(f.get("port")),
       });
-      if (connector === "postgresql") credentials.sslmode = f.get("sslmode");
+      if (["postgresql", "mysql", "oracle"].includes(connector)) credentials.sslmode = f.get("sslmode");
       if (connector === "mssql")
         credentials.trust_server_certificate = f.get("trust") === "on";
     }
@@ -344,8 +344,8 @@ function ConnectionForm({
                 />
               </label>
               </>}
-              {connector === "postgresql" && (
-                <label>{tr("SSL mode")}<select name="sslmode" defaultValue="prefer">
+              {["postgresql", "mysql", "oracle"].includes(connector) && (
+                <label>{tr("SSL mode")}<select name="sslmode" defaultValue="verify-full">
                     {[
                       "disable",
                       "allow",
