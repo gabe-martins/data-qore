@@ -6,6 +6,12 @@ from pathlib import Path
 import secrets
 from urllib.parse import urlsplit
 
+SECRET_KEYS = (
+    "POSTGRES_PASSWORD", "APP_DB_PASSWORD", "ENGINE_DB_PASSWORD",
+    "APP_MIGRATION_PASSWORD", "ENGINE_MIGRATION_PASSWORD", "ENGINE_API_KEY", "JWT_SECRET",
+    "IDENTITY_ENCRYPTION_KEY", "CONNECTIONS_ENCRYPTION_KEY", "EVIDENCE_ENCRYPTION_KEY",
+)
+
 
 def configuration(origin):
     url = urlsplit(origin)

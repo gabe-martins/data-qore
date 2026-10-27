@@ -2,15 +2,10 @@
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 cd "$root"
-compose() { docker compose --env-file .env.docker -f compose.yaml "$@"; }
+compose() { docker compose -f compose.yaml "$@"; }
 case "${1:-help}" in
   setup)
-    if [ "$#" -ne 2 ]; then
-      echo 'Uso: ./docker.sh setup http://IP_DO_SERVIDOR:8080' >&2; exit 1
-    fi
-    docker run --rm --user "$(id -u):$(id -g)" --entrypoint /usr/bin/python \
-      --mount "type=bind,source=$root,target=/workspace" --workdir /workspace \
-      reg.mini.dev/python:3.12.15 /workspace/docker/configure.py --origin "$2"
+    echo 'Setup is automatic. Set TZ and WEB_ORIGIN in compose.yaml, then run: docker compose up -d --build'
     ;;
   up)
     compose config --quiet
@@ -37,6 +32,6 @@ case "${1:-help}" in
   logs) shift; compose logs --tail 100 "$@" ;;
   check) compose config --quiet ;;
   *)
-    echo 'Uso: ./docker.sh setup http://IP:8080 | up | admin | reset-password | status | logs [serviço] | down | check | verify'
+    echo 'Uso: ./docker.sh up | reset-password | status | logs [serviço] | down | check | verify'
     ;;
 esac

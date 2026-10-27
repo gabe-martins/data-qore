@@ -21,6 +21,9 @@ import { ThemeControl } from "./components/ThemeControl";
 import { useAppearance, BrandLogo } from "./lib/appearance";
 import {
   login,
+  initialSetupRequired,
+  createInitialAdministrator,
+  ApiError,
   logout,
   refresh,
   onSessionExpired,
@@ -369,6 +372,15 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
   const { t: tr } = useLanguage();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [setup, setSetup] = useState<boolean | null>(null);
+  useEffect(() => {
+    let active = true;
+    initialSetupRequired().then(required => { if (active) setSetup(required); }).catch(err => {
+      if (active) { setError(err); setSetup(false); }
+    });
+    return () => { active = false; };
+  }, []);
+  if (setup === null) return <Loading />;
   return (
     <div className="login-screen">
       <section className="login-brand">
@@ -403,10 +415,14 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
             setBusy(true);
             setError(null);
             try {
-              onLogin(
-                await login(String(f.get("email")), String(f.get("password"))),
-              );
+              const email = String(f.get("email")), password = String(f.get("password"));
+              if (setup && password !== String(f.get("confirm_password")))
+                throw new ApiError(422, "password_mismatch", "Passwords do not match.");
+              onLogin(setup
+                ? await createInitialAdministrator(String(f.get("display_name")), email, password)
+                : await login(email, password));
             } catch (err) {
+              if (err instanceof ApiError && err.code === "setup_complete") setSetup(false);
               setError(err);
             } finally {
               setBusy(false);
@@ -415,21 +431,27 @@ function Login({ onLogin }: { onLogin: (u: User) => void }) {
         >
           <BrandLogo className="login-mobile-logo" width={230} />
           <p className="eyebrow">{tr("ADVANCED DATA QUALITY")}</p>
-          <h1>{tr("Welcome back")}</h1>
-          <p className="muted">{tr("Sign in to your local DataQore account.")}</p>
+          <h1>{tr(setup ? "Create your administrator" : "Welcome back")}</h1>
+          <p className="muted">{tr(setup ? "Set up the first account to start using DataQore. This account will be the platform administrator." : "Sign in to your local DataQore account.")}</p>
+          {setup && <label>{tr("Name")}<input name="display_name" autoComplete="name" required maxLength={255} /></label>}
           <label>{tr("Email")}<input name="email" type="email" autoComplete="username" required />
           </label>
           <label>{tr("Password")}<input
               name="password"
               type="password"
-              autoComplete="current-password"
+              autoComplete={setup ? "new-password" : "current-password"}
+              minLength={setup ? 12 : undefined}
               required
               maxLength={128}
             />
           </label>
+          {setup && <>
+            <p className="muted small">{tr("Use a password of 12–128 characters.")}</p>
+            <label>{tr("Confirm password")}<input name="confirm_password" type="password" autoComplete="new-password" required minLength={12} maxLength={128} /></label>
+          </>}
           <ErrorBox error={error} />
-          <Button disabled={busy}>{busy ? tr("Signing in…") : tr("Sign in")}</Button>
-          <p className="muted small">{tr("First time here? Create your administrator using the local setup command.")}</p>
+          <Button disabled={busy}>{busy ? tr(setup ? "Creating account…" : "Signing in…") : tr(setup ? "Create administrator" : "Sign in")}</Button>
+          {!setup && <p className="muted small">{tr("Ask your administrator for an account.")}</p>}
         </form>
       </section>
     </div>

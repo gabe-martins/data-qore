@@ -1,10 +1,13 @@
 # syntax=docker/dockerfile:1
-ARG NODE_VERSION=24.22.1
-ARG PYTHON_VERSION=3.12.15
-ARG NGINX_VERSION=1.30.6
+ARG NODE_IMAGE=node:24-bookworm-slim
+ARG PYTHON_IMAGE=python:3.12-slim-bookworm
+ARG NGINX_IMAGE=nginx:1.30-alpine
 
-FROM reg.mini.dev/node:${NODE_VERSION}-dev AS node-build
-USER root
+FROM ${NODE_IMAGE} AS node-base
+RUN apt-get update && apt-get install -y --no-install-recommends openssl tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM node-base AS node-build
 WORKDIR /app/controller
 COPY controller/package*.json ./
 RUN npm ci
@@ -13,76 +16,78 @@ COPY controller/prisma.config.ts controller/tsconfig.json ./
 RUN npm run prisma:generate
 COPY controller/src ./src
 RUN npm run build
-# The one-shot migration image needs Node as well as Python. Export the ELF
-# executable and its resolved shared libraries, not a shell or a package manager.
-COPY docker/collect-node.mjs /app/docker/collect-node.mjs
-RUN node /app/docker/collect-node.mjs /node-runtime
 
 FROM node-build AS controller-production
 RUN npm prune --omit=dev
 
-FROM reg.mini.dev/node:${NODE_VERSION} AS controller
+FROM node-base AS controller
 WORKDIR /app/controller
 COPY --from=controller-production /app/controller/package.json ./package.json
 COPY --from=controller-production /app/controller/node_modules ./node_modules
 COPY --from=controller-production /app/controller/dist ./dist
-# Bypass the base's shell entrypoint: production commands are direct execs.
+COPY engine.env.example /app/engine.env.example
+COPY docs/openapi-engine.json /app/docs/openapi-engine.json
+USER node
 ENTRYPOINT ["node"]
 CMD ["dist/src/main.js"]
 
-FROM reg.mini.dev/node:${NODE_VERSION}-dev AS web-build
-USER root
+FROM node-base AS web-build
 WORKDIR /app/web
 COPY web/package*.json ./
 RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-FROM reg.mini.dev/nginx:${NGINX_VERSION} AS web
+FROM ${NGINX_IMAGE} AS web
+RUN apk add --no-cache tzdata
 COPY --from=web-build /app/web/dist /app/web
 COPY docker/nginx.conf /etc/nginx/nginx.conf
-# Keep the image's non-root user, direct Nginx entrypoint and SIGQUIT.
+USER nginx
+ENTRYPOINT ["nginx"]
+CMD ["-c", "/etc/nginx/nginx.conf", "-e", "/dev/stderr", "-g", "daemon off;"]
 
-FROM reg.mini.dev/python:${PYTHON_VERSION} AS python-base
-
-FROM reg.mini.dev/python:${PYTHON_VERSION}-dev AS python-build
-USER root
+FROM ${PYTHON_IMAGE} AS python-base
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libstdc++6 libatomic1 libgssapi-krb5-2 libltdl7 openssl tzdata \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 1000 dataqore \
+    && useradd --uid 1000 --gid 1000 --create-home dataqore
 WORKDIR /app
-COPY --from=python-base / /runtime-base/
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+
+# Only bootstrap can write the master configuration and service exports.
+FROM python-base AS bootstrap
+COPY docker/configure.py docker/bootstrap.py /app/docker/
+ENTRYPOINT ["python", "/app/docker/bootstrap.py"]
+
+FROM python-base AS python-build
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
 COPY engine/requirements* ./engine/
 RUN python -m venv /opt/venv \
     && /opt/venv/bin/python -m pip install --no-cache-dir \
        -r engine/requirements-connectors.txt -r engine/requirements-databricks.lock \
     && /opt/venv/bin/python -m pip check
-COPY docker/collect-python.py /app/docker/collect-python.py
-# Resolve wheel dependencies while the build tools are available. Missing
-# libraries fail the build rather than producing a broken driver at runtime.
-RUN /opt/venv/bin/python /app/docker/collect-python.py /python-runtime /opt/venv /runtime-base
-
-FROM python-build AS migration-build
-COPY --from=node-build /node-runtime /node-runtime
-# Keep the Python base's core libraries; add only missing Node dependencies.
-RUN /opt/venv/bin/python /app/docker/collect-python.py /migration-runtime /opt/venv /runtime-base /node-runtime
 
 FROM python-base AS python-runtime
-WORKDIR /app
-ENV PYTHONPATH=/app/engine PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONPATH=/app/engine
 COPY --from=python-build /opt/venv /opt/venv
-COPY --from=python-build /python-runtime/ /
 COPY engine/dataqore_engine ./engine/dataqore_engine
+USER dataqore
 ENTRYPOINT ["/opt/venv/bin/python"]
 
 FROM python-runtime AS engine
-COPY docker/worker-health.py /app/docker/worker-health.py
-COPY docker/verify.py /app/docker/verify.py
+COPY docker/worker-health.py docker/verify.py /app/docker/
 CMD ["-m", "uvicorn", "dataqore_engine.api:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
 
 FROM python-runtime AS migrate
-COPY --from=migration-build /migration-runtime/ /
+# Both stages use Debian Bookworm; Node's ELF dependencies are in python-base.
+COPY --from=node-build /usr/local/bin/node /usr/local/bin/node
 COPY --from=node-build /app/controller/node_modules /app/controller/node_modules
 COPY --from=node-build /app/controller/dist /app/controller/dist
 COPY controller/package.json controller/prisma.config.ts /app/controller/
 COPY controller/prisma /app/controller/prisma
+COPY engine.env.example /app/engine.env.example
 COPY engine/alembic.ini /app/engine/alembic.ini
 COPY engine/migrations /app/engine/migrations
 COPY tools/__init__.py tools/migrations.py tools/migration_config.py tools/catalog.py tools/encrypt_documents.py /app/tools/

@@ -20,6 +20,7 @@ export async function languageFixture(page: Page, temporary = false, viewer = fa
     let body; try { body = req.postDataJSON(); } catch { body = null; }
     calls.push({ method: req.method(), path: p, body });
     const json = (data: unknown, status = 200) => route.fulfill({ json: data, status });
+    if (p === "/auth/setup") return json({ required: false });
     if (p === "/auth/refresh") return json(signedOut ? {} : { access_token: "test", user: { ...adminUser, must_change_password: temporary, permissions: viewer ? ["dashboard.read", "results.read"] : [...adminUser.permissions, "quality_settings.manage"] } }, signedOut ? 401 : 200);
     if (p === "/auth/logout") { signedOut = true; return json({ status: "ok" }); }
     if (p === "/settings/quality") return json({ row_match_target_percentage: body?.row_match_target_percentage == null ? "95" : String(body.row_match_target_percentage), metric: "row_match_rate", updated_at: "2026-10-24T12:00:00Z" });

@@ -1,6 +1,13 @@
 #!/bin/sh
 # Executed by the PostgreSQL entrypoint only for a new PGDATA directory.
 set -eu
+if [ -d /config ]; then
+    APP_DB_PASSWORD=$(cat /config/APP_DB_PASSWORD)
+    ENGINE_DB_PASSWORD=$(cat /config/ENGINE_DB_PASSWORD)
+    APP_MIGRATION_PASSWORD=$(cat /config/APP_MIGRATION_PASSWORD)
+    ENGINE_MIGRATION_PASSWORD=$(cat /config/ENGINE_MIGRATION_PASSWORD)
+    export APP_DB_PASSWORD ENGINE_DB_PASSWORD APP_MIGRATION_PASSWORD ENGINE_MIGRATION_PASSWORD
+fi
 psql -X --username "$POSTGRES_USER" --dbname postgres --set ON_ERROR_STOP=1 \
     --file /dataqore/database/00_databases_and_roles.sql
 psql -X --username "$POSTGRES_USER" --dbname postgres --set ON_ERROR_STOP=1 \

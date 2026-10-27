@@ -27,7 +27,43 @@ For a new installation on a personal Linux server using Docker Compose,
 see the [Docker guide](docs/DOCKER.md). It packages the web app, controller,
 engine, worker and a persistent PostgreSQL database, with HTTP access on your LAN.
 
-The steps below describe the existing local launcher.
+### Docker Compose quick start
+
+On a Linux Intel/AMD 64-bit server with Docker Engine and Docker Compose installed,
+set your timezone and browser URL in `compose.yaml`:
+
+```yaml
+x-timezone: &timezone America/Sao_Paulo
+services:
+  controller:
+    environment:
+      WEB_ORIGIN: http://YOUR_SERVER_IP:8080
+```
+
+Replace `YOUR_SERVER_IP` with your server's actual LAN address. Then run one
+command from the `data-qore` project directory:
+
+```bash
+docker compose up -d --build
+```
+
+Compose builds the application using public base images, generates and persists
+database passwords and encryption keys, prepares PostgreSQL, and applies the
+migrations before starting the application. No registry login, host Python,
+setup script, or manually created secret file is required.
+
+Open `http://YOUR_SERVER_IP:8080` from a computer on your network. On a new
+installation, the first person to complete the setup form chooses their name,
+email, and password and becomes the platform administrator. Further visitors
+see the sign-in page. There is no default account or password.
+
+Only the web port is published. Named volumes preserve the databases and keys
+across restarts. Back up the persisted configuration together with the databases;
+see the [Docker guide](docs/DOCKER.md) for operation, backups, and recovery.
+
+## Local launcher setup
+
+The steps below describe the local launcher.
 
 ### 1. Check the requirements
 

@@ -6,6 +6,7 @@ import { groupSchema, groupPatchSchema, userSchema, userPatchSchema, resetSchema
 import { profiles, profilePermissions, routePermission } from "./permissions.js";
 import { qualityTargetSchema, qualitySettingsSchema } from "./quality-settings.js";
 import { loginSchema, changeSchema } from "./auth.js";
+import { initialSetupSchema } from "./initial-setup.js";
 import { cronSchema, scheduleSchema, schedulePatchBaseSchema, scheduleOutSchema, dispatchOutSchema } from "./schedules.js";
 export const engineSpec = JSON.parse(
   readFileSync(resolve(root, "docs/openapi-engine.json"), "utf8"),
@@ -84,6 +85,23 @@ export function openapi() {
     };
   }
   spec.components.schemas.ScheduleOut = z.toJSONSchema(scheduleOutSchema);
+  spec.paths["/api/v1/auth/setup"] = {
+    get: {
+      tags: ["auth"], security: [], summary: "Check whether the initial administrator is required",
+      responses: { "200": { description: "Setup state", content: { "application/json": { schema: {
+        type: "object", additionalProperties: false, required: ["required"], properties: { required: { type: "boolean" } },
+      } } } } },
+    },
+    post: {
+      tags: ["auth"], security: [], summary: "Create the first administrator and start a session",
+      requestBody: { required: true, content: { "application/json": { schema: z.toJSONSchema(initialSetupSchema, { io: "input" }) } } },
+      responses: {
+        "201": { description: "Administrator created", content: { "application/json": { schema: token } } },
+        "403": { description: "Origin rejected" }, "409": { description: "Initial setup already completed" },
+        "422": { description: "Invalid input" }, "429": { description: "Too many attempts" },
+      },
+    },
+  };
   spec.components.schemas.ComparisonScheduleReference = {
     type: "object", additionalProperties: false,
     required: ["id", "name", "comparison_id", "is_active", "current", "historical"],

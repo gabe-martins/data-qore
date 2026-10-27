@@ -49,4 +49,4 @@ export function routePermission(method: string, path: string): string | undefine
   return policies[`${method.toLowerCase()} ${template}`];
 }
 export const selfServicePaths = new Set(["get /api/v1/auth/me", "post /api/v1/auth/logout", "post /api/v1/auth/change-password"]);
-export const publicPaths = new Set(["post /api/v1/auth/login", "post /api/v1/auth/refresh"]);
+export const publicPaths = new Set(["post /api/v1/auth/login", "post /api/v1/auth/refresh", "get /api/v1/auth/setup", "post /api/v1/auth/setup"]);

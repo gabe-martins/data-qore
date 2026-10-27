@@ -811,6 +811,117 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Check whether the initial administrator is required */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Setup state */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            required: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create the first administrator and start a session */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        display_name: string;
+                        email: string;
+                        password: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Administrator created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            access_token: string;
+                            expires_in: number;
+                            user: {
+                                id: string;
+                                email: string;
+                                display_name: string;
+                                group: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                };
+                                /** @enum {string} */
+                                profile: "viewer" | "quality_manager" | "developer" | "platform_admin";
+                                permissions: ("dashboard.read" | "results.read" | "datasets.read" | "comparisons.read" | "comparisons.manage" | "runs.execute" | "schedules.read" | "schedules.manage" | "quality_settings.manage" | "connections.read" | "connections.manage" | "catalog.read" | "datasets.manage" | "access.manage" | "audit.read")[];
+                                must_change_password: boolean;
+                            };
+                        };
+                    };
+                };
+                /** @description Origin rejected */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Initial setup already completed */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid input */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Too many attempts */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/schedules/preview": {
         parameters: {
             query?: never;

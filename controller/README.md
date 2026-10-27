@@ -47,7 +47,9 @@ route. For `database_connection_refused`, check the server and port. For
 
 ## Manage the administrator
 
-The launcher prompts for the initial administrator when no account exists.
+On a new installation, the web interface lets the first visitor create the
+initial administrator. After that account is created, initial setup is closed.
+The local launcher can also prompt for the initial administrator.
 For manual setup or password recovery:
 
 ```bash
@@ -57,7 +59,7 @@ npm run admin:reset-password --prefix controller
 
 These interactive commands prompt for email and password without echoing the
 password. Creation also asks for a name. Use a password of 12–128 characters.
-The initial administrator can create users and groups in the web interface. There is no public registration or default password. Resetting a password revokes existing sessions and requires the user to choose a different password on next access. The local recovery command accepts platform administrator accounts only.
+After initial setup, administrators create further users and groups in the web interface. There is no default password or ongoing public registration. Resetting a password revokes existing sessions and requires the user to choose a different password on next access. The local recovery command accepts platform administrator accounts only.
 
 See [access control](../docs/ACCESS_CONTROL.md) for profiles, permissions and upgrades.
 

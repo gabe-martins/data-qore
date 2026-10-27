@@ -1,6 +1,9 @@
 # Allowlist: local credentials, sources, dumps and build artifacts never enter context.
 **
 !Dockerfile
+!engine.env.example
+!docs/
+!docs/openapi-engine.json
 !docker/
 !docker/**
 !controller/
@@ -35,6 +38,7 @@
 !tools/migrations.py
 !tools/migration_config.py
 !tools/catalog.py
+!tools/encrypt_documents.py
 !tools/baselines/
 !tools/baselines/**
 **/__pycache__

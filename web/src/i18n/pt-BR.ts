@@ -1,5 +1,10 @@
 /** Application-owned copy only. Source names and evidence values never pass through this catalog. */
 export const ptBR = {
+    "Create your administrator": "Crie seu administrador",
+    "Set up the first account to start using DataQore. This account will be the platform administrator.": "Crie a primeira conta para começar a usar o DataQore. Esta conta será a administradora da plataforma.",
+    "Use a password of 12–128 characters.": "Use uma senha de 12 a 128 caracteres.",
+    "Confirm password": "Confirme a senha", "Create administrator": "Criar administrador",
+    "Creating account…": "Criando conta…", "Ask your administrator for an account.": "Solicite uma conta ao administrador.",
     "United States": "Estados Unidos", "Brazil": "Brasil",
     "Language": "Idioma", "English": "English", "Português (Brasil)": "Português (Brasil)",
     "Choose the language used on this browser.": "Escolha o idioma usado neste navegador.",

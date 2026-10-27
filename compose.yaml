@@ -1,32 +1,58 @@
 name: ${COMPOSE_PROJECT_NAME:-dataqore}
 
+# Configure the container timezone here. Database storage remains UTC.
+x-timezone: &timezone America/Sao_Paulo
+
+x-service: &service
+  platform: linux/amd64
+  init: true
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
 x-engine-environment: &engine-environment
-  DATAQORE_ENV_FILE: /dev/null
-  DATABASE_URL: postgresql+psycopg://srv_dataqore_engine:${ENGINE_DB_PASSWORD:?Run ./docker.sh setup}@postgres:5432/dataqore_engine?sslmode=disable
-  ENGINE_API_KEY: ${ENGINE_API_KEY:?Run ./docker.sh setup}
-  CONNECTIONS_ENCRYPTION_KEY: ${CONNECTIONS_ENCRYPTION_KEY:?Run ./docker.sh setup}
-  CONNECTIONS_ENCRYPTION_KEY_VERSION: v1
-  EVIDENCE_ENCRYPTION_KEY: ${EVIDENCE_ENCRYPTION_KEY:?Run ./docker.sh setup}
+  TZ: *timezone
+  DATAQORE_ENV_FILE: /config/engine.env
   SQLITE_ALLOWED_ROOT: /sources
 
 services:
+  bootstrap:
+    <<: *service
+    restart: "no"
+    build: { context: ., target: bootstrap }
+    network_mode: none
+    # Optional import for installations created by the old setup command.
+    env_file:
+      - path: .env.docker
+        required: false
+    environment:
+      TZ: *timezone
+    volumes:
+      - bootstrap-data:/state
+      - postgres-data:/database:ro
+      - postgres-config:/exports/postgres
+      - controller-config:/exports/controller
+      - engine-config:/exports/engine
+      - migration-config:/exports/migrate
+
   postgres:
     <<: *service
-    image: reg.mini.dev/postgres:16.15
+    image: postgres:16-bookworm
     environment:
+      TZ: *timezone
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run ./docker.sh setup}
+      POSTGRES_PASSWORD_FILE: /config/postgres-password
       POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
-      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Run ./docker.sh setup}
-      ENGINE_DB_PASSWORD: ${ENGINE_DB_PASSWORD:?Run ./docker.sh setup}
-      APP_MIGRATION_PASSWORD: ${APP_MIGRATION_PASSWORD:?Run ./docker.sh setup}
-      ENGINE_MIGRATION_PASSWORD: ${ENGINE_MIGRATION_PASSWORD:?Run ./docker.sh setup}
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - postgres-config:/config:ro
       - ./docker/init-db.sh:/docker-entrypoint-initdb.d/10-dataqore.sh:ro
       - ./database/00_databases_and_roles.sql:/dataqore/database/00_databases_and_roles.sql:ro
       - ./database/05_migration_roles.sql:/dataqore/database/05_migration_roles.sql:ro
+    depends_on:
+      bootstrap: { condition: service_completed_successfully }
     healthcheck:
       test: [CMD, pg_isready, -h, "127.0.0.1", -U, postgres, -d, postgres]
       interval: 5s
@@ -39,18 +65,21 @@ services:
     restart: "no"
     build: { context: ., target: migrate }
     environment:
-      IDENTITY_ENCRYPTION_KEY: ${IDENTITY_ENCRYPTION_KEY:?Configure the original identity encryption key}
-      CONNECTIONS_ENCRYPTION_KEY: ${CONNECTIONS_ENCRYPTION_KEY:?Configure the original connection encryption key}
-      APP_MIGRATION_DATABASE_URL: postgresql://srv_dataqore_app_migrator:${APP_MIGRATION_PASSWORD:?Run ./docker.sh setup}@postgres:5432/dataqore_app?schema=app&sslmode=disable
-      ENGINE_MIGRATION_DATABASE_URL: postgresql+psycopg://srv_dataqore_engine_migrator:${ENGINE_MIGRATION_PASSWORD:?Run ./docker.sh setup}@postgres:5432/dataqore_engine?sslmode=disable
+      TZ: *timezone
+      DATAQORE_ENV_FILE: /config/migrate.env
+    volumes:
+      - migration-config:/config:ro
     depends_on:
       postgres: { condition: service_healthy }
 
   engine:
     <<: *service
     image: ${COMPOSE_PROJECT_NAME:-dataqore}-engine:local
+    pull_policy: build
     build: { context: ., target: engine }
     environment: *engine-environment
+    volumes:
+      - engine-config:/config:ro
     depends_on:
       migrate: { condition: service_completed_successfully }
     healthcheck:
@@ -63,9 +92,12 @@ services:
   worker:
     <<: *service
     image: ${COMPOSE_PROJECT_NAME:-dataqore}-engine:local
+    pull_policy: build
     build: { context: ., target: engine }
     command: [-m, dataqore_engine, worker]
     environment: *engine-environment
+    volumes:
+      - engine-config:/config:ro
     stop_grace_period: 20s
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -80,14 +112,14 @@ services:
     <<: *service
     build: { context: ., target: controller }
     environment:
-      DATAQORE_ENV_FILE: /dev/null
+      TZ: *timezone
+      DATAQORE_ENV_FILE: /config/controller.env
       CONTROLLER_HOST: 0.0.0.0
-      DATABASE_URL: postgresql://srv_dataqore_app:${APP_DB_PASSWORD:?Run ./docker.sh setup}@postgres:5432/dataqore_app?schema=app&sslmode=disable
       ENGINE_API_URL: http://engine:8000
-      ENGINE_API_KEY: ${ENGINE_API_KEY:?Run ./docker.sh setup}
-      IDENTITY_ENCRYPTION_KEY: ${IDENTITY_ENCRYPTION_KEY:?Configure the original identity encryption key}
-      JWT_SECRET: ${JWT_SECRET:?Run ./docker.sh setup}
-      WEB_ORIGIN: ${WEB_ORIGIN:?Run ./docker.sh setup}
+      # Set this to the exact URL used by browsers on your network.
+      WEB_ORIGIN: ${DATAQORE_WEB_ORIGIN:-http://192.168.15.9:8080}
+    volumes:
+      - controller-config:/config:ro
     depends_on:
       migrate: { condition: service_completed_successfully }
       engine: { condition: service_healthy }
@@ -101,11 +133,18 @@ services:
   web:
     <<: *service
     build: { context: ., target: web }
+    environment:
+      TZ: *timezone
     ports:
-      - "${WEB_BIND_ADDRESS:-0.0.0.0}:${WEB_PORT:-8080}:8080"
+      - "${DATAQORE_BIND_ADDRESS:-0.0.0.0}:${DATAQORE_PORT:-8080}:8080"
     depends_on:
       controller: { condition: service_healthy }
       worker: { condition: service_healthy }
 
 volumes:
   postgres-data:
+  bootstrap-data:
+  postgres-config:
+  controller-config:
+  engine-config:
+  migration-config:

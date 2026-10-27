@@ -4670,6 +4670,186 @@
         }
       }
     },
+    "/api/v1/auth/setup": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "security": [],
+        "summary": "Check whether the initial administrator is required",
+        "responses": {
+          "200": {
+            "description": "Setup state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "required"
+                  ],
+                  "properties": {
+                    "required": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "security": [],
+        "summary": "Create the first administrator and start a session",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "display_name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 12,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "display_name",
+                  "email",
+                  "password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Administrator created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "access_token",
+                    "expires_in",
+                    "user"
+                  ],
+                  "properties": {
+                    "access_token": {
+                      "type": "string"
+                    },
+                    "expires_in": {
+                      "type": "integer"
+                    },
+                    "user": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "email",
+                        "display_name",
+                        "group",
+                        "profile",
+                        "permissions",
+                        "must_change_password"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "display_name": {
+                          "type": "string"
+                        },
+                        "group": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "profile": {
+                          "type": "string",
+                          "enum": [
+                            "viewer",
+                            "quality_manager",
+                            "developer",
+                            "platform_admin"
+                          ]
+                        },
+                        "permissions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "dashboard.read",
+                              "results.read",
+                              "datasets.read",
+                              "comparisons.read",
+                              "comparisons.manage",
+                              "runs.execute",
+                              "schedules.read",
+                              "schedules.manage",
+                              "quality_settings.manage",
+                              "connections.read",
+                              "connections.manage",
+                              "catalog.read",
+                              "datasets.manage",
+                              "access.manage",
+                              "audit.read"
+                            ]
+                          }
+                        },
+                        "must_change_password": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin rejected"
+          },
+          "409": {
+            "description": "Initial setup already completed"
+          },
+          "422": {
+            "description": "Invalid input"
+          },
+          "429": {
+            "description": "Too many attempts"
+          }
+        }
+      }
+    },
     "/api/v1/schedules/preview": {
       "post": {
         "tags": [

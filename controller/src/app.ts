@@ -21,6 +21,7 @@ import { ZodError } from "zod";
 import type { Config } from "./config.js";
 import type { DB } from "./db.js";
 import { Auth, PublicError } from "./auth.js";
+import { createInitialAdministrator } from "./initial-setup.js";
 import type {
   paths as EnginePaths,
   components as EngineComponents,
@@ -175,6 +176,14 @@ export async function createApp(config: Config, db: DB) {
     res.clearCookie(COOKIE, { path: "/api/v1/auth" });
   }
   const operations: [string, string, (req: any, res: any) => Promise<any>][] = [
+    ["get", "/api/v1/auth/setup", async () => ({ required: (await db.user.count()) === 0 })],
+    ["post", "/api/v1/auth/setup", async (req, res) => {
+      const values = await createInitialAdministrator(db, auth.identity, req.body, req.id);
+      const result = await auth.login({ email: values.email, password: values.password }, req.id);
+      setCookie(res, result.refresh, result.expires);
+      res.status(201);
+      return result.body;
+    }],
     ...accessOperations(db, auth.identity),
     ["get", "/api/v1/settings/quality", async () => readQualitySettings(db)],
     ["patch", "/api/v1/settings/quality", async req => {

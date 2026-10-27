@@ -60,7 +60,7 @@ class DockerConfigurationTests(unittest.TestCase):
                                      "-f", str(ROOT / "compose.yaml"), "config", "--format", "json"],
                                     check=True, capture_output=True, text=True)
             services = json.loads(result.stdout)["services"]
-            self.assertEqual(set(services), {"web", "controller", "engine", "worker", "postgres", "migrate"})
+            self.assertEqual(set(services), {"web", "controller", "engine", "worker", "postgres", "migrate", "bootstrap"})
             for name, service in services.items():
                 if name == "web":
                     self.assertEqual(len(service["ports"]), 1)
@@ -108,7 +108,7 @@ if os.environ.get("DATAQORE_PG_BIN"):
                 self.assertEqual(connection.execute("SELECT version_num FROM engine.alembic_version").fetchone()[0], "0006_record_evidence")
                 self.assertFalse(connection.execute("SELECT has_table_privilege('srv_dataqore_engine','engine.alembic_version','SELECT')").fetchone()[0])
                 # The worker healthcheck must observe leadership without taking it.
-                health_env = {**environment, "DATABASE_URL": f"postgresql://srv_dataqore_engine:{passwords['ENGINE_DB_PASSWORD']}@127.0.0.1:{self.port}/dataqore_engine"}
+                health_env = {**environment, "DATAQORE_ENV_FILE": "/dev/null", "ENGINE_API_KEY": "worker-health-isolated-secret", "DATABASE_URL": f"postgresql://srv_dataqore_engine:{passwords['ENGINE_DB_PASSWORD']}@127.0.0.1:{self.port}/dataqore_engine"}
                 def health():
                     return subprocess.run([sys.executable, str(ROOT / "docker/worker-health.py")], env=health_env, capture_output=True).returncode
                 self.assertEqual(health(), 1)

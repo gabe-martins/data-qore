@@ -1,72 +1,103 @@
-# DataQore com Docker Compose
+# Docker Compose deployment
 
-Instalação nova para um servidor pessoal Linux Intel/AMD de 64 bits, acessível
-por HTTP na rede local. Execute os comandos **no servidor**, a partir da raiz
-do projeto. É necessário Docker Engine com Compose v2.24 ou posterior, acesso
-à internet para baixar imagens/dependências e uma porta TCP livre.
+Run DataQore on a personal Linux Intel/AMD 64-bit server with Docker Engine and
+Docker Compose **2.24 or later**. Run commands from the project directory on that
+server. Internet access is needed for the initial builds and image downloads.
 
-## Primeira instalação
+## Start the application
 
-Escolha um IP estável ou hostname resolvível pelos computadores da rede. Neste
-exemplo, o servidor é `192.168.1.50` e a porta publicada é `8080`:
-
-```bash
-./docker.sh setup http://192.168.1.50:8080
-./docker.sh up
-./docker.sh admin
-```
-
-`setup` usa a imagem Python para gerar `.env.docker` com permissão `0600`;
-não precisa instalar Python ou Node no servidor. O arquivo contém senhas
-independentes, segredo da API interna, assinatura JWT e chaves Fernet.
-Executar `setup` novamente preserva o arquivo existente, inclusive o endereço.
-`docker.env.example` é apenas uma referência dos campos disponíveis.
-
-`up` constrói as imagens, aguarda o PostgreSQL, executa e confere as migrations
-e inicia os serviços. Ao final, verifica imports dos drivers, saúde das APIs,
-arquivos compilados, rotas da SPA e proxy Nginx, sem consultar fontes cadastradas.
-`admin` pede nome, e-mail e senha em um terminal
-interativo, sem exibir a senha. Não existe conta padrão. Depois, abra
-`http://192.168.1.50:8080` no navegador e faça login.
-
-O PostgreSQL cria os bancos `dataqore_app` e `dataqore_engine`, owners,
-contas de execução e migrators pelos scripts administrativos `00` e `05`.
-As tabelas são criadas pelas migrations Prisma/Alembic existentes. Os scripts
-antigos `01`, `02` e `03` não são executados nesse fluxo. Se uma migration
-falhar, engine, worker e controller não são iniciados.
-
-## Configuração e fontes
-
-Somente a porta web é publicada. Nginx serve os arquivos compilados e encaminha
-`/api/` ao controller, preservando a origem usada pela autenticação.
-Controller, engine, worker e PostgreSQL usam a rede privada do Compose.
-Nenhuma porta desses serviços é publicada no host.
-
-Para mudar o endereço, edite **ambos** `WEB_ORIGIN` e `WEB_PORT` em
-`.env.docker` e execute `./docker.sh up`. Use a origem exata, sem barra final,
-por exemplo `http://dataqore.lan:8080`. `WEB_BIND_ADDRESS` controla em qual
-interface do servidor a porta é publicada; o padrão `0.0.0.0` aceita acesso
-pela rede. Em HTTP na porta 80, use `WEB_ORIGIN=http://dataqore.lan` e
-`WEB_PORT=80`. Permita a porta escolhida no firewall da sua rede.
-
-A configuração Docker é independente de `engine.env`, `controller.env` e
-dos bancos da instalação local. As credenciais administrativas e de migrations
-não são entregues aos processos de execução da aplicação. Os dois bancos
-internos usam um volume nomeado `<projeto>_postgres-data`.
-
-A imagem do engine/worker inclui os clientes PostgreSQL, SQLite, MySQL,
-Oracle, SQL Server e Databricks. Os servidores das fontes continuam externos;
-cadastre suas conexões pela interface. Dentro do container, `localhost`
-identifica o próprio container: para uma fonte na rede, informe o IP ou
-hostname real do servidor dessa fonte. Nenhuma fonte, regra ou execução é
-criada automaticamente.
-
-SQLite não armazena os dados internos do DataQore. Se quiser usá-lo como
-fonte, forneça os arquivos explicitamente por um override, montando o mesmo
-diretório em engine e worker, somente para leitura:
+In `compose.yaml`, configure:
 
 ```yaml
-# compose.sources.yaml (opcional; caminhos do servidor)
+x-timezone: &timezone America/Sao_Paulo
+services:
+  controller:
+    environment:
+      WEB_ORIGIN: http://192.168.15.9:8080
+```
+
+Replace the IP with the server's LAN address. The checked-in example uses
+`192.168.15.9:8080`. The web service publishes `0.0.0.0:8080:8080`, so other
+computers on your network can reach it. Allow this port in your host firewall.
+If you change the published port, change `WEB_ORIGIN` to match. The optional
+`DATAQORE_WEB_ORIGIN`, `DATAQORE_PORT`, and `DATAQORE_BIND_ADDRESS` environment
+variables override these values; no environment file is required.
+
+Start with a single command:
+
+```bash
+docker compose up -d --build
+```
+
+Open `http://192.168.15.9:8080`. On a fresh database, the first visitor chooses
+their name, email, and password in the setup form and becomes the platform
+administrator. The password must have 12–128 characters. Setup closes once any
+user exists; two simultaneous submissions cannot create two initial admins.
+The winning visitor is signed in automatically. Existing installations show
+normal sign-in and preserve all users and groups.
+
+This workflow follows the [Langflow Compose deployment approach](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml):
+configuration in Compose, persistent volumes, a database service, and one startup
+command. DataQore builds its own application images from this checkout and uses
+public Node, Python, Nginx, and PostgreSQL base images. It requires no Minimus
+account, registry token, host Python, `setup` command, or pre-created secret file.
+
+## Automatic initialization and persistence
+
+Compose starts these services in dependency order:
+
+1. `bootstrap` creates random database passwords, internal API/JWT secrets,
+   identity encryption and Fernet keys in the `bootstrap-data` volume. It validates
+   `TZ` before starting the database and never prints the secrets.
+2. It exports only the configuration needed by each component into separate
+   private volumes. PostgreSQL exports belong to UID 999; application exports
+   belong to UID 1000. Files have mode `0600`; directories have mode `0700`.
+3. `postgres` provisions `dataqore_app`, `dataqore_engine`, owners, runtime accounts
+   and migrators on a new data volume, using administrative scripts `00` and `05`.
+4. `migrate` applies and verifies Prisma/Alembic migrations with the dedicated
+   migrator accounts. API and worker startup is blocked on failure.
+5. `engine`, `worker`, `controller`, and `web` start. Nginx serves the built SPA
+   and proxies `/api/` to the controller without publishing internal APIs.
+
+Only bootstrap mounts the master keys. Application containers receive read-only
+configuration volumes with runtime credentials; they do not receive database
+administrator or migrator passwords. The worker and engine share the same image.
+The controller also runs the scheduler; keep one controller and one worker per
+installation.
+
+`TZ` is applied to **every** container, with `America/Sao_Paulo` as the default.
+It controls the container clock presentation and local timezone behavior.
+Database timestamps and metrics partitions remain UTC. Existing comparison
+interpretations and each schedule's explicitly selected IANA timezone are
+preserved; changing `TZ` does not reinterpret source timestamps.
+
+Volumes survive `docker compose down` and container recreation. Never use
+`docker compose down --volumes` for an installation you want to preserve. If
+PostgreSQL already contains data but the master keys are missing, bootstrap
+refuses to generate replacements. Restore the original keys before restarting.
+
+## Existing installations and sources
+
+If `.env.docker` from the old setup exists, bootstrap imports its original
+secrets on first startup. A complete set of keys is required. Later startups
+reuse the persisted keys; conflicting imported values stop startup rather than
+silently rotating encryption keys or database passwords. Keep the original
+Compose project name so existing volume names remain associated with it.
+Back up an existing installation before changing its container base images;
+for a database created with Minimus, restore into a fresh official PostgreSQL
+volume with the original keys rather than switching OS libraries in place.
+
+No external source, dataset, rule, or comparison is created automatically. Add
+sources in the application after sign-in. The engine image includes PostgreSQL,
+SQLite, MySQL, Oracle, SQL Server, and Databricks clients; their servers remain
+external. Use the actual source server's IP/hostname, since `localhost` inside
+a container identifies that container.
+
+For SQLite sources, optionally add a Compose override mounting the same existing
+directory in both engine and worker, read-only:
+
+```yaml
+# compose.sources.yaml
 services:
   engine:
     volumes:
@@ -76,129 +107,102 @@ services:
       - /srv/dataqore-sources:/sources:ro
 ```
 
-Nesse caso, use `docker compose --env-file .env.docker -f compose.yaml
--f compose.sources.yaml` em todas as operações Compose, incluindo builds e
-atualizações. Os arquivos precisam existir e ser legíveis pelo UID 1000;
-cadastre `/sources/arquivo.sqlite` na aplicação.
+Use `docker compose -f compose.yaml -f compose.sources.yaml` for all operations
+when using that override. Files must be readable by UID 1000. Register the
+container path, such as `/sources/records.sqlite`, in the application.
 
-## Operação e atualização
+## Operations and updates
 
 ```bash
-./docker.sh status
-./docker.sh verify
-./docker.sh logs
-./docker.sh logs worker
-./docker.sh reset-password
-./docker.sh down
+docker compose ps -a
+docker compose logs --tail 100
+docker compose logs --tail 100 worker
+docker compose down
+docker compose up -d --build
 ```
 
-`down` remove os containers e a rede, preservando o volume. Para subir
-novamente ou atualizar após obter uma nova versão do código, use
-`./docker.sh up`. O comando constrói primeiro; depois para os processos da
-aplicação, remove somente o container temporário de migrations e inicia
-novamente. O worker recebe SIGTERM e tem 20 segundos para encerrar. O
-agendador continua dentro do controller; mantenha uma instância do controller
-e do worker por instalação.
+Bootstrap and migrate should exit with code zero; database and application
+services should stay running. The source build needs no pre-published DataQore
+image. For updates, back up first, stop `web controller worker engine`, obtain
+the new source version and run the startup command again. The worker has 20
+seconds to handle SIGTERM and stop supervised jobs. The optional `docker.sh`
+wrapper remains available for status, logs and verification.
 
-Não use `down --volumes` em uma instalação que deseja preservar. Não troque
-as chaves de criptografia ou as senhas no arquivo como forma de atualizar a
-instalação. Alterar uma senha em `.env.docker` não altera a senha já gravada
-no PostgreSQL; o script de inicialização só roda em um volume novo.
-Se o provisionamento inicial falhar parcialmente, examine os logs e os
-objetos existentes antes de tentar corrigir; não há reset automático.
+To check drivers, readiness, SPA routes and the API proxy without querying
+registered sources:
 
-As bases selecionadas são Minimus Node 24.22.1, Python 3.12.15, Nginx 1.30.6
-e PostgreSQL 16.15. O Dockerfile usa builds em estágios separados e comandos
-diretos nos runtimes; mantém o usuário 1000 dos serviços da aplicação. O
-PostgreSQL mantém seu entrypoint para preparar o volume e trocar de usuário.
-Os contratos públicos podem ser conferidos na
-[galeria Minimus](https://images.minimus.io/). Se tiver uma conta Minimus,
-`docker login reg.mini.dev` no servidor permite usar os limites de pull dessa
-conta; não coloque tokens no Dockerfile ou no Git.
+```bash
+docker compose exec -T web nginx -t
+docker compose run --rm --no-deps engine /app/docker/verify.py
+```
 
-Na consulta de 25/10/2026, a galeria publicou zero vulnerabilidades nas bases
-Node 24.22.1, Nginx 1.30.6 e PostgreSQL 16.15, e cinco na base Python 3.12.15.
-Essas contagens são das bases publicadas, não uma análise das imagens da
-aplicação ou de suas dependências.
+To recover an administrator password using the existing interactive CLI:
 
-## Backup consistente
+```bash
+docker compose run --rm --no-deps controller dist/src/admin.js reset-password
+```
 
-Faça backup antes de atualizar. Pare os processos que escrevem nos bancos,
-mantendo o PostgreSQL ativo. Os dumps dos dois bancos e o arquivo de
-configuração formam um conjunto: preserve-os juntos e com acesso restrito.
+If bootstrap fails, inspect its logs. Common causes are an invalid `TZ`, missing
+original keys, an incomplete legacy `.env.docker`, or volume permissions. If a
+migration fails, inspect `migrate` logs and repair it without resetting databases.
+A browser `origin_rejected` response means `WEB_ORIGIN` must match the exact URL,
+including scheme and port, used in the browser.
+
+## Backup and recovery
+
+Back up the master configuration **together with both databases**. Stop the
+application writers to obtain a consistent pair of dumps, leaving PostgreSQL
+running. Execute commands individually and check their exit codes:
 
 ```bash
 umask 077
 backup_dir="backups/$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$backup_dir"
-docker compose --env-file .env.docker stop web controller worker engine
-docker compose --env-file .env.docker exec -T postgres pg_dump -U postgres -Fc dataqore_app > "$backup_dir/app.dump"
-docker compose --env-file .env.docker exec -T postgres pg_dump -U postgres -Fc dataqore_engine > "$backup_dir/engine.dump"
-install -m 600 .env.docker "$backup_dir/config.env"
-docker compose --env-file .env.docker exec -T postgres pg_restore --list < "$backup_dir/app.dump" > /dev/null
-docker compose --env-file .env.docker exec -T postgres pg_restore --list < "$backup_dir/engine.dump" > /dev/null
-./docker.sh up
+docker compose stop web controller worker engine
+docker compose exec -T postgres pg_dump -U postgres -Fc dataqore_app > "$backup_dir/app.dump"
+docker compose exec -T postgres pg_dump -U postgres -Fc dataqore_engine > "$backup_dir/engine.dump"
+docker compose run --rm --no-deps -T --entrypoint cat bootstrap /state/secrets.json > "$backup_dir/secrets.json"
+docker compose exec -T postgres pg_restore --list < "$backup_dir/app.dump" > /dev/null
+docker compose exec -T postgres pg_restore --list < "$backup_dir/engine.dump" > /dev/null
+docker compose up -d
 ```
 
-Execute cada comando verificando seu código de saída. Se um dump falhar,
-não o trate como backup válido. A listagem confere o formato do arquivo;
-um teste completo de recuperação requer restauração em outra instalação.
-Os dumps preservam histórico de migrations e proprietários. Como o
-provisionamento recria as mesmas contas, não é necessário exportar roles
-globais. Fontes externas e arquivos SQLite têm seus próprios backups.
-
-## Restauração
-
-Use uma instalação separada com volume vazio e o mesmo código do backup para
-testar a recuperação. Copie `config.env` do conjunto para `.env.docker` com
-permissão `0600`. Para coexistir no mesmo host, ajuste somente
-`COMPOSE_PROJECT_NAME`, `WEB_ORIGIN` e `WEB_PORT`, mantendo senhas e chaves.
+A successful archive listing validates its format, not a complete recovery.
+Test recovery in a separate installation with empty volumes and the same source
+version. Restore `secrets.json` into `/state/secrets.json` in `bootstrap-data`
+before starting PostgreSQL. This example refuses to overwrite existing keys:
 
 ```bash
-docker compose --env-file .env.docker up -d --wait postgres
-docker compose --env-file .env.docker exec -T postgres pg_restore -U postgres --exit-on-error --clean --if-exists -d dataqore_app < /CAMINHO/DO/BACKUP/app.dump
-docker compose --env-file .env.docker exec -T postgres pg_restore -U postgres --exit-on-error --clean --if-exists -d dataqore_engine < /CAMINHO/DO/BACKUP/engine.dump
-./docker.sh up
+docker compose build bootstrap
+docker compose run --rm --no-deps -T --entrypoint python bootstrap -c 'import os,sys; os.umask(0o077); f=open("/state/secrets.json","xb"); f.write(sys.stdin.buffer.read()); f.close()' < /PATH/TO/BACKUP/secrets.json
+docker compose up -d --wait postgres
+docker compose exec -T postgres pg_restore -U postgres --exit-on-error --clean --if-exists -d dataqore_app < /PATH/TO/BACKUP/app.dump
+docker compose exec -T postgres pg_restore -U postgres --exit-on-error --clean --if-exists -d dataqore_engine < /PATH/TO/BACKUP/engine.dump
+docker compose up -d --build
 ```
 
-Os comandos de restore substituem os objetos dos bancos de destino. Use-os
-somente na instalação escolhida para recuperação, com a aplicação parada.
-Confira login, configurações e resultados após a restauração. Sem as chaves
-originais, credenciais de fontes e evidências criptografadas ficam ilegíveis.
+Restore replaces the destination database objects; run it only against your
+chosen recovery installation with application writers stopped. The same roles
+are recreated by provisioning. Bootstrap reconstructs the per-service exports
+from the restored master keys. Source databases and SQLite files have their own
+backup requirements. Confirm sign-in, encrypted source credentials and saved
+results after recovery.
 
-## Validação
+## Validation
 
-`./docker.sh check` valida o Compose sem iniciar serviços. `./docker.sh verify`
-repete as verificações dos runtimes ativos e testa a configuração do Nginx.
-A configuração
-expandida contém segredos; evite imprimir `docker compose config` completo.
-Os testes de preparação e bootstrap usam somente arquivos e PostgreSQL
-descartáveis:
+`docker compose config --quiet` checks the Compose file without starting services.
+Configuration and bootstrap tests use only temporary files and optional
+disposable PostgreSQL clusters:
 
 ```bash
-PYTHONPATH=engine:tests engine/.venv/bin/python -m unittest discover -s tests -p test_docker.py -v
-# Inclui bootstrap/migrations quando houver binários locais do PostgreSQL 16:
-DATAQORE_PG_BIN=/CAMINHO/postgresql/16/bin PYTHONPATH=engine:tests \
-  engine/.venv/bin/python -m unittest discover -s tests -p test_docker.py -v
-# Também testa a topologia/credenciais do Compose, sem precisar de daemon:
-DATAQORE_COMPOSE_BIN=/CAMINHO/docker-compose PYTHONPATH=engine:tests \
-  engine/.venv/bin/python -m unittest discover -s tests -p test_docker.py -v
+PYTHONPATH=engine:tests engine/.venv/bin/python -m unittest discover -s tests -p 'test_compose_bootstrap.py' -v
+# Optional standalone Compose parser and PostgreSQL integration:
+DATAQORE_COMPOSE_BIN=/PATH/docker-compose DATAQORE_PG_BIN=/PATH/postgresql/16/bin \
+  PYTHONPATH=engine:tests engine/.venv/bin/python -m unittest discover -s tests -p 'test_compose_bootstrap.py' -v
 ```
 
-No servidor com Docker, conclua o aceite em uma instalação descartável:
-
-1. Execute setup/up/admin; confira `status`: PostgreSQL, engine, worker e
-   controller saudáveis, web em execução e migrate encerrado com código zero.
-2. Confira `http://IP:PORTA/health/live`, faça login pelo navegador, recarregue
-   uma rota como `/comparisons` e confirme a renovação da sessão.
-3. Cadastre explicitamente uma fonte de teste descartável, dois datasets e
-   uma comparação; execute e confira o resultado e os logs do worker.
-4. Execute down/up; confirme que usuário, conexão, comparação e resultado
-   continuam disponíveis e que a conexão ainda é descriptografada.
-5. Verifique `docker compose --env-file .env.docker ps`: somente web deve
-   mostrar uma porta publicada. Confira as imagens e o conteúdo permitido
-   em `.dockerignore`; arquivos de configuração e fontes ficam fora do build.
-
-Build de imagem, imports nativos dentro dos runtimes, proxy Nginx e esse
-aceite completo precisam ser verificados em Docker. Os testes locais de
-Compose/migrations e os builds Node não substituem essa validação.
+Complete runtime acceptance requires a Docker host: build/start all containers,
+create the first administrator through the browser, verify sign-in after reload,
+run a comparison against a disposable test source, and confirm persistence after
+down/up. Only the web port should be published. Local builds and isolated tests
+do not substitute for the complete Docker acceptance run.

@@ -1,8 +1,8 @@
 """Check the worker's session leadership without claiming jobs or locks."""
-import os
 import psycopg
+from dataqore_engine.settings import load_settings
 
-url = os.environ["DATABASE_URL"].replace("postgresql+psycopg://", "postgresql://", 1)
+url = load_settings().database_url.replace("postgresql+psycopg://", "postgresql://", 1)
 with psycopg.connect(url, connect_timeout=5) as connection:
     active = connection.execute("""
         SELECT EXISTS(SELECT FROM pg_locks WHERE locktype='advisory'

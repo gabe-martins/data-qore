@@ -2,12 +2,18 @@
 import os
 from pathlib import Path
 import sys
+from dotenv import dotenv_values
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tools.migrations import main
 
 
 def migrate():
+    path = Path(os.environ.get("DATAQORE_ENV_FILE", "/dev/null"))
+    if path.is_file():
+        for key, value in dotenv_values(path, interpolate=False).items():
+            if value is not None:
+                os.environ.setdefault(key, value)
     os.environ["DATAQORE_ENV_FILE"] = "/dev/null"
     for service in ("app", "engine"):
         os.environ["MIGRATION_DATABASE_URL"] = os.environ[f"{service.upper()}_MIGRATION_DATABASE_URL"]

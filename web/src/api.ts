@@ -87,6 +87,18 @@ export async function login(email: string, password: string): Promise<User> {
   accessToken = r.access_token;
   return r.user;
 }
+export async function initialSetupRequired(): Promise<boolean> {
+  const result = await read(await fetch("/api/v1/auth/setup"));
+  return result.required === true;
+}
+export async function createInitialAdministrator(display_name: string, email: string, password: string): Promise<User> {
+  const result = await read(await fetch("/api/v1/auth/setup", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ display_name, email, password }),
+  }));
+  accessToken = result.access_token;
+  return result.user;
+}
 export async function api<T = any>(
   path: string,
   options: RequestInit = {},
