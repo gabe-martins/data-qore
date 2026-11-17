@@ -19,7 +19,7 @@ import { Rate } from "../components/CriticalMetrics";
 import {
   ComparisonQuality,
   ExecutionContext,
-} from "../components/ComparisonQuality";
+} from "../components/quality";
 import { useCan } from "../lib/access";
 import { normalizeTolerance } from "../lib/tolerances";
 import {

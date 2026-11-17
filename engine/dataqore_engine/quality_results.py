@@ -21,8 +21,24 @@ class QualityResults:
             result = conn.scalar(select(m.run_results.c.result).where(m.run_results.c.run_id == run_id)) if run["status"] == "succeeded" else None
         return run, name or "Comparison", result
 
-    def columns(self, result):
+    def previous(self, run):
+        """Metrics of the closest earlier successful execution of the same comparison."""
+        if run["comparison_id"] is None:
+            return None
+        with self.engine.connect() as conn:
+            row = conn.execute(select(m.runs.c.id, m.runs.c.finished_at, m.run_results.c.conclusion,
+                    m.run_results.c.result["metrics"].label("metrics"))
+                .join(m.run_results, m.run_results.c.run_id == m.runs.c.id)
+                .where(m.runs.c.comparison_id == run["comparison_id"], m.runs.c.status == "succeeded",
+                    m.runs.c.id != run["id"], m.runs.c.requested_at <= run["requested_at"])
+                .order_by(m.runs.c.requested_at.desc(), m.runs.c.id.desc()).limit(1)).mappings().first()
+        return dict(row) if row else None
+
+    def columns(self, result, previous=None):
         columns = []
+        details = (result.get("statistics") or {}).get("columns", [])
+        earlier = {(c["left_column"], c["right_column"]): c["percentage"]
+                   for c in (previous or {}).get("metrics", {}).get("column_match_rate", [])}
         sources = result.get("sources", [])
         mapping_count = len(result.get("column_mapping", []))
         for i, metric in enumerate(result["metrics"]["column_match_rate"]):
@@ -33,7 +49,9 @@ class QualityResults:
             blocked = not left or not right or not compatible(lm, rm)
             status = "critical" if blocked else "attention" if metric["different_values"] else "not_calculated" if metric["not_evaluated"] or not metric["denominator"] else "passed"
             columns.append({"id": column_id, "left_column": left, "right_column": right,
-                "left_type": lm.get("type"), "right_type": rm.get("type"), "status": status, "metric": metric})
+                "left_type": lm.get("type"), "right_type": rm.get("type"), "status": status, "metric": metric,
+                "statistics": {k: v for k, v in details[i].items() if k not in ("left_column", "right_column")} if i < len(details) else None,
+                "previous_percentage": earlier.get((left, right))})
         return columns
 
     def summary(self, run_id):
@@ -44,9 +62,13 @@ class QualityResults:
         parameters["sources"]=[{k:v for k,v in source.items() if k!="expected_columns"} for source in parameters.get("sources",[])]
         run["parameters"]=parameters
         out = {"run": run, "comparison_name": name, "result": result, "dimensions": [], "diagnostics": [],
-               "evidence": evidence_state(result or {})}
+               "evidence": evidence_state(result or {}), "previous": None}
         if not result:
             return out
+        earlier = self.previous(run)
+        if earlier:
+            out["previous"] = {"run_id": earlier["id"], "finished_at": earlier["finished_at"], "conclusion": earlier["conclusion"],
+                "metrics": {k: v for k, v in earlier["metrics"].items() if k != "column_match_rate"}}
         metrics = result["metrics"]
         row, count, keys = (metrics[n] for n in ("row_match_rate", "row_count_match", "key_coverage"))
         invalid = any(not d["valid"] for d in result["key_validation"])
@@ -81,7 +103,8 @@ class QualityResults:
         out["result"].update(sources=[{k:v for k,v in source.items() if k!="columns"} for source in result["sources"]],
             metrics={k:v for k,v in metrics.items() if k!="column_match_rate"},column_count=len(columns),
             columns_requiring_review=sum(c["status"]!="passed" for c in columns),
-            column_directory=[{k:c[k] for k in ("id","left_column","right_column")} for c in columns])
+            column_directory=[{k:c[k] for k in ("id","left_column","right_column")} for c in columns],
+            statistics={k:v for k,v in result["statistics"].items() if k!="columns"} if result.get("statistics") else None)
         return out
 
     def result(self, run_id):
@@ -89,6 +112,13 @@ class QualityResults:
         if result is None:
             raise DomainError(409,"result_unavailable","This execution has no completed result.")
         return result
+
+    def column_page(self, run_id):
+        """Column rates of one execution with their change since the previous one."""
+        run, _, result = self.load(run_id)
+        if result is None:
+            raise DomainError(409,"result_unavailable","This execution has no completed result.")
+        return self.columns(result, self.previous(run))
 
     def filters(self, run_id, result, state="all", column=None, key=None):
         manifest = evidence_state(result)

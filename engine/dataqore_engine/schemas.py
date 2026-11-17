@@ -264,8 +264,70 @@ class CriticalMetrics(Model):
     column_match_rate: list[ColumnMatchRate]
 
 
+class RateInterval(Model):
+    method: Literal["wilson","complete_scope"]
+    confidence_level: int | None
+    lower: Decimal
+    upper: Decimal
+
+
+class RecordOutcomes(Model):
+    equal: int
+    different: int
+    only_reference: int
+    only_target: int
+    unknown: int
+    total: int
+
+
+class NumericDifference(Model):
+    compared_differences: int
+    mean_signed_difference: str
+    mean_absolute_difference: str
+    max_absolute_difference: str
+    target_greater: int
+    reference_greater: int
+
+
+class ColumnDetail(Model):
+    interval: RateInterval | None
+    difference_kinds: dict[str,int]
+    null_values: dict[str,int]
+    numeric_difference: NumericDifference | None
+
+
+class ColumnStatistics(ColumnDetail):
+    left_column: str | None
+    right_column: str | None
+
+
+class DifferingColumns(Model):
+    columns: int
+    records: int
+
+
+class StageTiming(Model):
+    stage: str
+    milliseconds: float
+
+
+class SampleStatistics(Model):
+    """Aggregates that explain the five metrics; never raw keys or values."""
+    scope: str
+    sample_is_complete_scope: bool
+    record_outcomes: RecordOutcomes
+    intervals: dict[str,Any]
+    differing_columns_per_record: list[DifferingColumns]
+    difference_kinds: dict[str,int]
+    stage_timings: list[StageTiming]
+
+
+class ComparisonStatistics(SampleStatistics):
+    columns: list[ColumnStatistics]
+
+
 class ComparisonResult(Model):
-    format_version: Literal[6,7]
+    format_version: Literal[6,7,8]
     engine_version: str
     execution_id: UUID
     started_at: datetime
@@ -278,6 +340,7 @@ class ComparisonResult(Model):
     key_validation: list[dict[str,Any]]
     sampling_plan: dict[str,Any]
     metrics: CriticalMetrics
+    statistics: ComparisonStatistics | None = None
     summary: dict[str,Any]
     warnings: list[str]
     query_log: list[dict[str,Any]]
@@ -292,7 +355,7 @@ class QualityMetricSummary(Model):
 
 
 class QualityResultContext(Model):
-    format_version: Literal[6,7]
+    format_version: Literal[6,7,8]
     execution_id: UUID
     sources: list[dict[str,Any]]
     comparison_options: ComparisonOptions = Field(default_factory=ComparisonOptions)
@@ -302,15 +365,25 @@ class QualityResultContext(Model):
     summary: dict[str,Any]
     warnings: list[str]
     metrics: QualityMetricSummary
+    statistics: SampleStatistics | None = None
     column_count: int
     columns_requiring_review: int
     column_directory: list[dict[str,Any]]
+
+
+class PreviousExecution(Model):
+    """Closest earlier successful execution of the same comparison."""
+    run_id: UUID
+    finished_at: datetime | None
+    conclusion: str
+    metrics: QualityMetricSummary
 
 
 class QualityOut(Model):
     run: RunOut
     comparison_name: str
     result: QualityResultContext | None
+    previous: PreviousExecution | None = None
     dimensions: list[dict[str,Any]]
     diagnostics: list[dict[str,Any]]
     evidence: dict[str,Any]
@@ -332,6 +405,8 @@ class QualityColumnOut(Model):
     right_type: str | None
     status: str
     metric: ColumnMatchRate
+    statistics: ColumnDetail | None = None
+    previous_percentage: Decimal | None = None
 
 
 class ResultOut(Model):

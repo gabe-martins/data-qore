@@ -115,7 +115,7 @@ test("real saved execution: summary, column filter, record evidence and export",
     `evidence-${saved.run_id}.json`,
   );
   await page
-    .locator(".comparison-quality > .card")
+    .locator(".comparison-quality .card")
     .first()
     .screenshot({ path: testInfo.outputPath("quality-summary.png") });
   await page.screenshot({

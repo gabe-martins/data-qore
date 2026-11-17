@@ -249,13 +249,37 @@ class APITests(TemporaryPostgres):
         preview=self.request('POST','/comparisons/preview',json=payload)
         self.assertEqual((preview['scope_counts'],preview['sample_target']),([2,2],1))
         run,result=self.finish(c)
-        self.assertEqual(result['format_version'],7)
+        self.assertEqual(result['format_version'],8)
         self.assertEqual(len(result['result']['metrics']),5)
         self.assertNotIn('PRIVATE_VALUE',json.dumps(result))
         self.assertEqual(result['result']['sampling_plan']['seed'],'18446744073709551615')
         with self.engine.connect() as db:
             self.assertEqual(db.scalar(select(func.count()).select_from(m.run_results)),1)
             self.assertEqual(db.scalar(select(m.runs.c.status)),'succeeded')
+
+    def test_quality_statistics_and_change_since_previous_execution(self):
+        c=self.definition()
+        first,_=self.finish(c)
+        summary=self.request('GET',f"/runs/{first['id']}/quality")
+        self.assertIsNone(summary['previous'])
+        statistics=summary['result']['statistics']
+        self.assertNotIn('columns',statistics)
+        self.assertEqual(statistics['record_outcomes'],{'equal':1,'different':1,'only_reference':0,'only_target':0,'unknown':0,'total':2})
+        self.assertEqual(statistics['difference_kinds']['value'],1)
+        with sqlite3.connect(self.settings.sqlite_allowed_root/'right.sqlite') as db:
+            db.execute("UPDATE records SET value='same' WHERE id=2")
+        second,_=self.finish(c)
+        summary=self.request('GET',f"/runs/{second['id']}/quality")
+        self.assertEqual(summary['previous']['run_id'],first['id'])
+        self.assertEqual(Decimal(summary['previous']['metrics']['row_match_rate']['percentage']),50)
+        self.assertNotIn('column_match_rate',summary['previous']['metrics'])
+        columns={x['left_column']:x for x in self.request('GET',f"/runs/{second['id']}/quality/columns")['items']}
+        self.assertEqual((Decimal(columns['value']['metric']['percentage']),Decimal(columns['value']['previous_percentage'])),(100,50))
+        self.assertEqual(columns['value']['statistics']['interval']['method'],'complete_scope')
+        self.assertNotIn('PRIVATE_VALUE',json.dumps(columns))
+        earlier={x['left_column']:x for x in self.request('GET',f"/runs/{first['id']}/quality/columns")['items']}
+        self.assertIsNone(earlier['value']['previous_percentage'])
+        self.assertEqual(earlier['value']['statistics']['difference_kinds']['value'],1)
 
     def test_exclusions_and_timezone_survive_preview_queue_edit_and_history(self):
         for side in ('left','right'):

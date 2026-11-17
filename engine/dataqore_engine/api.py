@@ -357,7 +357,7 @@ def create_app(settings=None):
     def quality_columns(identifier:UUID,limit:Annotated[int,Query(ge=1,le=100)]=50,offset:Offset=0,
                         search:str=Query(default="",max_length=255),status:Annotated[str,Query(pattern="^(all|passed|attention|critical|not_calculated)$")]="all",
                         sort:Annotated[str,Query(pattern="^(differences|name|match)$")]="differences"):
-        items=quality.columns(quality.result(identifier))
+        items=quality.column_page(identifier)
         items=[c for c in items if (status=="all" or c["status"]==status) and search.casefold() in ((c["left_column"] or "")+" "+(c["right_column"] or "")).casefold()]
         items.sort(key=lambda c:(c["left_column"] or c["right_column"] or "").casefold() if sort=="name" else (c["metric"]["percentage"] is None,float(c["metric"]["percentage"] or 0),c["id"]) if sort=="match" else (-c["metric"]["different_values"]-c["metric"]["unknown_values"],c["id"]))
         return {"items":items[offset:offset+limit],"total":len(items),"limit":limit,"offset":offset}

@@ -61,7 +61,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -151,7 +151,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -253,7 +253,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -367,7 +367,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -459,7 +459,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -549,7 +549,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -649,7 +649,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -787,7 +787,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -879,7 +879,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -994,7 +994,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -1119,7 +1119,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -1260,7 +1260,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -1350,7 +1350,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -1470,7 +1470,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -1562,7 +1562,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -1652,7 +1652,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -1767,7 +1767,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -1859,7 +1859,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -1937,7 +1937,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -2039,7 +2039,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -2153,7 +2153,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -2245,7 +2245,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -2335,7 +2335,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -2435,7 +2435,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -2548,7 +2548,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -2658,7 +2658,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -2797,7 +2797,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -2889,7 +2889,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -2981,7 +2981,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -3129,7 +3129,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -3289,7 +3289,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -3392,7 +3392,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -3531,7 +3531,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -3623,7 +3623,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -3732,7 +3732,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -3844,7 +3844,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -3912,7 +3912,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -4061,7 +4061,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -4225,7 +4225,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "503": {
             "content": {
@@ -6514,6 +6514,53 @@
         ],
         "title": "AttentionOut"
       },
+      "ColumnDetail": {
+        "properties": {
+          "interval": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RateInterval"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "difference_kinds": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Difference Kinds"
+          },
+          "null_values": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Null Values"
+          },
+          "numeric_difference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericDifference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "interval",
+          "difference_kinds",
+          "null_values",
+          "numeric_difference"
+        ],
+        "title": "ColumnDetail"
+      },
       "ColumnMatchRate": {
         "properties": {
           "numerator": {
@@ -6663,6 +6710,77 @@
           "right"
         ],
         "title": "ColumnPair"
+      },
+      "ColumnStatistics": {
+        "properties": {
+          "interval": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RateInterval"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "difference_kinds": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Difference Kinds"
+          },
+          "null_values": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Null Values"
+          },
+          "numeric_difference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericDifference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "left_column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Column"
+          },
+          "right_column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Right Column"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "interval",
+          "difference_kinds",
+          "null_values",
+          "numeric_difference",
+          "left_column",
+          "right_column"
+        ],
+        "title": "ColumnStatistics"
       },
       "ComparisonCreate": {
         "properties": {
@@ -7027,7 +7145,8 @@
             "type": "integer",
             "enum": [
               6,
-              7
+              7,
+              8
             ],
             "title": "Format Version"
           },
@@ -7101,6 +7220,16 @@
           },
           "metrics": {
             "$ref": "#/components/schemas/CriticalMetrics"
+          },
+          "statistics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ComparisonStatistics"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "summary": {
             "additionalProperties": true,
@@ -7183,6 +7312,67 @@
           "points"
         ],
         "title": "ComparisonRowMatchSeries"
+      },
+      "ComparisonStatistics": {
+        "properties": {
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "sample_is_complete_scope": {
+            "type": "boolean",
+            "title": "Sample Is Complete Scope"
+          },
+          "record_outcomes": {
+            "$ref": "#/components/schemas/RecordOutcomes"
+          },
+          "intervals": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Intervals"
+          },
+          "differing_columns_per_record": {
+            "items": {
+              "$ref": "#/components/schemas/DifferingColumns"
+            },
+            "type": "array",
+            "title": "Differing Columns Per Record"
+          },
+          "difference_kinds": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Difference Kinds"
+          },
+          "stage_timings": {
+            "items": {
+              "$ref": "#/components/schemas/StageTiming"
+            },
+            "type": "array",
+            "title": "Stage Timings"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnStatistics"
+            },
+            "type": "array",
+            "title": "Columns"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "scope",
+          "sample_is_complete_scope",
+          "record_outcomes",
+          "intervals",
+          "differing_columns_per_record",
+          "difference_kinds",
+          "stage_timings",
+          "columns"
+        ],
+        "title": "ComparisonStatistics"
       },
       "ComparisonSummaryOut": {
         "properties": {
@@ -8240,6 +8430,25 @@
         ],
         "title": "DatasetOut"
       },
+      "DifferingColumns": {
+        "properties": {
+          "columns": {
+            "type": "integer",
+            "title": "Columns"
+          },
+          "records": {
+            "type": "integer",
+            "title": "Records"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "columns",
+          "records"
+        ],
+        "title": "DifferingColumns"
+      },
       "DuplicateKeyRate": {
         "properties": {
           "numerator": {
@@ -8848,6 +9057,45 @@
           "values"
         ],
         "title": "MetricTrendPoint"
+      },
+      "NumericDifference": {
+        "properties": {
+          "compared_differences": {
+            "type": "integer",
+            "title": "Compared Differences"
+          },
+          "mean_signed_difference": {
+            "type": "string",
+            "title": "Mean Signed Difference"
+          },
+          "mean_absolute_difference": {
+            "type": "string",
+            "title": "Mean Absolute Difference"
+          },
+          "max_absolute_difference": {
+            "type": "string",
+            "title": "Max Absolute Difference"
+          },
+          "target_greater": {
+            "type": "integer",
+            "title": "Target Greater"
+          },
+          "reference_greater": {
+            "type": "integer",
+            "title": "Reference Greater"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "compared_differences",
+          "mean_signed_difference",
+          "mean_absolute_difference",
+          "max_absolute_difference",
+          "target_greater",
+          "reference_greater"
+        ],
+        "title": "NumericDifference"
       },
       "OverviewColumnPair": {
         "properties": {
@@ -9642,6 +9890,44 @@
         ],
         "title": "Period"
       },
+      "PreviousExecution": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Run Id"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "conclusion": {
+            "type": "string",
+            "title": "Conclusion"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/QualityMetricSummary"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run_id",
+          "finished_at",
+          "conclusion",
+          "metrics"
+        ],
+        "title": "PreviousExecution",
+        "description": "Closest earlier successful execution of the same comparison."
+      },
       "QualityColumnOut": {
         "properties": {
           "id": {
@@ -9698,6 +9984,27 @@
           },
           "metric": {
             "$ref": "#/components/schemas/ColumnMatchRate"
+          },
+          "statistics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ColumnDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "previous_percentage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Percentage"
           }
         },
         "additionalProperties": false,
@@ -9761,6 +10068,16 @@
               }
             ]
           },
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PreviousExecution"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "dimensions": {
             "items": {
               "additionalProperties": true,
@@ -9801,7 +10118,8 @@
             "type": "integer",
             "enum": [
               6,
-              7
+              7,
+              8
             ],
             "title": "Format Version"
           },
@@ -9854,6 +10172,16 @@
           "metrics": {
             "$ref": "#/components/schemas/QualityMetricSummary"
           },
+          "statistics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SampleStatistics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "column_count": {
             "type": "integer",
             "title": "Column Count"
@@ -9888,6 +10216,46 @@
           "column_directory"
         ],
         "title": "QualityResultContext"
+      },
+      "RateInterval": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": [
+              "wilson",
+              "complete_scope"
+            ],
+            "title": "Method"
+          },
+          "confidence_level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Level"
+          },
+          "lower": {
+            "type": "string",
+            "title": "Lower"
+          },
+          "upper": {
+            "type": "string",
+            "title": "Upper"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "method",
+          "confidence_level",
+          "lower",
+          "upper"
+        ],
+        "title": "RateInterval"
       },
       "RecentRunOut": {
         "properties": {
@@ -10007,6 +10375,45 @@
           "row_match_rate"
         ],
         "title": "RecentRunOut"
+      },
+      "RecordOutcomes": {
+        "properties": {
+          "equal": {
+            "type": "integer",
+            "title": "Equal"
+          },
+          "different": {
+            "type": "integer",
+            "title": "Different"
+          },
+          "only_reference": {
+            "type": "integer",
+            "title": "Only Reference"
+          },
+          "only_target": {
+            "type": "integer",
+            "title": "Only Target"
+          },
+          "unknown": {
+            "type": "integer",
+            "title": "Unknown"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "equal",
+          "different",
+          "only_reference",
+          "only_target",
+          "unknown",
+          "total"
+        ],
+        "title": "RecordOutcomes"
       },
       "ResultOut": {
         "properties": {
@@ -10387,6 +10794,60 @@
         ],
         "title": "RunOut"
       },
+      "SampleStatistics": {
+        "properties": {
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "sample_is_complete_scope": {
+            "type": "boolean",
+            "title": "Sample Is Complete Scope"
+          },
+          "record_outcomes": {
+            "$ref": "#/components/schemas/RecordOutcomes"
+          },
+          "intervals": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Intervals"
+          },
+          "differing_columns_per_record": {
+            "items": {
+              "$ref": "#/components/schemas/DifferingColumns"
+            },
+            "type": "array",
+            "title": "Differing Columns Per Record"
+          },
+          "difference_kinds": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Difference Kinds"
+          },
+          "stage_timings": {
+            "items": {
+              "$ref": "#/components/schemas/StageTiming"
+            },
+            "type": "array",
+            "title": "Stage Timings"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "scope",
+          "sample_is_complete_scope",
+          "record_outcomes",
+          "intervals",
+          "differing_columns_per_record",
+          "difference_kinds",
+          "stage_timings"
+        ],
+        "title": "SampleStatistics",
+        "description": "Aggregates that explain the five metrics; never raw keys or values."
+      },
       "Sampling-Input": {
         "properties": {
           "method": {
@@ -10605,6 +11066,25 @@
           "operator"
         ],
         "title": "ScopeFilter"
+      },
+      "StageTiming": {
+        "properties": {
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "milliseconds": {
+            "type": "number",
+            "title": "Milliseconds"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stage",
+          "milliseconds"
+        ],
+        "title": "StageTiming"
       },
       "TableOut": {
         "properties": {
