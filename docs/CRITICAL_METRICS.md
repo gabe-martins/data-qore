@@ -1,4 +1,4 @@
-# ADQ v7 — comparison quality and record evidence
+# ADQ v8 — comparison quality and record evidence
 
 O motor publica somente Row Count Match, Key Coverage, Duplicate Key Rate,
 Row Match Rate e Column Match Rate. Resultados e configurações ficam salvos por
@@ -114,6 +114,61 @@ sucesso anterior. Perfis, séries estatísticas, regras de negócio e a meta glo
 antiga foram retirados dos contratos e do banco na simplificação anterior.
 Esta atualização preserva os resultados v6; evidências individuais não são
 reconstruídas para execuções antigas.
+
+## Motor v8 — pipeline, estatísticas explicativas e gráficos — 17/11/2026
+
+`execute_comparison` passou a ser um pipeline de etapas com responsabilidade
+única e tempo medido: metadados → validação da chave no recorte inteiro →
+seleção das chaves → leitura dos registros → avaliação → captura de evidências.
+Os pares de colunas (metadados, fuso, compatibilidade de tipos) são resolvidos
+uma vez por execução, não a cada registro. As cinco métricas mantêm exatamente
+as mesmas fórmulas; `metrics` continua com cinco chaves.
+
+O resultado (formato 8) ganha o bloco `statistics`, somente com agregados —
+nenhuma chave, linha ou valor de célula:
+
+| Campo | Conteúdo |
+| --- | --- |
+| `record_outcomes` | Posições da amostra por desfecho: iguais, diferentes (pareadas), só em A, só em B, não avaliadas. Cada posição tem um único desfecho. |
+| `intervals` | Intervalo de Wilson de 95% para Row Match Rate e as duas direções de Key Coverage. |
+| `differing_columns_per_record` | Histograma: quantas colunas divergem em cada registro pareado divergente. |
+| `difference_kinds` | Divergências comprovadas por tipo: NULL só em A/B, apenas espaços, apenas caixa, numérica, temporal, outro valor. |
+| `columns[]` | Por par: intervalo, tipos de divergência, NULLs em A/B e, para números, diferença B − A (média com sinal, média absoluta, máxima, direção). |
+| `stage_timings` | Milissegundos por etapa do pipeline. |
+
+**Intervalos.** A seleção bottom-k sobre SHA-256 com semente é uma amostra
+uniforme da união de chaves do recorte; por isso o intervalo delimita a taxa
+sobre essa união. Ele ignora a correção de população finita (é conservador) e
+não cobre posições não avaliadas. Quando a amostra contém menos chaves do que o
+solicitado, ela já contém a união inteira: `sample_is_complete_scope` é
+verdadeiro e o intervalo vira o valor exato (`method: complete_scope`). O
+intervalo não altera a conclusão da execução nem substitui as contagens completas.
+
+**Diferença numérica.** A diferença máxima de uma coluna é um agregado derivado
+de valores da amostra; fica no resultado agregado, visível a quem já tem
+`results.read`. Tolerâncias continuam valendo: valores tolerados não são
+contados como divergência.
+
+**Execução anterior.** `GET /v1/runs/{id}/quality` devolve `previous` (última
+execução bem-sucedida anterior da mesma comparação, com as quatro métricas
+agregadas) e `result.statistics` sem o detalhe por coluna. `/quality/columns`
+devolve, por par, `statistics` e `previous_percentage`. Nenhuma consulta às
+fontes é feita; resultados v6/v7 continuam legíveis, sem `statistics`.
+
+**Interface.** A seção Comparison Quality foi dividida em módulos
+(`web/src/components/quality/`) e ganhou navegação fixa entre seções, variação
+em pontos percentuais contra a execução anterior, intervalo ao lado das taxas
+e o cartão **Comparative charts** com cinco visões: desfecho dos registros,
+fonte A × B, colunas, tipos de diferença e execução anterior. Clicar em um
+desfecho ou em uma barra de coluna filtra a inspeção de registros. A busca de
+colunas espera a digitação terminar e a paginação mantém a página anterior
+visível enquanto carrega. As cores usam os tokens de gráfico existentes; como
+essa paleta não separa bem todas as séries (sobretudo no tema escuro), toda
+visão traz legenda com rótulo e contagem, e "não avaliado" usa hachura.
+
+Validação: `tests/test_comparison_statistics.py` (reconciliação com as métricas,
+intervalos, tolerância, ausência de valores brutos, esquema público) e
+`test_api.APITests.test_quality_statistics_and_change_since_previous_execution`.
 
 ## Comparison Quality — one selected execution
 
